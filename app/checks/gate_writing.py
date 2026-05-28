@@ -510,14 +510,17 @@ class WritingQualityGate(BaseGate):
         score = max(0, 100 - error_count * 20 - warn_count * 5)
         passed = error_count == 0
 
+        # Compute writing grade
+        grade = "A" if score >= 90 else "B" if score >= 75 else "C" if score >= 60 else "D"
+
         return CheckResult(
             gate_name=self.name,
             gate_description=self.description,
             passed=passed,
             score=score,
             issues=issues,
-            summary=f"写作检查: {error_count} 个错误, {warn_count} 个警告",
-            metadata={},
+            summary=f"写作检查: {error_count} 个错误, {warn_count} 个警告 (Grade {grade})",
+            metadata={"grade": grade, "error_count": error_count, "warning_count": warn_count},
         )
 
     @staticmethod

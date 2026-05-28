@@ -155,29 +155,33 @@ class FigureTableGate(BaseGate):
             if not flt["label"]:
                 issues.append(Issue(
                     severity=Severity.ERROR,
-                    message=f"{display_name} has NO \\label — cannot be referenced",
+                    message=f"{display_name} 缺少 \\label — 无法被正文引用",
                     location=f"{flt['file']}:{flt['line']}",
                     evidence=f"Caption: {flt['caption'] or 'N/A'}",
-                    suggestion=f"Add \\label{{{flt['type']}:meaningful_name}} inside the {flt['type']} environment.",
+                    suggestion=f"在 {flt['type']} 环境内添加 \\label{{{flt['type']}:meaningful_name}}。",
+                    file=flt["file"],
+                    line=flt["line"],
                 ))
 
             # Issue: no caption
             if not flt["caption"]:
                 issues.append(Issue(
                     severity=Severity.ERROR,
-                    message=f"{display_name} has NO \\caption",
+                    message=f"{display_name} 缺少 \\caption",
                     location=f"{flt['file']}:{flt['line']}",
-                    suggestion="Every figure/table must have a descriptive caption.",
+                    suggestion="每个图表必须有描述性的 caption。请添加 \\caption{{...}}。",
+                    file=flt["file"],
+                    line=flt["line"],
                 ))
 
             # Issue: not referenced in text (skip for appendix floats)
             if flt["label"] and flt["label"] not in ref_locations and not flt.get("in_appendix"):
                 issues.append(Issue(
                     severity=Severity.ERROR,
-                    message=f"{display_name} (\\label{{{flt['label']}}}) is NEVER referenced in text",
+                    message=f"{display_name} (\\label{{{flt['label']}}}) 在正文中从未被引用",
                     location=f"{flt['file']}:{flt['line']}",
                     evidence=f"Caption: {flt['caption'] or 'N/A'}",
-                    suggestion=f"Add \\ref{{{flt['label']}}} or \\cref{{{flt['label']}}} somewhere in your text.",
+                    suggestion=f"在正文合适位置添加 \\ref{{{flt['label']}}} 或 \\cref{{{flt['label']}}} 来引用此图表。",
                 ))
 
         # Check for dangling \ref{fig:*} or \ref{tab:*} pointing to non-existent floats
