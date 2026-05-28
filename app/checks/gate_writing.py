@@ -510,6 +510,22 @@ class WritingQualityGate(BaseGate):
         score = max(0, 100 - error_count * 20 - warn_count * 5)
         passed = error_count == 0
 
+        # Generate writing tips based on detected patterns
+        tips = []
+        for issue in issues:
+            if "被动语态" in issue.message:
+                tips.append("多用主动语态（We propose/show/demonstrate）提升文章力度")
+            elif "超长句子" in issue.message:
+                tips.append("长句拆短：一句一个核心观点，控制在 25 词以内")
+            elif "em-dash" in issue.message.lower() or "en-dash" in issue.message.lower():
+                tips.append("减少 em-dash (—) 使用，改用逗号或分句")
+            elif "重复" in issue.message and "段落" in issue.message:
+                tips.append("Abstract 和 Conclusion 避免大段复制粘贴，用不同角度总结")
+            elif "Limitations" in issue.message:
+                tips.append("Limitations 不是缺点列表，而是诚实讨论方法的适用边界")
+        # Deduplicate
+        tips = list(dict.fromkeys(tips))[:5]
+
         # Compute writing grade
         grade = "A" if score >= 90 else "B" if score >= 75 else "C" if score >= 60 else "D"
 
@@ -520,7 +536,7 @@ class WritingQualityGate(BaseGate):
             score=score,
             issues=issues,
             summary=f"写作检查: {error_count} 个错误, {warn_count} 个警告 (Grade {grade})",
-            metadata={"grade": grade, "error_count": error_count, "warning_count": warn_count},
+            metadata={"grade": grade, "error_count": error_count, "warning_count": warn_count, "tips": tips},
         )
 
     @staticmethod

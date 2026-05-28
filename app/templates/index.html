@@ -1026,6 +1026,14 @@ function showOverview() {
             cardsHtml += `</div></details>`;
         }
 
+        // Show writing tips for writing_quality gate
+        if (g.gate_name === 'writing_quality' && g.metadata?.tips?.length > 0) {
+            cardsHtml += `<div class="mt-2 pt-2 border-t border-slate-200">
+                <p style="font-size:10px; font-weight:600; color:#64748b; margin:0 0 4px;">写作建议</p>
+                ${g.metadata.tips.map(t => `<p style="font-size:11px; color:#475569; margin:2px 0; padding-left:8px; border-left:2px solid #3b82f6;">` + t + `</p>`).join('')}
+            </div>`;
+        }
+
         cardsHtml += `</div>`;
     });
     document.getElementById('overview-gates').innerHTML = statsHtml + cardsHtml;
