@@ -2489,13 +2489,77 @@ function updateNavbar() {
 }
 
 function toggleUserMenu() {
-    // Simple dropdown - for now just logout
-    if (confirm('退出登录？')) {
-        fetch('/api/auth/logout', {method:'POST'});
-        currentUser = null;
-        localStorage.removeItem('token');
-        updateNavbar();
-        toast('已退出登录', 'info', 2000);
+    // Show dropdown menu
+    const existing = document.getElementById('user-dropdown');
+    if (existing) { existing.remove(); return; }
+
+    const dropdown = document.createElement('div');
+    dropdown.id = 'user-dropdown';
+    dropdown.style.cssText = 'position:fixed; top:52px; right:20px; background:#fff; border:1px solid #e2e8f0; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.12); padding:6px 0; z-index:200; min-width:160px; animation:fadeIn 0.15s;';
+    dropdown.innerHTML = `
+        <div style="padding:10px 14px; border-bottom:1px solid #f1f5f9;">
+            <p style="font-size:12px; font-weight:600; color:#1e293b; margin:0;">${currentUser.name || currentUser.email}</p>
+            <p style="font-size:10px; color:#64748b; margin:2px 0 0;">${currentUser.email}</p>
+        </div>
+        <div class="ctx-item" onclick="showDashboard();document.getElementById('user-dropdown').remove()">我的账户</div>
+        <div class="ctx-item" onclick="document.getElementById('recharge-modal').classList.remove('hidden');document.getElementById('user-dropdown').remove()">购买次数</div>
+        <div style="height:1px; background:#f1f5f9; margin:4px 0;"></div>
+        <div class="ctx-item" style="color:#ef4444;" onclick="doLogout()">退出登录</div>
+    `;
+    document.body.appendChild(dropdown);
+    setTimeout(() => document.addEventListener('click', () => { dropdown.remove(); }, {once:true}), 50);
+}
+
+function doLogout() {
+    fetch('/api/auth/logout', {method:'POST'});
+    currentUser = null;
+    localStorage.removeItem('token');
+    updateNavbar();
+    toast('已退出登录', 'info', 2000);
+    const dd = document.getElementById('user-dropdown');
+    if (dd) dd.remove();
+}
+
+async function showDashboard() {
+    toast('加载账户信息...', 'info', 1500);
+    try {
+        const r = await fetch('/api/auth/dashboard');
+        const d = await r.json();
+        const modal = document.createElement('div');
+        modal.className = 'modal-bg';
+        modal.onclick = e => { if(e.target===modal) modal.remove(); };
+
+        const txnHtml = (d.recent_transactions || []).map(t => {
+            const color = t.amount > 0 ? '#059669' : '#dc2626';
+            return `<div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #f8fafc; font-size:11px;">
+                <span style="color:#475569;">${t.description}</span>
+                <span style="color:${color}; font-weight:600;">${t.amount > 0 ? '+' : ''}${t.amount}</span>
+            </div>`;
+        }).join('') || '<p style="font-size:12px; color:#94a3b8;">暂无记录</p>';
+
+        modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:28px; max-width:440px; width:90%; max-height:80vh; overflow-y:auto;">
+            <h3 style="font-size:18px; font-weight:700; margin:0 0 16px; color:#0f172a;">我的账户</h3>
+            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px;">
+                <div style="text-align:center; padding:12px; background:#f8fafc; border-radius:10px;">
+                    <p style="font-size:22px; font-weight:700; color:#3b82f6; margin:0;">${d.stats.credits_remaining}</p>
+                    <p style="font-size:10px; color:#64748b; margin:2px 0 0;">剩余次数</p>
+                </div>
+                <div style="text-align:center; padding:12px; background:#f8fafc; border-radius:10px;">
+                    <p style="font-size:22px; font-weight:700; color:#0f172a; margin:0;">${d.stats.total_checks}</p>
+                    <p style="font-size:10px; color:#64748b; margin:2px 0 0;">累计质检</p>
+                </div>
+                <div style="text-align:center; padding:12px; background:#f8fafc; border-radius:10px;">
+                    <p style="font-size:22px; font-weight:700; color:#0f172a; margin:0;">${d.user.tier}</p>
+                    <p style="font-size:10px; color:#64748b; margin:2px 0 0;">会员等级</p>
+                </div>
+            </div>
+            <p style="font-size:12px; font-weight:600; color:#334155; margin:0 0 8px;">最近记录</p>
+            <div style="max-height:200px; overflow-y:auto;">${txnHtml}</div>
+            <button onclick="this.closest('.modal-bg').remove()" style="margin-top:16px; width:100%; padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:13px; color:#64748b;">关闭</button>
+        </div>`;
+        document.body.appendChild(modal);
+    } catch(e) {
+        toast('加载失败', 'error');
     }
 }
 

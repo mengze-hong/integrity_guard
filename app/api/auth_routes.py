@@ -11,6 +11,7 @@ from app.auth import (
 from app.models_db import User
 from app.dependencies import get_current_user, get_current_user_optional
 from app.credits import get_balance, get_transactions
+from app.models_db import User, Transaction
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -98,6 +99,34 @@ async def my_transactions(request: Request, db: Session = Depends(get_db)):
     user = await get_current_user(request)
     txns = get_transactions(db, user.id)
     return {"transactions": txns}
+
+
+@router.get("/dashboard")
+async def user_dashboard(request: Request, db: Session = Depends(get_db)):
+    """Get user dashboard data: stats, recent checks, credit history."""
+    user = await get_current_user(request)
+
+    # Refresh user from DB
+    fresh_user = db.query(User).filter(User.id == user.id).first()
+
+    # Get transactions
+    txns = get_transactions(db, user.id, limit=10)
+
+    # Count total checks (consume type transactions)
+    total_checks = db.query(Transaction).filter(
+        Transaction.user_id == user.id,
+        Transaction.type == "consume"
+    ).count()
+
+    return {
+        "user": _user_dict(fresh_user),
+        "stats": {
+            "total_checks": total_checks,
+            "credits_remaining": fresh_user.credits,
+            "member_since": fresh_user.created_at,
+        },
+        "recent_transactions": txns,
+    }
 
 
 def _user_dict(user: User) -> dict:
