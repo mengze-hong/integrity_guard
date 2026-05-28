@@ -1,0 +1,48 @@
+\documentclass{article}
+\usepackage{graphicx}
+
+\title{A Sample Paper for Testing Integrity Checks}
+\author{Test Author}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This is a test paper that cites both real and fake references.
+Our method achieves 95.2\% accuracy on the benchmark.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+
+Deep learning has revolutionized NLP \cite{real_entry_attention, real_entry_bert}.
+Recent work by \cite{fake_entry_1} proposed a novel framework.
+Cross-lingual approaches \cite{fake_entry_2} have shown promise.
+
+We also reference an undefined key \cite{nonexistent_key}.
+
+\section{Method}
+\label{sec:method}
+
+See Figure~\ref{fig:architecture} for an overview.
+As shown in Table~\ref{tab:results}, our results are significant.
+
+\input{tables/results}
+
+\includegraphics[width=0.8\textwidth]{figures/architecture.png}
+
+\section{Results}
+\label{sec:results}
+
+Our method outperforms baselines as shown in Section~\ref{sec:method}.
+We reference a non-existent figure: Figure~\ref{fig:missing}.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+We presented our approach and demonstrated strong results.
+
+\bibliographystyle{plain}
+\bibliography{refs}
+
+\end{document}

@@ -1,0 +1,11 @@
+services:
+  integrityguard:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+    environment:
+      - PYTHONPATH=/app
+    restart: unless-stopped

@@ -1,0 +1,136 @@
+"""Authentication utilities: JWT, password hashing, user management."""
+
+import uuid
+from datetime import datetime, timezone, timedelta
+
+import bcrypt
+import jwt
+from sqlalchemy.orm import Session
+
+from app.models_db import User, Transaction
+from app.config import settings
+
+JWT_SECRET = settings.jwt_secret
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRE_DAYS = 7
+
+
+# === Password Hashing ===
+
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+
+def verify_password(password: str, hashed: str) -> bool:
+    return bcrypt.checkpw(password.encode(), hashed.encode())
+
+
+# === JWT ===
+
+def create_token(user_id: str) -> str:
+    payload = {
+        "sub": user_id,
+        "exp": datetime.now(timezone.utc) + timedelta(days=JWT_EXPIRE_DAYS),
+        "iat": datetime.now(timezone.utc),
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+
+def decode_token(token: str) -> dict | None:
+    try:
+        return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+        return None
+
+
+# === User Operations ===
+
+def register_user(db: Session, email: str, password: str, name: str = None) -> User:
+    """Create a new user with email + password."""
+    user = User(
+        id=str(uuid.uuid4())[:8],
+        email=email.lower().strip(),
+        password_hash=hash_password(password),
+        name=name or email.split("@")[0],
+        credits=2,
+        created_at=datetime.now(timezone.utc).isoformat(),
+    )
+    db.add(user)
+
+    # Record welcome gift
+    db.add(Transaction(
+        id=str(uuid.uuid4())[:8],
+        user_id=user.id,
+        type="gift",
+        amount=2,
+        balance_after=2,
+        description="注册赠送 2 次免费质检",
+        created_at=datetime.now(timezone.utc).isoformat(),
+    ))
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def authenticate_user(db: Session, email: str, password: str) -> User | None:
+    """Verify email + password, return user or None."""
+    user = db.query(User).filter(User.email == email.lower().strip()).first()
+    if not user or not user.password_hash:
+        return None
+    if not verify_password(password, user.password_hash):
+        return None
+    # Update last login
+    user.last_login_at = datetime.now(timezone.utc).isoformat()
+    db.commit()
+    return user
+
+
+def get_or_create_oauth_user(
+    db: Session, provider: str, oauth_id: str, email: str, name: str = None, avatar: str = None
+) -> User:
+    """Find or create a user from OAuth login."""
+    # Try to find by oauth_id first
+    user = db.query(User).filter(
+        User.oauth_provider == provider, User.oauth_id == oauth_id
+    ).first()
+    if user:
+        user.last_login_at = datetime.now(timezone.utc).isoformat()
+        db.commit()
+        return user
+
+    # Try to find by email (link accounts)
+    user = db.query(User).filter(User.email == email.lower()).first()
+    if user:
+        user.oauth_provider = provider
+        user.oauth_id = oauth_id
+        if avatar:
+            user.avatar_url = avatar
+        user.last_login_at = datetime.now(timezone.utc).isoformat()
+        db.commit()
+        return user
+
+    # Create new user
+    user = User(
+        id=str(uuid.uuid4())[:8],
+        email=email.lower(),
+        name=name or email.split("@")[0],
+        avatar_url=avatar,
+        oauth_provider=provider,
+        oauth_id=oauth_id,
+        credits=2,
+        created_at=datetime.now(timezone.utc).isoformat(),
+        last_login_at=datetime.now(timezone.utc).isoformat(),
+    )
+    db.add(user)
+    db.add(Transaction(
+        id=str(uuid.uuid4())[:8],
+        user_id=user.id,
+        type="gift",
+        amount=2,
+        balance_after=2,
+        description="注册赠送 2 次免费质检",
+        created_at=datetime.now(timezone.utc).isoformat(),
+    ))
+    db.commit()
+    db.refresh(user)
+    return user

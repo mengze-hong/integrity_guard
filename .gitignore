@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.pyc
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+
+# Node
+node_modules/
+package-lock.json
+
+# Data & uploads (user-generated)
+data/integrity.db
+data/jobs/
+uploads/
+
+# IDE
+.vscode/
+.idea/
+
+# Playwright MCP artifacts
+.playwright-mcp/
+
+# Screenshots & generated
+screenshots/
+screenshots_new/
+IntegrityGuard_Demo.pptx
+IntegrityGuard_Pitch_Deck.pptx
+create_ppt.py
+create_ppt.js
+take_screenshots.py
+_test_syntax.js
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+*.log

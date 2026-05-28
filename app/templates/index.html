@@ -1,0 +1,2349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+    <title>Integrity Assurance - 论文质检</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/material-darker.css">
+    <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/stex/stex.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/selection/active-line.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/search/searchcursor.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/search/search.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/search/jump-to-line.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/dialog/dialog.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/dialog/dialog.css">
+    <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/hint/show-hint.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/hint/show-hint.css">
+    <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/scroll/simplescrollbars.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/scroll/simplescrollbars.css">
+    <style>
+        :root {
+            --color-primary: #3b82f6;
+            --color-primary-hover: #2563eb;
+            --color-success: #22c55e;
+            --color-error: #ef4444;
+            --color-warning: #f59e0b;
+            --color-text: #1e293b;
+            --color-text-secondary: #64748b;
+            --color-text-muted: #94a3b8;
+            --color-bg: #ffffff;
+            --color-bg-secondary: #f8fafc;
+            --color-border: #e2e8f0;
+            --color-card: #ffffff;
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+            --font-mono: 'JetBrains Mono','Fira Code','Consolas','Monaco',monospace;
+        }
+        * { box-sizing: border-box; }
+        html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',sans-serif; }
+        #app { display:flex; flex-direction:column; width:100vw; height:100vh; }
+
+        /* === Workspace Layout === */
+        #workspace { display:flex; flex:1; overflow:hidden; width:100%; height:calc(100vh - 92px); }
+
+        /* File Panel - Overleaf style */
+        #file-panel {
+            width:220px; min-width:180px; max-width:260px;
+            background:#1e293b; color:#e2e8f0;
+            display:flex; flex-direction:column;
+            overflow:hidden; user-select:none;
+        }
+        #file-panel-header {
+            padding:10px 16px; border-bottom:1px solid #334155;
+            background:#0f172a;
+        }
+        #file-panel-header h3 { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8; margin:0; }
+        #file-tree { flex:1; overflow-y:auto; padding:6px 0; }
+        .file-section { padding:8px 16px 4px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#64748b; }
+        .file-item {
+            padding:7px 16px 7px 20px; cursor:pointer; font-size:13px;
+            display:flex; align-items:center; gap:8px;
+            border-left:3px solid transparent; transition:all 0.1s;
+            color:#cbd5e1;
+        }
+        .file-item:hover { background:#334155; color:#f1f5f9; }
+        .file-item.active { background:#1e40af; border-left-color:#60a5fa; color:#fff; font-weight:600; }
+        .file-item .file-icon { font-size:14px; flex-shrink:0; }
+        .file-item .file-name { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .file-item .file-status { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+        .file-status-ok { background:#22c55e; }
+        .file-status-warn { background:#f59e0b; }
+        .file-status-err { background:#ef4444; }
+
+        /* Editor Panel */
+        #editor-panel { flex:1; display:flex; flex-direction:column; min-width:0; background:#fff; position:relative; }
+        #editor-tab-bar {
+            display:flex; align-items:center; justify-content:space-between;
+            padding:0 8px; height:36px; min-height:36px;
+            background:#f8fafc; border-bottom:1px solid #e2e8f0;
+            font-size:12px; color:#64748b; gap:0;
+        }
+        #editor-tabs { display:flex; align-items:center; gap:0; overflow-x:auto; flex:1; }
+        .editor-tab {
+            padding:6px 12px; cursor:pointer; border-bottom:2px solid transparent;
+            white-space:nowrap; font-size:12px; color:#64748b; transition:all 0.1s;
+            display:flex; align-items:center; gap:4px;
+        }
+        .editor-tab:hover { color:#334155; background:#f1f5f9; }
+        .editor-tab.active { color:#1e40af; border-bottom-color:#3b82f6; font-weight:600; background:#fff; }
+        .editor-tab .tab-close { font-size:10px; opacity:0.5; padding:2px; border-radius:3px; }
+        .editor-tab .tab-close:hover { opacity:1; background:#fee2e2; color:#ef4444; }
+        #editor-container { flex:1; position:relative; overflow:hidden; }
+
+        /* CodeMirror overrides */
+        .CodeMirror {
+            position:absolute !important; top:0; left:0; right:0; bottom:0;
+            height:100% !important; width:100% !important;
+            font-size:14px; font-family:'JetBrains Mono','Fira Code','Consolas','Monaco',monospace;
+            line-height:1.65;
+        }
+        .CodeMirror-scroll {
+            overflow-y:auto !important;
+            overflow-x:auto !important;
+        }
+        .CodeMirror-vscrollbar, .CodeMirror-hscrollbar { display:block !important; }
+        .cm-error-line { background:rgba(239,68,68,0.06) !important; }
+        .cm-flash-line { background:rgba(59,130,246,0.25) !important; animation: flashPulse 0.8s ease; }
+        @keyframes flashPulse { 0%{background:rgba(59,130,246,0.4)!important} 50%{background:rgba(59,130,246,0.1)!important} 100%{background:rgba(59,130,246,0.25)!important} }
+        .cm-error-gutter { color:#ef4444; font-size:14px; cursor:pointer; position:relative; }
+        .cm-warn-gutter { color:#f59e0b; font-size:14px; cursor:pointer; position:relative; }
+        .cm-error-gutter:hover::after, .cm-warn-gutter:hover::after {
+            content: attr(title);
+            position:absolute; left:20px; top:-4px; z-index:50;
+            background:#1e293b; color:#fff; font-size:11px; padding:4px 8px;
+            border-radius:4px; white-space:nowrap; max-width:300px;
+            overflow:hidden; text-overflow:ellipsis; pointer-events:none;
+            box-shadow:0 2px 8px rgba(0,0,0,0.2);
+        }
+        .cm-error-token { background:rgba(239,68,68,0.2); border-bottom:2px wavy #ef4444; border-radius:1px; padding:0 1px; }
+        .cm-warn-token { background:rgba(245,158,11,0.15); border-bottom:2px wavy #f59e0b; border-radius:1px; padding:0 1px; }
+
+        /* Check Panel - Fixed layout */
+        #check-panel {
+            width:340px; min-width:300px; max-width:420px;
+            border-left:1px solid #e2e8f0;
+            display:flex; flex-direction:column;
+            height:100%; overflow:hidden;
+            background:#fafbfc;
+        }
+        #check-panel-header {
+            padding:12px 16px; border-bottom:1px solid #e2e8f0;
+            background:#fff; flex-shrink:0;
+        }
+        #issue-list {
+            flex:1; overflow-y:auto; padding:12px 14px;
+            scroll-behavior:smooth;
+        }
+        #check-panel-footer {
+            padding:12px 16px; border-top:1px solid #e2e8f0;
+            background:#fff; flex-shrink:0;
+        }
+
+        /* Issues */
+        .issue-card {
+            padding:12px 14px; margin-bottom:8px; border-radius:8px;
+            font-size:13px; cursor:pointer; border:1px solid;
+            transition:all 0.15s ease; animation: slideUp 0.2s ease;
+        }
+        @keyframes slideUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+        .issue-card:hover { transform:translateY(-1px); box-shadow:0 3px 12px rgba(0,0,0,0.06); }
+        .issue-card.error { background:#fef2f2; border-color:#fecaca; }
+        .issue-card.warning { background:#fffbeb; border-color:#fde68a; }
+        .issue-card.dismissed { background:#f8fafc; border-color:#e2e8f0; opacity:0.7; }
+
+        /* Progress nodes */
+        .node { width:2.6rem; height:2.6rem; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:0.9rem; border:2.5px solid; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
+        .node-pass { background:#10b981; border-color:#059669; color:white; }
+        .node-fail { background:#ef4444; border-color:#dc2626; color:white; }
+        .node-pending { background:#e2e8f0; border-color:#cbd5e1; color:#94a3b8; }
+        .conn { height:2px; flex:1; border-radius:1px; margin:0 4px; }
+        .conn-pass { background:#10b981; }
+        .conn-fail { background:#ef4444; }
+        .conn-pending { background:#e2e8f0; }
+
+        /* Modal */
+        .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(2px); z-index:100; display:flex; align-items:center; justify-content:center; }
+
+        /* Toast notifications */
+        #toast-container { position:fixed; top:16px; right:16px; z-index:200; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
+        .toast {
+            padding:12px 18px; border-radius:10px; font-size:13px; color:#fff;
+            box-shadow:0 4px 16px rgba(0,0,0,0.15); pointer-events:auto;
+            animation: slideIn 0.3s ease; max-width:360px;
+        }
+        .toast-success { background:#059669; }
+        .toast-error { background:#dc2626; }
+        .toast-info { background:#2563eb; }
+        .toast-warning { background:#d97706; }
+        @keyframes slideIn { from { transform:translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+        /* Issue filter buttons */
+        .issue-filter-btn {
+            font-size:11px; padding:3px 8px; border-radius:6px; border:1px solid #e2e8f0;
+            background:#fff; color:#64748b; cursor:pointer; transition:all 0.1s; white-space:nowrap;
+        }
+        .issue-filter-btn:hover { background:#f1f5f9; color:#334155; }
+        .issue-filter-btn.active { background:#3b82f6; color:#fff; border-color:#3b82f6; }
+
+        /* Skeleton loading animation */
+        .skeleton {
+            background:linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+            background-size:200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius:6px;
+        }
+        @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+        #screen-upload:not(.hidden), #screen-overview:not(.hidden), #screen-workspace:not(.hidden) { animation: fadeIn 0.25s ease; }
+
+        /* Context menu */
+        .ctx-item { padding:7px 14px; font-size:13px; cursor:pointer; color:#334155; }
+        .ctx-item:hover { background:#f1f5f9; }
+
+        /* Full-screen screens */
+        #screen-upload, #screen-overview, #screen-workspace { width:100%; height:100%; }
+
+        /* Scrollbar styling */
+        #file-tree::-webkit-scrollbar, #issue-list::-webkit-scrollbar { width:6px; }
+        #file-tree::-webkit-scrollbar-track { background:transparent; }
+        #file-tree::-webkit-scrollbar-thumb { background:#475569; border-radius:3px; }
+        #issue-list::-webkit-scrollbar-track { background:transparent; }
+        #issue-list::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:3px; }
+
+        /* Upload screen centering */
+        #screen-upload:not(.hidden) { display:flex !important; flex-direction:column; align-items:center; justify-content:flex-start; padding-top:40px; }
+        #screen-overview:not(.hidden) { display:flex !important; align-items:flex-start; justify-content:center; overflow-y:auto; }
+        .hidden { display:none !important; }
+
+        /* === Mobile Responsive === */
+        @media (max-width: 768px) {
+            /* Upload page: stack vertically, hide intro */
+            #upload-intro { display:none !important; }
+            #screen-upload > div:first-child { flex-direction:column; padding:20px; gap:0; }
+            #screen-upload > div:first-child > div:last-child { width:100%; max-width:100%; border-radius:12px; padding:24px; }
+            /* Module grid: 2 columns on mobile */
+            #screen-upload > div:nth-child(2) div[style*="grid-template-columns"] { grid-template-columns:repeat(2,1fr) !important; }
+
+            /* Workspace: tab-based instead of three-column */
+            #workspace { flex-direction:column; }
+            #file-panel { width:100%; max-width:100%; min-width:0; height:auto; max-height:180px; }
+            #check-panel { width:100%; max-width:100%; min-width:0; height:250px; border-left:none; border-top:1px solid #e2e8f0; }
+            #editor-panel { min-height:300px; }
+
+            /* Smaller fonts on mobile */
+            .CodeMirror { font-size:12px !important; }
+            .issue-card { font-size:12px; padding:10px; }
+        }
+
+        @media (max-width: 480px) {
+            #screen-upload > div > div:last-child { padding:16px; }
+            .node { width:2.2rem; height:2.2rem; font-size:0.8rem; }
+        }
+
+        /* Tablet */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            #file-panel { width:180px; min-width:140px; }
+            #check-panel { width:280px; min-width:250px; }
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+
+    <!-- ====== Global Navbar ====== -->
+    <div id="navbar" style="display:flex; align-items:center; justify-content:space-between; padding:0 20px; height:44px; background:#fff; border-bottom:1px solid #e2e8f0; flex-shrink:0; z-index:50;">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:20px;">🛡️</span>
+            <span style="font-size:14px; font-weight:700; color:#0f172a;">IntegrityGuard</span>
+        </div>
+        <div id="nav-auth" style="display:flex; align-items:center; gap:12px;">
+            <!-- Populated by JS based on auth state -->
+            <button onclick="showAuthModal('login')" id="nav-login-btn" style="font-size:12px; padding:5px 14px; border-radius:6px; border:1px solid #e2e8f0; background:#fff; color:#334155; cursor:pointer; font-weight:500;">登录</button>
+            <button onclick="showAuthModal('register')" id="nav-register-btn" style="font-size:12px; padding:5px 14px; border-radius:6px; border:none; background:#3b82f6; color:#fff; cursor:pointer; font-weight:500;">注册</button>
+        </div>
+    </div>
+
+    <!-- ====== SCREEN 1: Upload ====== -->
+    <div id="screen-upload" class="flex-1" style="background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%); overflow-y:auto;">
+        <div style="display:flex; align-items:center; gap:60px; max-width:1100px; width:100%; padding:40px 40px 0; margin:0 auto;">
+            <!-- Left: Branding & Features -->
+            <div id="upload-intro" style="flex:1; color:#1e293b;">
+                <div style="display:flex; align-items:center; gap:14px; margin-bottom:28px;">
+                    <div style="font-size:42px;">🛡️</div>
+                    <div>
+                        <h1 style="font-size:28px; font-weight:800; margin:0; letter-spacing:-0.5px; color:#0f172a;">IntegrityGuard</h1>
+                        <p style="font-size:13px; color:#3b82f6; margin:4px 0 0; font-weight:500;">Academic Paper Pre-submission Checker</p>
+                    </div>
+                </div>
+                <p style="color:#475569; font-size:15px; line-height:1.7; margin-bottom:32px;">
+                    在提交论文前，自动检测引用造假、数据异常、格式缺陷等问题。<br>
+                    避免 desk reject，保护学术声誉。
+                </p>
+                <div style="display:flex; flex-direction:column; gap:18px;">
+                    <div style="display:flex; align-items:flex-start; gap:12px;">
+                        <div style="width:36px;height:36px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;">🔍</div>
+                        <div>
+                            <p style="font-weight:600; font-size:14px; margin:0; color:#1e293b;">引文真实性验证</p>
+                            <p style="color:#64748b; font-size:12px; margin:3px 0 0;">通过 Crossref/DataCite/Semantic Scholar/OpenAlex 交叉验证</p>
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:flex-start; gap:12px;">
+                        <div style="width:36px;height:36px;border-radius:8px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;">🧪</div>
+                        <div>
+                            <p style="font-weight:600; font-size:14px; margin:0; color:#1e293b;">实验数据异常检测</p>
+                            <p style="color:#64748b; font-size:12px; margin:3px 0 0;">Benford 定律、重复行、偏移造假、p-value 异常</p>
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:flex-start; gap:12px;">
+                        <div style="width:36px;height:36px;border-radius:8px;background:#fffbeb;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;">✍️</div>
+                        <div>
+                            <p style="font-weight:600; font-size:14px; margin:0; color:#1e293b;">写作质量分析</p>
+                            <p style="color:#64748b; font-size:12px; margin:3px 0 0;">AI 痕迹检测、匿名化检查、拼写错误、段落重复</p>
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:flex-start; gap:12px;">
+                        <div style="width:36px;height:36px;border-radius:8px;background:#faf5ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;">📋</div>
+                        <div>
+                            <p style="font-weight:600; font-size:14px; margin:0; color:#1e293b;">Bib 智能整理</p>
+                            <p style="color:#64748b; font-size:12px; margin:3px 0 0;">格式化、按引用排序、分离未引用条目、官方 bib 替换</p>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top:32px; padding-top:20px; border-top:1px solid #e2e8f0;">
+                    <p style="font-size:11px; color:#94a3b8;">已为 <span style="color:#3b82f6; font-weight:700;">200+</span> 篇论文提供质检服务 · 支持 ACL / NeurIPS / EMNLP / ICLR 等顶会格式</p>
+                </div>
+            </div>
+
+            <!-- Right: Upload Card -->
+            <div style="background:#fff; border-radius:16px; box-shadow:0 4px 24px rgba(0,0,0,0.08); border:1px solid #e2e8f0; padding:36px; width:400px; flex-shrink:0;">
+                <div style="text-align:center; margin-bottom:28px;">
+                    <h2 style="font-size:20px; font-weight:700; color:#1e293b; margin:0;">上传论文开始检查</h2>
+                    <p style="color:#94a3b8; font-size:13px; margin:6px 0 0;">支持 Overleaf 导出的 ZIP 压缩包</p>
+                </div>
+                <form id="upload-form">
+                    <div id="drop-zone" style="border:2px dashed #e2e8f0; border-radius:12px; padding:28px; text-align:center; cursor:pointer; transition:all 0.2s;" onclick="document.getElementById('file-input').click()" onmouseover="this.style.borderColor='#3b82f6';this.style.background='#eff6ff'" onmouseout="this.style.borderColor='#e2e8f0';this.style.background=''">
+                        <div style="font-size:28px; margin-bottom:8px;">📦</div>
+                        <p style="font-size:14px; margin:0;"><span style="color:#3b82f6; font-weight:600;">点击上传</span> 或拖拽文件到此处</p>
+                        <p style="font-size:12px; color:#94a3b8; margin:4px 0 0;">.zip 格式（含 .tex + .bib + figures）</p>
+                        <input id="file-input" type="file" accept=".zip" style="display:none;" onchange="handleUpload(this)">
+                    </div>
+                    <div id="file-info" class="hidden" style="margin-top:12px; font-size:13px; color:#64748b; text-align:center;"></div>
+                    <button type="submit" id="submit-btn" disabled style="margin-top:20px; width:100%; background:#3b82f6; color:#fff; padding:12px; border-radius:12px; font-weight:700; font-size:15px; border:none; cursor:pointer; opacity:0.4; transition:all 0.2s;" onmouseover="if(!this.disabled)this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">开始质检</button>
+                    <!-- Check progress bar (hidden by default) -->
+                    <div id="check-progress" style="display:none; margin-top:12px;">
+                        <div style="display:flex; justify-content:space-between; font-size:11px; color:#64748b; margin-bottom:4px;">
+                            <span id="check-progress-text">准备中...</span>
+                            <span id="check-progress-pct">0%</span>
+                        </div>
+                        <div style="height:6px; background:#e2e8f0; border-radius:3px; overflow:hidden;">
+                            <div id="check-progress-bar" style="height:100%; width:0%; background:linear-gradient(90deg,#3b82f6,#06b6d4); border-radius:3px; transition:width 0.3s;"></div>
+                        </div>
+                    </div>
+                </form>
+                <div style="margin-top:20px; padding-top:16px; border-top:1px solid #f1f5f9; text-align:center;">
+                    <p style="font-size:11px; color:#94a3b8;">🔒 文件仅在本地保留 7 天，到期自动清理</p>
+                </div>
+                <!-- History section -->
+                <div id="history-section" style="margin-top:20px; display:none;">
+                    <div style="padding-top:16px; border-top:1px solid #f1f5f9;">
+                        <p style="font-size:12px; font-weight:600; color:#64748b; margin:0 0 10px;">📂 最近的检查</p>
+                        <div id="history-list" style="max-height:200px; overflow-y:auto;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feature Modules Showcase -->
+        <div style="max-width:1100px; width:100%; margin:0 auto; padding:48px 40px 40px;">
+            <div style="text-align:center; margin-bottom:28px;">
+                <h2 style="font-size:20px; font-weight:700; color:#0f172a; margin:0;">模块化检查能力</h2>
+                <p style="font-size:13px; color:#64748b; margin:6px 0 0;">每个模块独立运行，精准定位论文问题</p>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:14px;">
+                <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:18px; transition:all 0.15s; cursor:pointer;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.06)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
+                    <div style="font-size:22px; margin-bottom:6px;">🔍</div>
+                    <p style="font-weight:600; font-size:13px; color:#1e293b; margin:0;">引文验证</p>
+                    <p style="font-size:11px; color:#64748b; margin:4px 0 0; line-height:1.4;">Crossref/S2/OpenAlex 交叉验证真实性</p>
+                </div>
+                <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:18px; transition:all 0.15s; cursor:pointer;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.06)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
+                    <div style="font-size:22px; margin-bottom:6px;">📋</div>
+                    <p style="font-weight:600; font-size:13px; color:#1e293b; margin:0;">Bib 整理</p>
+                    <p style="font-size:11px; color:#64748b; margin:4px 0 0; line-height:1.4;">格式化、按引用排序、分离未引用条目</p>
+                </div>
+                <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:18px; transition:all 0.15s; cursor:pointer;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.06)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
+                    <div style="font-size:22px; margin-bottom:6px;">✍️</div>
+                    <p style="font-weight:600; font-size:13px; color:#1e293b; margin:0;">写作质量</p>
+                    <p style="font-size:11px; color:#64748b; margin:4px 0 0; line-height:1.4;">AI 痕迹、套话检测、被动语态分析</p>
+                </div>
+                <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:18px; transition:all 0.15s; cursor:pointer;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.06)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
+                    <div style="font-size:22px; margin-bottom:6px;">🧪</div>
+                    <p style="font-weight:600; font-size:13px; color:#1e293b; margin:0;">数据完整性</p>
+                    <p style="font-size:11px; color:#64748b; margin:4px 0 0; line-height:1.4;">Benford 定律、重复行、p-value 异常</p>
+                </div>
+                <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:18px; transition:all 0.15s; cursor:pointer;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.06)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
+                    <div style="font-size:22px; margin-bottom:6px;">📊</div>
+                    <p style="font-weight:600; font-size:13px; color:#1e293b; margin:0;">图表引用</p>
+                    <p style="font-size:11px; color:#64748b; margin:4px 0 0; line-height:1.4;">label/caption/ref 完整性验证</p>
+                </div>
+                <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:18px; transition:all 0.15s; cursor:pointer;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.06)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
+                    <div style="font-size:22px; margin-bottom:6px;">🏆</div>
+                    <p style="font-weight:600; font-size:13px; color:#1e293b; margin:0;">引用质量</p>
+                    <p style="font-size:11px; color:#64748b; margin:4px 0 0; line-height:1.4;">顶会覆盖率、venue 分布分析</p>
+                </div>
+                <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:18px; transition:all 0.15s; cursor:pointer;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.06)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
+                    <div style="font-size:22px; margin-bottom:6px;">⚖️</div>
+                    <p style="font-weight:600; font-size:13px; color:#1e293b; margin:0;">学术伦理</p>
+                    <p style="font-size:11px; color:#64748b; margin:4px 0 0; line-height:1.4;">Ethics/Limitations 章节、标注者信息</p>
+                </div>
+                <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:18px; transition:all 0.15s; cursor:pointer;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.06)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
+                    <div style="font-size:22px; margin-bottom:6px;">🔒</div>
+                    <p style="font-weight:600; font-size:13px; color:#1e293b; margin:0;">匿名化</p>
+                    <p style="font-size:11px; color:#64748b; margin:4px 0 0; line-height:1.4;">[review] 模式、metadata、自引泄露</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="screen-overview" class="flex-1 overflow-y-auto hidden" style="background:linear-gradient(180deg,#f8fafc,#fff); min-height:0;">
+        <div class="w-full py-10 px-4" style="max-width:700px;">
+            <!-- Top bar: back button -->
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+                <button onclick="showScreen('screen-upload'); loadHistory();" style="font-size:14px; color:#64748b; background:none; border:none; cursor:pointer; padding:4px 8px; border-radius:6px;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='none'">← 返回首页</button>
+                <div style="display:flex; gap:8px;">
+                    <button onclick="copyShareLink()" style="font-size:12px; color:#3b82f6; background:none; border:1px solid #bfdbfe; cursor:pointer; padding:4px 12px; border-radius:6px;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='none'">🔗 分享链接</button>
+                    <button onclick="deleteCurrentJob()" style="font-size:12px; color:#ef4444; background:none; border:1px solid #fecaca; cursor:pointer; padding:4px 12px; border-radius:6px;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='none'">🗑️ 删除</button>
+                </div>
+            </div>
+            <h1 class="text-2xl font-bold text-center mb-2">🛡️ 质检结果</h1>
+            <p class="text-center text-slate-400 text-sm mb-8" id="overview-filename"></p>
+
+            <!-- Progress nodes -->
+            <div class="flex items-center justify-center gap-0 mb-8 px-4" id="overview-nodes"></div>
+
+            <!-- Score -->
+            <div class="text-center mb-8">
+                <span class="text-5xl font-black" id="overview-score">0</span><span class="text-xl text-slate-400">/100</span>
+                <p class="text-sm mt-2" id="overview-status-text"></p>
+            </div>
+
+            <!-- Score Trend (shown if multiple checks for same file) -->
+            <div id="score-trend" class="mb-6 hidden">
+                <div class="bg-white border border-slate-200 rounded-lg p-4">
+                    <p class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">📈 分数趋势</p>
+                    <div id="trend-chart" class="flex items-end gap-1 h-16"></div>
+                    <div id="trend-labels" class="flex gap-1 mt-1"></div>
+                </div>
+            </div>
+
+            <!-- Gate summary cards -->
+            <div id="overview-gates" class="space-y-3 mb-8"></div>
+
+            <!-- Action buttons -->
+            <div class="text-center" style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+                <button onclick="enterWorkspace()" class="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold text-base hover:bg-blue-700 shadow-lg transition-all hover:shadow-xl">
+                    ✏️ 进入工作台修复问题
+                </button>
+                <button onclick="doAiReview()" id="ai-review-btn" class="bg-slate-700 text-white px-6 py-3 rounded-xl font-bold text-base hover:bg-slate-800 shadow-lg transition-all hover:shadow-xl">
+                    🎓 模拟审稿人反馈
+                </button>
+            </div>
+
+            <!-- AI Review Result (hidden by default) -->
+            <div id="ai-review-result" class="hidden" style="margin-top:24px; background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:20px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                    <h3 style="font-size:15px; font-weight:700; color:#0f172a; margin:0;">🎓 审稿人反馈</h3>
+                    <span style="font-size:10px; color:#94a3b8;">AI 模拟 · 仅供参考</span>
+                </div>
+                <div id="ai-review-content" style="font-size:13px; line-height:1.8; color:#334155; white-space:pre-wrap;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====== SCREEN 3: Workspace ====== -->
+    <div id="screen-workspace" class="flex-1 flex flex-col hidden" style="min-height:0;">
+        <!-- Top bar -->
+        <div class="flex items-center justify-between px-4 bg-white border-b border-slate-200" style="height:48px; min-height:48px; flex-shrink:0;">
+            <div class="flex items-center gap-3">
+                <button onclick="showOverview()" class="text-slate-400 hover:text-slate-700 text-sm font-medium transition-colors">&larr; 概览</button>
+                <span class="text-slate-200">|</span>
+                <span class="font-bold text-sm">🛡️ 工作台</span>
+                <span class="text-xs text-slate-400" id="ws-filename"></span>
+                <span id="ws-stats" class="text-xs px-2 py-0.5 rounded-full font-medium"></span>
+                <span class="w-2 h-2 rounded-full" id="save-dot"></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="doBibClean()" class="bg-slate-600 text-white text-xs px-4 py-1.5 rounded-md font-medium hover:bg-slate-700 transition-colors">📋 整理 Bib</button>
+                <button onclick="doTidyUp()" class="bg-slate-600 text-white text-xs px-4 py-1.5 rounded-md font-medium hover:bg-slate-700 transition-colors">🗂️ 整理结构</button>
+                <button onclick="showAnalysis()" class="bg-indigo-600 text-white text-xs px-4 py-1.5 rounded-md font-medium hover:bg-indigo-700 transition-colors">📊 分析</button>
+                <button onclick="showChecklist()" class="bg-emerald-600 text-white text-xs px-4 py-1.5 rounded-md font-medium hover:bg-emerald-700 transition-colors">✅ 清单</button>
+                <button onclick="doRecheck()" id="recheck-btn" class="bg-blue-600 text-white text-xs px-4 py-1.5 rounded-md font-medium hover:bg-blue-700 transition-colors" title="重新运行质检 (Ctrl+Shift+R)">🔄 重新质检</button>
+                <button onclick="exportReport()" class="bg-slate-700 text-white text-xs px-4 py-1.5 rounded-md font-medium hover:bg-slate-800 transition-colors">📋 导出报告</button>
+                <button onclick="document.getElementById('shortcuts-modal').classList.remove('hidden')" class="text-slate-400 text-xs px-2 py-1.5 rounded-md hover:text-slate-700 hover:bg-slate-100 transition-colors" title="快捷键帮助 (?)">⌨️</button>
+            </div>
+        </div>
+
+        <!-- Workspace body -->
+        <div id="workspace">
+            <!-- Left: File Panel (Overleaf-style) -->
+            <div id="file-panel">
+                <div id="file-panel-header">
+                    <h3>文件</h3>
+                </div>
+                <div id="file-tree"></div>
+            </div>
+
+            <!-- Center: Editor -->
+            <div id="editor-panel">
+                <div id="editor-tab-bar">
+                    <div id="editor-tabs"></div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span class="text-xs text-slate-400" id="editor-stats" title="文档统计"></span>
+                        <span class="text-xs text-slate-400" id="editor-pos"></span>
+                        <button onclick="toggleEditorTheme()" style="font-size:12px; padding:2px 6px; border-radius:4px; background:#f1f5f9; border:none; cursor:pointer; color:#64748b;" title="切换编辑器主题">🌙</button>
+                    </div>
+                </div>
+                <div id="editor-container"></div>
+                <!-- Floating "next issue" button -->
+                <div id="next-issue-btn" onclick="jumpToNextIssue()" style="position:absolute; bottom:20px; right:20px; width:44px; height:44px; border-radius:50%; background:#3b82f6; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 4px 12px rgba(59,130,246,0.4); font-size:18px; z-index:10; transition:all 0.15s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" title="跳转到下一个问题 (↓)">↓</div>
+            </div>
+
+            <!-- Right: Check Panel (fixed, no scroll on whole panel) -->
+            <div id="check-panel">
+                <div id="check-panel-header">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm font-bold text-slate-700" id="panel-title">问题列表</span>
+                        <span class="text-xs px-2 py-0.5 rounded-full font-medium" id="panel-badge">0</span>
+                    </div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <div class="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                            <div id="xp-bar" class="h-full rounded-full transition-all duration-500" style="width:0%"></div>
+                        </div>
+                        <span class="text-xs font-mono text-slate-500 w-8 text-right" id="xp-text">0%</span>
+                    </div>
+                    <!-- Issue filter tabs -->
+                    <div class="flex items-center gap-1" id="issue-filters">
+                        <button onclick="setIssueFilter('all')" class="issue-filter-btn active" data-filter="all">全部</button>
+                        <button onclick="setIssueFilter('error')" class="issue-filter-btn" data-filter="error">❌ 错误</button>
+                        <button onclick="setIssueFilter('warning')" class="issue-filter-btn" data-filter="warning">⚠️ 警告</button>
+                        <button onclick="setIssueFilter('dismissed')" class="issue-filter-btn" data-filter="dismissed">✅ 已忽略</button>
+                    </div>
+                    <!-- Issue search -->
+                    <div style="margin-top:6px;">
+                        <input id="issue-search" type="text" placeholder="🔍 搜索问题..." oninput="onIssueSearch(this.value)" style="width:100%; padding:5px 10px; font-size:11px; border:1px solid #e2e8f0; border-radius:6px; outline:none; background:#f8fafc; color:#334155;" onfocus="this.style.borderColor='#3b82f6';this.style.background='#fff'" onblur="this.style.borderColor='#e2e8f0';this.style.background='#f8fafc'">
+                    </div>
+                </div>
+                <div id="issue-list"></div>
+                <div id="check-panel-footer">
+                    <div class="flex gap-2 mb-2">
+                        <button onclick="copyIssueList()" class="flex-1 py-2 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors border-none cursor-pointer" title="复制问题列表发给导师">📋 复制问题</button>
+                        <button onclick="downloadCurrentFile()" class="flex-1 py-2 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors border-none cursor-pointer" title="下载当前文件">💾 下载文件</button>
+                    </div>
+                    <button id="complete-btn" disabled onclick="completeSubmission()" class="w-full py-2.5 rounded-lg font-bold text-sm transition-all disabled:bg-slate-100 disabled:text-slate-300 disabled:cursor-not-allowed bg-green-600 text-white hover:bg-green-700 shadow disabled:shadow-none">
+                        ✅ 确认提交
+                    </button>
+                    <p class="text-[10px] text-slate-400 text-center mt-1.5" id="complete-hint">解决所有问题后可提交</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div id="toast-container"></div>
+
+<!-- Keyboard Shortcuts Help -->
+<div id="shortcuts-modal" class="modal-bg hidden" onclick="if(event.target===this)this.classList.add('hidden')">
+    <div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:28px; max-width:420px; width:90%;">
+        <h3 style="font-size:16px; font-weight:700; margin:0 0 16px; color:#0f172a;">⌨️ 快捷键</h3>
+        <div style="display:grid; grid-template-columns:auto 1fr; gap:8px 16px; font-size:13px;">
+            <kbd style="background:#f1f5f9; padding:2px 8px; border-radius:4px; font-size:11px; font-family:var(--font-mono); border:1px solid #e2e8f0;">Ctrl+S</kbd><span style="color:#475569;">保存当前文件</span>
+            <kbd style="background:#f1f5f9; padding:2px 8px; border-radius:4px; font-size:11px; font-family:var(--font-mono); border:1px solid #e2e8f0;">Ctrl+Shift+R</kbd><span style="color:#475569;">重新运行质检</span>
+            <kbd style="background:#f1f5f9; padding:2px 8px; border-radius:4px; font-size:11px; font-family:var(--font-mono); border:1px solid #e2e8f0;">F8</kbd><span style="color:#475569;">跳转到下一个问题</span>
+            <kbd style="background:#f1f5f9; padding:2px 8px; border-radius:4px; font-size:11px; font-family:var(--font-mono); border:1px solid #e2e8f0;">Ctrl+F</kbd><span style="color:#475569;">搜索</span>
+            <kbd style="background:#f1f5f9; padding:2px 8px; border-radius:4px; font-size:11px; font-family:var(--font-mono); border:1px solid #e2e8f0;">Ctrl+G</kbd><span style="color:#475569;">跳转到行号</span>
+            <kbd style="background:#f1f5f9; padding:2px 8px; border-radius:4px; font-size:11px; font-family:var(--font-mono); border:1px solid #e2e8f0;">Ctrl+Z</kbd><span style="color:#475569;">撤销</span>
+            <kbd style="background:#f1f5f9; padding:2px 8px; border-radius:4px; font-size:11px; font-family:var(--font-mono); border:1px solid #e2e8f0;">?</kbd><span style="color:#475569;">显示此帮助</span>
+        </div>
+        <button onclick="document.getElementById('shortcuts-modal').classList.add('hidden')" style="margin-top:20px; width:100%; padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:13px; color:#64748b;">关闭</button>
+    </div>
+</div>
+
+<!-- Auth Modal (Login/Register) -->
+<div id="auth-modal" class="modal-bg hidden" onclick="if(event.target===this)this.classList.add('hidden')">
+    <div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:32px; max-width:400px; width:90%;">
+        <h3 style="font-size:20px; font-weight:700; margin:0 0 4px; color:#0f172a; text-align:center;" id="auth-title">登录</h3>
+        <p style="font-size:12px; color:#64748b; margin:0 0 20px; text-align:center;">登录后享受完整功能，注册送 2 次免费质检</p>
+        <!-- Tab switch -->
+        <div style="display:flex; gap:0; margin-bottom:20px; border-bottom:1px solid #e2e8f0;">
+            <button onclick="switchAuthTab('login')" id="auth-tab-login" style="flex:1; padding:8px; border:none; background:none; font-size:13px; font-weight:600; color:#3b82f6; border-bottom:2px solid #3b82f6; cursor:pointer;">登录</button>
+            <button onclick="switchAuthTab('register')" id="auth-tab-register" style="flex:1; padding:8px; border:none; background:none; font-size:13px; font-weight:500; color:#94a3b8; border-bottom:2px solid transparent; cursor:pointer;">注册</button>
+        </div>
+        <form id="auth-form" onsubmit="handleAuth(event)">
+            <div id="auth-name-field" style="display:none; margin-bottom:12px;">
+                <label style="font-size:11px; font-weight:600; color:#64748b; display:block; margin-bottom:4px;">昵称</label>
+                <input id="auth-name" type="text" placeholder="你的名字" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; outline:none;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:11px; font-weight:600; color:#64748b; display:block; margin-bottom:4px;">邮箱</label>
+                <input id="auth-email" type="email" placeholder="your@email.com" required style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; outline:none;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
+            </div>
+            <div style="margin-bottom:16px;">
+                <label style="font-size:11px; font-weight:600; color:#64748b; display:block; margin-bottom:4px;">密码</label>
+                <input id="auth-password" type="password" placeholder="至少 6 位" required minlength="6" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; outline:none;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
+            </div>
+            <p id="auth-error" style="font-size:12px; color:#ef4444; margin:0 0 12px; display:none;"></p>
+            <button type="submit" id="auth-submit-btn" style="width:100%; padding:11px; border-radius:10px; border:none; background:#3b82f6; color:#fff; font-size:14px; font-weight:600; cursor:pointer;">登录</button>
+        </form>
+        <p style="text-align:center; font-size:11px; color:#94a3b8; margin:16px 0 0;">🔒 数据安全加密存储</p>
+    </div>
+</div>
+
+<!-- Recharge Modal -->
+<div id="recharge-modal" class="modal-bg hidden" onclick="if(event.target===this)this.classList.add('hidden')">
+    <div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:28px; max-width:520px; width:90%;">
+        <h3 style="font-size:18px; font-weight:700; margin:0 0 4px; color:#0f172a;">💰 购买质检次数</h3>
+        <p style="font-size:12px; color:#64748b; margin:0 0 20px;">每次质检 = 完整 6 项检查 + 无限重新检查 + AI 修复</p>
+        <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:12px;">
+            <div class="recharge-card" data-credits="1" data-price="19.9" data-pkg="single" onclick="selectRecharge(this)" style="border:2px solid #e2e8f0; border-radius:12px; padding:16px; text-align:center; cursor:pointer; transition:all 0.15s;">
+                <p style="font-size:24px; font-weight:700; color:#0f172a; margin:0;">1 次</p>
+                <p style="font-size:11px; color:#64748b; margin:4px 0 8px;">单次质检</p>
+                <p style="font-size:18px; font-weight:600; color:#3b82f6; margin:0;">¥19.9</p>
+            </div>
+            <div class="recharge-card" data-credits="5" data-price="69" data-pkg="starter" onclick="selectRecharge(this)" style="border:2px solid #e2e8f0; border-radius:12px; padding:16px; text-align:center; cursor:pointer; transition:all 0.15s;">
+                <p style="font-size:24px; font-weight:700; color:#0f172a; margin:0;">5 次</p>
+                <p style="font-size:11px; color:#64748b; margin:4px 0 8px;">入门包</p>
+                <p style="font-size:18px; font-weight:600; color:#3b82f6; margin:0;">¥69</p>
+                <p style="font-size:10px; color:#22c55e; margin:2px 0 0;">省 30%</p>
+            </div>
+            <div class="recharge-card" data-credits="20" data-price="199" data-pkg="pro" onclick="selectRecharge(this)" style="border:2px solid #3b82f6; border-radius:12px; padding:16px; text-align:center; cursor:pointer; transition:all 0.15s; background:#eff6ff;">
+                <p style="font-size:24px; font-weight:700; color:#0f172a; margin:0;">20 次</p>
+                <p style="font-size:11px; color:#64748b; margin:4px 0 8px;">专业包</p>
+                <p style="font-size:18px; font-weight:600; color:#3b82f6; margin:0;">¥199</p>
+                <p style="font-size:10px; color:#22c55e; margin:2px 0 0;">最受欢迎 · 省 50%</p>
+            </div>
+            <div class="recharge-card" data-credits="100" data-price="699" data-pkg="lab" onclick="selectRecharge(this)" style="border:2px solid #e2e8f0; border-radius:12px; padding:16px; text-align:center; cursor:pointer; transition:all 0.15s;">
+                <p style="font-size:24px; font-weight:700; color:#0f172a; margin:0;">100 次</p>
+                <p style="font-size:11px; color:#64748b; margin:4px 0 8px;">实验室包</p>
+                <p style="font-size:18px; font-weight:600; color:#3b82f6; margin:0;">¥699</p>
+                <p style="font-size:10px; color:#22c55e; margin:2px 0 0;">团队共享 · 省 65%</p>
+            </div>
+        </div>
+        <button onclick="doRecharge()" style="margin-top:20px; width:100%; padding:12px; border-radius:10px; border:none; background:#3b82f6; color:#fff; font-size:14px; font-weight:600; cursor:pointer;">确认购买</button>
+        <p style="text-align:center; font-size:11px; color:#94a3b8; margin:12px 0 0;">支持支付宝 / 微信支付 · 购买后永久有效</p>
+    </div>
+</div>
+
+<!-- Context Menu -->
+<div id="context-menu" style="display:none; position:fixed; z-index:150; background:#fff; border:1px solid #e2e8f0; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.12); padding:4px 0; min-width:180px;">
+    <div class="ctx-item" onclick="jumpToNextIssue(); hideContextMenu()">⬇️ 跳转到下一个问题 <span style="color:#94a3b8; float:right;">F8</span></div>
+    <div class="ctx-item" onclick="doRecheck(); hideContextMenu()">🔄 重新质检 <span style="color:#94a3b8; float:right;">⌘⇧R</span></div>
+    <div class="ctx-item" onclick="autoSave(); toast('已保存','success',1500); hideContextMenu()">💾 保存 <span style="color:#94a3b8; float:right;">⌘S</span></div>
+    <div style="height:1px; background:#e2e8f0; margin:4px 0;"></div>
+    <div class="ctx-item" id="ctx-polish" style="display:none;" onclick="doPolishSelection(); hideContextMenu()">✨ 润色选中文本</div>
+    <div class="ctx-item" id="ctx-concise" style="display:none;" onclick="doPolishSelection('concise'); hideContextMenu()">✂️ 精简选中文本</div>
+    <div style="height:1px; background:#e2e8f0; margin:4px 0;" id="ctx-divider-ai" style="display:none;"></div>
+    <div class="ctx-item" onclick="doBibClean(); hideContextMenu()">📋 整理 Bib</div>
+    <div class="ctx-item" onclick="exportReport(); hideContextMenu()">📄 导出报告</div>
+</div>
+
+<!-- Dismiss Modal -->
+<div id="modal" class="modal-bg hidden">
+    <div class="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4">
+        <h3 class="font-bold text-lg mb-1">🙋 报告：这不是问题</h3>
+        <p class="text-sm text-slate-600 mb-3" id="modal-issue"></p>
+        <p class="text-xs text-amber-600 mb-3">⚠️ 导师将在最终报告中看到此项及你的解释</p>
+        <textarea id="modal-reason" class="w-full border border-slate-300 rounded-lg p-3 text-sm h-20 resize-none focus:ring-2 focus:ring-amber-200 focus:border-amber-400 outline-none" placeholder="请解释为什么这不是问题...（必填）"></textarea>
+        <div class="flex gap-2 mt-4">
+            <button onclick="submitDismiss()" class="flex-1 bg-amber-500 text-white py-2.5 rounded-lg font-medium hover:bg-amber-600 transition-colors">确认提交</button>
+            <button onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-600 py-2.5 rounded-lg font-medium hover:bg-slate-200 transition-colors">取消</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// === State ===
+let jobId=null, report=null, editor=null, currentFile=null, saveTimer=null, dismissCtx=null, uploadedFile=null;
+let textMarkers = [];
+let openTabs = [];  // list of open file paths
+let issueFilter = 'all';  // 'all' | 'error' | 'warning' | 'dismissed'
+let issueSearchQuery = '';  // text search in issues
+let editorDark = localStorage.getItem('editorTheme') === 'dark';
+let currentUser = null;  // logged-in user object
+let authMode = 'login';  // 'login' | 'register'
+
+const GATE_INFO = {
+    'structure_integrity':      { name:'文件结构', icon:'📂' },
+    'citation_bib_consistency': { name:'引用匹配', icon:'🔗' },
+    'reference_authenticity':   { name:'引文真实', icon:'🔍' },
+    'figure_table_crossref':    { name:'图表引用', icon:'📊' },
+    'data_integrity':           { name:'数据完整', icon:'🧪' },
+    'writing_quality':          { name:'写作质量', icon:'✍️' },
+};
+
+// === Screen management ===
+function showScreen(id) {
+    ['screen-upload','screen-overview','screen-workspace'].forEach(s => {
+        document.getElementById(s).classList.add('hidden');
+        document.getElementById(s).style.display = 'none';
+    });
+    const el = document.getElementById(id);
+    el.classList.remove('hidden');
+    el.style.display = id === 'screen-workspace' ? 'flex' : 'flex';
+}
+
+// === Upload ===
+function handleUpload(input) {
+    const f = input.files[0];
+    if (f?.name.endsWith('.zip')) {
+        uploadedFile = f;
+        document.getElementById('file-info').textContent = `📁 ${f.name} (${(f.size/1024).toFixed(0)} KB)`;
+        document.getElementById('file-info').classList.remove('hidden');
+        const btn = document.getElementById('submit-btn');
+        btn.disabled = false; btn.style.opacity = '1';
+    }
+}
+
+// Drag & drop
+const dropZone = document.getElementById('drop-zone');
+const uploadScreen = document.getElementById('screen-upload');
+
+// Prevent default drag behavior on the whole page (otherwise browser opens the file)
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => e.preventDefault());
+
+// Drop zone specific handling
+dropZone.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); dropZone.style.borderColor='#3b82f6'; dropZone.style.background='#eff6ff'; });
+dropZone.addEventListener('dragleave', e => { e.preventDefault(); e.stopPropagation(); dropZone.style.borderColor='#e2e8f0'; dropZone.style.background=''; });
+dropZone.addEventListener('drop', e => {
+    e.preventDefault(); e.stopPropagation();
+    dropZone.style.borderColor='#e2e8f0'; dropZone.style.background='';
+    const f = e.dataTransfer.files[0];
+    if (f?.name.endsWith('.zip')) {
+        uploadedFile = f;
+        document.getElementById('file-info').textContent = `📁 ${f.name} (${(f.size/1024).toFixed(0)} KB)`;
+        document.getElementById('file-info').classList.remove('hidden');
+        const btn = document.getElementById('submit-btn');
+        btn.disabled = false; btn.style.opacity = '1';
+    } else { toast('请上传 .zip 文件', 'error'); }
+});
+
+// Also handle drop on the entire upload screen (in case user drops outside the zone)
+uploadScreen.addEventListener('drop', e => {
+    e.preventDefault(); e.stopPropagation();
+    const f = e.dataTransfer.files[0];
+    if (f?.name.endsWith('.zip')) {
+        uploadedFile = f;
+        document.getElementById('file-info').textContent = `📁 ${f.name} (${(f.size/1024).toFixed(0)} KB)`;
+        document.getElementById('file-info').classList.remove('hidden');
+        const btn = document.getElementById('submit-btn');
+        btn.disabled = false; btn.style.opacity = '1';
+        toast('📦 文件已选择', 'success', 1500);
+    }
+});
+
+document.getElementById('upload-form').addEventListener('submit', async e => {
+    e.preventDefault(); if (!uploadedFile) return;
+
+    // Check credits if logged in
+    if (currentUser && currentUser.credits < 10) {
+        toast('💰 积分不足（需要 10 积分），请充值', 'warning', 4000);
+        document.getElementById('recharge-modal').classList.remove('hidden');
+        return;
+    }
+
+    const btn = document.getElementById('submit-btn');
+    const progressDiv = document.getElementById('check-progress');
+    const progressBar = document.getElementById('check-progress-bar');
+    const progressText = document.getElementById('check-progress-text');
+    const progressPct = document.getElementById('check-progress-pct');
+
+    btn.disabled = true; btn.style.opacity = '0.5';
+    btn.textContent = '⏳ 上传中...';
+    if (progressDiv) progressDiv.style.display = 'block';
+
+    // Upload with progress tracking
+    const fd = new FormData(); fd.append('file', uploadedFile);
+    const uploadResult = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/upload');
+        xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+                const pct = Math.round(e.loaded / e.total * 30); // Upload is 0-30%
+                if (progressBar) progressBar.style.width = pct + '%';
+                if (progressText) progressText.textContent = '上传文件...';
+                if (progressPct) progressPct.textContent = pct + '%';
+            }
+        };
+        xhr.onload = () => { try { resolve(JSON.parse(xhr.responseText)); } catch(e) { reject(e); } };
+        xhr.onerror = () => reject(new Error('Upload failed'));
+        xhr.send(fd);
+    });
+
+    // Handle payment required / errors
+    if (uploadResult.detail) {
+        btn.textContent = '开始质检'; btn.disabled = false; btn.style.opacity = '1';
+        if (progressDiv) progressDiv.style.display = 'none';
+        if (uploadResult.detail.includes('积分不足')) {
+            toast('💰 积分不足，请充值', 'warning', 4000);
+            document.getElementById('recharge-modal').classList.remove('hidden');
+        } else {
+            toast(uploadResult.detail, 'error', 4000);
+        }
+        return;
+    }
+
+    jobId = uploadResult.job_id;
+    btn.textContent = '🔍 正在检查...';
+    if (progressBar) progressBar.style.width = '30%';
+    if (progressText) progressText.textContent = '开始质检...';
+
+    await waitForResult(); await loadReport();
+    refreshCredits();  // Update credits display after upload
+    if (report) showOverview();
+    else { btn.textContent = '开始质检'; btn.disabled = false; btn.style.opacity = '1'; }
+});
+
+const GATE_NAMES_ORDER = ['structure_integrity','citation_bib_consistency','reference_authenticity','figure_table_crossref','data_integrity','writing_quality'];
+
+async function waitForResult() {
+    const btn = document.getElementById('submit-btn');
+    const progressBar = document.getElementById('check-progress-bar');
+    const progressText = document.getElementById('check-progress-text');
+    const progressPct = document.getElementById('check-progress-pct');
+
+    return new Promise(resolve => {
+        const iv = setInterval(async () => {
+            const r = await fetch(`/api/status/${jobId}`);
+            const d = await r.json();
+            // Update progress display (30-100% range, upload was 0-30%)
+            if (d.progress && d.progress.length > 0) {
+                const done = d.progress.length;
+                const total = 6;
+                const pct = 30 + Math.round(done / total * 70);
+                const lastGate = d.progress[d.progress.length-1];
+                const gateInfo = GATE_INFO[lastGate];
+                btn.textContent = `✓ ${done}/${total} ${gateInfo?gateInfo.name:lastGate}`;
+                if (progressBar) progressBar.style.width = pct + '%';
+                if (progressText) progressText.textContent = `${gateInfo?gateInfo.icon:''} ${gateInfo?gateInfo.name:lastGate} 完成`;
+                if (progressPct) progressPct.textContent = pct + '%';
+            }
+            if (d.status==='completed'||d.status==='failed') {
+                if (progressBar) progressBar.style.width = '100%';
+                if (progressText) progressText.textContent = '✅ 检查完成';
+                if (progressPct) progressPct.textContent = '100%';
+                // Browser notification if tab is not focused
+                if (document.hidden && Notification.permission === 'granted') {
+                    new Notification('IntegrityGuard', {body: '质检完成！点击查看结果。', icon: '🛡️'});
+                }
+                clearInterval(iv); resolve();
+            }
+        }, 700);
+    });
+}
+async function loadReport() {
+    try {
+        const r = await fetch(`/api/report/${jobId}`);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        report = await r.json();
+    } catch(e) {
+        toast('加载报告失败: ' + e.message, 'error', 5000);
+        report = null;
+    }
+}
+
+// === Overview Screen ===
+function showOverview() {
+    showScreen('screen-overview');
+    // Reset upload UI
+    const progressDiv = document.getElementById('check-progress');
+    if (progressDiv) progressDiv.style.display = 'none';
+    const btn = document.getElementById('submit-btn');
+    btn.textContent = '开始质检'; btn.disabled = true; btn.style.opacity = '0.4';
+
+    // Update page title
+    document.title = `${report.overall_score.toFixed(0)}/100 - ${report.filename} | IntegrityGuard`;
+
+    document.getElementById('overview-filename').textContent = report.filename;
+    document.getElementById('overview-score').textContent = report.overall_score.toFixed(0);
+
+    const gates = report.gate_results;
+    const passCount = gates.filter(g=>g.passed).length;
+
+    const stEl = document.getElementById('overview-status-text');
+    if (report.overall_passed) { stEl.innerHTML = '<span class="text-green-600 font-bold">🏆 全部通过！可以提交</span>'; }
+    else { stEl.innerHTML = `<span class="text-red-600">通过 ${passCount}/${gates.length} 关，请进入工作台修复</span>`; }
+
+    // Nodes
+    let nodesHtml = '';
+    gates.forEach((g, i) => {
+        const info = GATE_INFO[g.gate_name]||{name:g.gate_name,icon:'📋'};
+        const cls = g.passed ? 'node-pass' : 'node-fail';
+        nodesHtml += `<div class="flex flex-col items-center"><div class="node ${cls}">${g.passed?'✓':'!'}</div><span class="text-xs mt-1 text-slate-600">${info.name}</span></div>`;
+        if (i < gates.length-1) nodesHtml += `<div class="conn ${g.passed?'conn-pass':'conn-fail'}"></div>`;
+    });
+    document.getElementById('overview-nodes').innerHTML = nodesHtml;
+
+    // Quick stats summary
+    const totalErrors = gates.reduce((s,g) => s + g.issues.filter(i=>i.severity==='error').length, 0);
+    const totalWarnings = gates.reduce((s,g) => s + g.issues.filter(i=>i.severity==='warning').length, 0);
+    const refGate = gates.find(g=>g.gate_name==='reference_authenticity');
+    const bibCount = refGate?.metadata?.verified_entries?.length || 0;
+    const wordCount = report.metadata?.word_count || 0;
+    const statsHtml = `<div class="flex justify-center gap-6 mb-6 text-sm">
+        <div class="text-center"><span class="text-2xl font-bold text-red-600">${totalErrors}</span><p class="text-xs text-slate-400">错误</p></div>
+        <div class="text-center"><span class="text-2xl font-bold text-amber-500">${totalWarnings}</span><p class="text-xs text-slate-400">警告</p></div>
+        <div class="text-center"><span class="text-2xl font-bold text-blue-600">${bibCount}</span><p class="text-xs text-slate-400">引文</p></div>
+        <div class="text-center"><span class="text-2xl font-bold text-slate-600">${wordCount>1000?(wordCount/1000).toFixed(1)+'k':wordCount}</span><p class="text-xs text-slate-400">词数</p></div>
+    </div>`;
+
+    // Gate cards
+    let cardsHtml = '';
+    gates.forEach(g => {
+        const info = GATE_INFO[g.gate_name]||{name:g.gate_name,icon:'📋'};
+        const errCount = g.issues.filter(x=>x.severity==='error').length;
+        const warnCount = g.issues.filter(x=>x.severity==='warning').length;
+        const bg = g.passed ? 'border-green-200 bg-green-50 hover:bg-green-100' : 'border-red-200 bg-red-50 hover:bg-red-100';
+        cardsHtml += `<div class="border rounded-lg p-4 ${bg} transition-all">
+            <div class="flex items-center justify-between cursor-pointer" onclick="enterWorkspace()">
+                <span class="font-medium">${info.icon} ${info.name}</span>
+                <span class="text-sm font-bold ${g.passed?'text-green-600':'text-red-600'}">${g.passed?'✅ 通过':'❌ '+errCount+'个错误'}${warnCount?' ⚠️'+warnCount:''}</span>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">${g.summary}</p>`;
+
+        // Show issue preview for failed gates
+        if (!g.passed && g.issues.length > 0) {
+            const previewIssues = g.issues.filter(i=>i.severity==='error').slice(0, 3);
+            cardsHtml += `<div class="mt-2 space-y-1 border-t border-slate-200 pt-2">`;
+            for (const issue of previewIssues) {
+                cardsHtml += `<p class="text-[11px] text-red-700 leading-snug">❌ ${esc(issue.message).slice(0,80)}${issue.message.length>80?'...':''}</p>`;
+            }
+            if (errCount > 3) cardsHtml += `<p class="text-[10px] text-slate-400">... 还有 ${errCount-3} 个错误</p>`;
+            cardsHtml += `</div>`;
+        }
+
+        // Add reference verification detail for reference_authenticity gate
+        if (g.gate_name === 'reference_authenticity' && g.metadata?.verified_entries) {
+            cardsHtml += `<details class="mt-2"><summary class="text-[11px] text-blue-600 cursor-pointer hover:underline">查看引文验证详情 (${g.metadata.verified_entries.length} 条)</summary>
+            <div class="mt-2 max-h-48 overflow-y-auto text-[11px] space-y-1">`;
+            for (const entry of g.metadata.verified_entries) {
+                const icon = entry.status === 'pass' ? '✅' : entry.status === 'no_doi_but_url' || entry.status === 'verified_by_title_search' ? '🟡' : '❌';
+                const link = entry.doi_link ? `<a href="${entry.doi_link}" target="_blank" class="text-blue-500 hover:underline ml-1">↗</a>` : '';
+                cardsHtml += `<div class="flex items-center gap-1">${icon} <span class="font-mono">${esc(entry.key)}</span>${link}</div>`;
+            }
+            cardsHtml += `</div></details>`;
+        }
+
+        cardsHtml += `</div>`;
+    });
+    document.getElementById('overview-gates').innerHTML = statsHtml + cardsHtml;
+
+    // Load score trend
+    loadScoreTrend();
+}
+
+async function loadScoreTrend() {
+    try {
+        const r = await fetch(`/api/score-trend/${jobId}`);
+        const d = await r.json();
+        const trendEl = document.getElementById('score-trend');
+        if (!d.trend || d.trend.length < 2) { trendEl.classList.add('hidden'); return; }
+
+        trendEl.classList.remove('hidden');
+        const chart = document.getElementById('trend-chart');
+        const labels = document.getElementById('trend-labels');
+        const maxScore = 100;
+
+        chart.innerHTML = d.trend.map((t, i) => {
+            const h = Math.max(8, (t.score / maxScore) * 100);
+            const color = t.score >= 90 ? '#22c55e' : t.score >= 60 ? '#f59e0b' : '#ef4444';
+            const isCurrent = t.job_id === jobId;
+            const border = isCurrent ? 'border:2px solid #1e40af;' : '';
+            return `<div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:2px;">
+                <span style="font-size:10px; font-weight:600; color:${color};">${t.score.toFixed(0)}</span>
+                <div style="width:100%; height:${h}%; min-height:6px; background:${color}; border-radius:4px; ${border} opacity:${isCurrent?1:0.6}; transition:all 0.3s;"></div>
+            </div>`;
+        }).join('');
+
+        labels.innerHTML = d.trend.map(t => {
+            const date = new Date(t.timestamp);
+            return `<span style="flex:1; text-align:center; font-size:9px; color:#94a3b8;">${date.getMonth()+1}/${date.getDate()}</span>`;
+        }).join('');
+    } catch(e) { /* silent */ }
+}
+
+// === AI Review (integrated into overview flow) ===
+async function doAiReview() {
+    const btn = document.getElementById('ai-review-btn');
+    btn.disabled = true; btn.textContent = '🎓 分析中...';
+
+    try {
+        const r = await fetch(`/api/ai-review/${jobId}`, {method: 'POST'});
+        const d = await r.json();
+        if (d.status === 'ok' && d.review) {
+            document.getElementById('ai-review-result').classList.remove('hidden');
+            document.getElementById('ai-review-content').textContent = d.review;
+            btn.textContent = '🎓 重新获取反馈';
+        } else {
+            toast('审稿反馈获取失败: ' + (d.detail || ''), 'warning');
+            btn.textContent = '🎓 模拟审稿人反馈';
+        }
+    } catch(e) {
+        toast('请求失败', 'error');
+        btn.textContent = '🎓 模拟审稿人反馈';
+    }
+    btn.disabled = false;
+}
+
+// === Workspace ===
+function enterWorkspace() {
+    showScreen('screen-workspace');
+    document.getElementById('ws-filename').textContent = report.filename;
+
+    if (!editor) {
+        editor = CodeMirror(document.getElementById('editor-container'), {
+            mode:'stex',
+            theme: editorDark ? 'material-darker' : 'default',
+            lineNumbers:true,
+            lineWrapping:true,
+            styleActiveLine:true,
+            scrollbarStyle:'overlay',
+            gutters:['CodeMirror-lint-markers','CodeMirror-linenumbers'],
+            viewportMargin: Infinity,
+            inputStyle: 'contenteditable',
+            hintOptions: {completeSingle: false},
+        });
+        // Ensure scroll works properly
+        editor.on('cursorActivity', () => {
+            const p = editor.getCursor();
+            const total = editor.lineCount();
+            document.getElementById('editor-pos').textContent = `Ln ${p.line+1}/${total}, Col ${p.ch+1}`;
+        });
+        editor.on('change', (cm, change) => {
+            if (currentFile) { clearTimeout(saveTimer); saveTimer = setTimeout(autoSave, 800); }
+            // Trigger autocomplete after typing backslash
+            if (change.origin === '+input' && change.text[0] === '\\') {
+                setTimeout(() => cm.showHint({hint: latexHint}), 50);
+            }
+            // Update word/line stats (debounced)
+            clearTimeout(cm._statsTimer);
+            cm._statsTimer = setTimeout(updateEditorStats, 300);
+        });
+        // Keyboard shortcuts
+        editor.setOption('extraKeys', {
+            'Ctrl-S': (cm) => { autoSave(); toast('已保存', 'success', 1500); },
+            'Cmd-S': (cm) => { autoSave(); toast('已保存', 'success', 1500); },
+            'Ctrl-Shift-R': () => doRecheck(),
+            'Cmd-Shift-R': () => doRecheck(),
+            'F8': () => jumpToNextIssue(),
+        });
+        // Force refresh after a tick to fix initial sizing
+        setTimeout(() => editor.refresh(), 50);
+
+        // Right-click context menu
+        editor.on('contextmenu', (cm, e) => {
+            e.preventDefault();
+            showContextMenu(e.clientX, e.clientY);
+        });
+    } else {
+        setTimeout(() => editor.refresh(), 50);
+    }
+    updateXP(); loadFileTree(); updateCompleteBtn();
+}
+
+async function loadFileTree() {
+    const r = await fetch(`/api/files/${jobId}`); const {files} = await r.json();
+
+    // Group files by type
+    const texFiles = files.filter(f => f.type === 'tex');
+    const bibFiles = files.filter(f => f.type === 'bib');
+    const otherFiles = files.filter(f => f.type !== 'tex' && f.type !== 'bib');
+
+    let html = '';
+
+    if (texFiles.length) {
+        html += `<div class="file-section">LaTeX 源文件</div>`;
+        html += texFiles.map(f => renderFileItem(f)).join('');
+    }
+    if (bibFiles.length) {
+        html += `<div class="file-section">参考文献</div>`;
+        html += bibFiles.map(f => renderFileItem(f)).join('');
+    }
+    if (otherFiles.length) {
+        html += `<div class="file-section">其他文件</div>`;
+        html += otherFiles.map(f => renderFileItem(f)).join('');
+    }
+
+    document.getElementById('file-tree').innerHTML = html;
+    if (files.length && !currentFile) openFile(files[0].path);
+}
+
+function renderFileItem(f) {
+    const st = getFileStatus(f.path);
+    const statusCls = st==='ok'?'file-status-ok':st==='warn'?'file-status-warn':'file-status-err';
+    const icon = f.type==='bib' ? '📚' : f.type==='tex' ? '📄' : '📎';
+    // Count errors for this file
+    let errCount = 0;
+    if (report) {
+        for (const gate of report.gate_results) {
+            gate.issues.forEach((issue, idx) => {
+                if (issueMatchesFile(issue, f.path) && issue.severity === 'error') {
+                    const dismissed = report.dismissed_issues?.some(d=>d.gate_name===gate.gate_name&&d.issue_index===idx);
+                    if (!dismissed) errCount++;
+                }
+            });
+        }
+    }
+    const badge = errCount > 0 ? `<span style="background:#ef4444;color:#fff;font-size:10px;padding:1px 5px;border-radius:8px;font-weight:600;">${errCount}</span>` : '';
+    return `<div class="file-item" data-path="${f.path}" onclick="openFile('${f.path}')">
+        <span class="file-icon">${icon}</span>
+        <span class="file-name">${f.name}</span>
+        ${badge}
+        <span class="file-status ${statusCls}"></span>
+    </div>`;
+}
+
+function getFileStatus(path) {
+    if (!report) return 'none';
+    let hasErr=false, hasDismissed=false;
+    for (const gate of report.gate_results) {
+        gate.issues.forEach((issue,idx) => {
+            if (!issueMatchesFile(issue,path)) return;
+            const dismissed = report.dismissed_issues?.some(d=>d.gate_name===gate.gate_name&&d.issue_index===idx);
+            if (dismissed) hasDismissed=true;
+            else if (issue.severity==='error') hasErr=true;
+        });
+    }
+    if (hasErr) return 'err';
+    if (hasDismissed) return 'warn';
+    return 'ok';
+}
+
+function issueMatchesFile(issue, path) {
+    if (issue.file===path) return true;
+    if (path.endsWith('.bib') && issue.location?.startsWith('bib:')) return true;
+    if (path.endsWith('.tex') && issue.location && !issue.location.startsWith('bib:')) return true;
+    const fname = path.split('/').pop();
+    if (issue.location?.includes(fname)) return true;
+    return false;
+}
+
+async function openFile(path) {
+    // Show loading state — temporarily disable auto-save
+    const prevFile = currentFile;
+    currentFile = null;  // prevent auto-save during loading
+    if (editor) editor.setValue('// Loading...');
+    const r = await fetch(`/api/files/${jobId}/${path}`); const d = await r.json();
+    currentFile = path;
+    editor.setValue(d.content);
+    editor.clearHistory();  // don't let user undo back to "Loading..."
+    editor.setOption('mode', path.endsWith('.bib') ? 'text/x-stex' : 'stex');
+    // Manage tabs
+    if (!openTabs.includes(path)) openTabs.push(path);
+    renderTabs();
+    document.querySelectorAll('.file-item').forEach(el => el.classList.toggle('active', el.dataset.path===path));
+    setTimeout(() => { editor.refresh(); highlightErrors(); updateEditorStats(); }, 30);
+    renderIssues(path);
+    _issueNavIndex = -1; // Reset nav index for new file
+}
+
+function renderTabs() {
+    const container = document.getElementById('editor-tabs');
+    container.innerHTML = openTabs.map(path => {
+        const name = path.split('/').pop();
+        const active = path === currentFile ? 'active' : '';
+        return `<div class="editor-tab ${active}" onclick="openFile('${path}')">
+            <span>${name}</span>
+            <span class="tab-close" onclick="event.stopPropagation();closeTab('${path}')">✕</span>
+        </div>`;
+    }).join('');
+}
+
+function closeTab(path) {
+    openTabs = openTabs.filter(p => p !== path);
+    if (currentFile === path && openTabs.length > 0) {
+        openFile(openTabs[openTabs.length - 1]);
+    } else if (openTabs.length === 0) {
+        editor.setValue('');
+        currentFile = null;
+        renderTabs();
+    } else {
+        renderTabs();
+    }
+}
+
+// === Highlight errors in editor ===
+function highlightErrors() {
+    editor.clearGutter('CodeMirror-lint-markers');
+    for (let i=0;i<editor.lineCount();i++) editor.removeLineClass(i,'background');
+    textMarkers.forEach(m=>m.clear()); textMarkers=[];
+
+    if (!report||!currentFile) return;
+    const content = editor.getValue();
+    const lines = content.split('\n');
+
+    for (const gate of report.gate_results) {
+        gate.issues.forEach((issue, idx) => {
+            if (!issueMatchesFile(issue, currentFile)) return;
+            const isDismissed = report.dismissed_issues?.some(d=>d.gate_name===gate.gate_name&&d.issue_index===idx);
+            if (isDismissed) return;
+
+            let lineNum = issue.line ? issue.line-1 : null;
+            if (lineNum===null && issue.location?.startsWith('bib:')) {
+                const key = issue.location.replace('bib:','');
+                for (let i=0;i<lines.length;i++) { if (lines[i].includes(key)){lineNum=i;break;} }
+            }
+
+            if (lineNum!==null && lineNum<editor.lineCount()) {
+                const mk = document.createElement('span');
+                mk.className = issue.severity==='error'?'cm-error-gutter':'cm-warn-gutter';
+                mk.textContent = '●';
+                mk.title = issue.message;
+                editor.setGutterMarker(lineNum, 'CodeMirror-lint-markers', mk);
+                editor.addLineClass(lineNum, 'background', 'cm-error-line');
+
+                // For data_integrity issues (table), highlight entire table environment
+                if (gate.gate_name === 'data_integrity' && issue.severity === 'error') {
+                    // Find \begin{table} before and \end{table} after this line
+                    let startLine = lineNum, endLine = lineNum;
+                    for (let l = lineNum; l >= Math.max(0, lineNum-50); l--) {
+                        if (lines[l]?.includes('\\begin{table')) { startLine = l; break; }
+                    }
+                    for (let l = lineNum; l < Math.min(lines.length, lineNum+100); l++) {
+                        if (lines[l]?.includes('\\end{table')) { endLine = l; break; }
+                    }
+                    for (let l = startLine; l <= endLine; l++) {
+                        editor.addLineClass(l, 'background', 'cm-error-line');
+                    }
+                }
+            }
+
+            const tokens = extractTokens(issue);
+            for (const token of tokens) {
+                const cursor = editor.getSearchCursor(token, {line:0,ch:0}, {caseFold:false});
+                while (cursor.findNext()) {
+                    const marker = editor.markText(cursor.from(), cursor.to(), {
+                        className: issue.severity==='error'?'cm-error-token':'cm-warn-token',
+                        title: issue.message,
+                    });
+                    textMarkers.push(marker);
+                }
+            }
+        });
+    }
+}
+
+function extractTokens(issue) {
+    const tokens = [];
+    const msg = issue.message || '';
+    const citeMatch = msg.match(/\\cite\{([^}]+)\}/);
+    if (citeMatch) tokens.push(`\\cite{${citeMatch[1]}}`);
+    const refMatch = msg.match(/\\ref\{([^}]+)\}/);
+    if (refMatch) tokens.push(`\\ref{${refMatch[1]}}`);
+    const inputMatch = msg.match(/\\input\{([^}]+)\}/);
+    if (inputMatch) tokens.push(`\\input{${inputMatch[1]}}`);
+    if (issue.location?.startsWith('bib:')) {
+        const key = issue.location.replace('bib:','');
+        tokens.push(key);
+    }
+    return tokens;
+}
+
+// === Issue Filter ===
+function setIssueFilter(filter) {
+    issueFilter = filter;
+    document.querySelectorAll('.issue-filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.filter === filter);
+    });
+    if (currentFile) renderIssues(currentFile);
+}
+
+function onIssueSearch(query) {
+    issueSearchQuery = query.toLowerCase().trim();
+    if (currentFile) renderIssues(currentFile);
+}
+
+function toggleGateSection(id) {
+    const el = document.getElementById(id);
+    const toggle = document.getElementById('toggle-' + id);
+    if (el.style.display === 'none') {
+        el.style.display = '';
+        if (toggle) toggle.style.transform = 'rotate(0deg)';
+    } else {
+        el.style.display = 'none';
+        if (toggle) toggle.style.transform = 'rotate(-90deg)';
+    }
+}
+
+function copyIssueList() {
+    if (!report) return;
+    let text = `📋 ${report.filename} 问题列表\n`;
+    text += `得分: ${report.overall_score.toFixed(0)}/100\n\n`;
+    for (const gate of report.gate_results) {
+        const info = GATE_INFO[gate.gate_name]||{name:gate.gate_name};
+        const issues = gate.issues.filter((iss, idx) => {
+            return !report.dismissed_issues?.some(d=>d.gate_name===gate.gate_name&&d.issue_index===idx);
+        });
+        if (!issues.length) continue;
+        text += `── ${info.icon||''} ${info.name} ──\n`;
+        issues.forEach(iss => {
+            const icon = iss.severity === 'error' ? '❌' : '⚠️';
+            text += `${icon} ${iss.message}\n`;
+        });
+        text += '\n';
+    }
+    navigator.clipboard.writeText(text).then(() => {
+        toast('📋 问题列表已复制，可粘贴发给导师', 'success', 3000);
+    });
+}
+
+function downloadCurrentFile() {
+    if (!currentFile || !editor) return;
+    const content = editor.getValue();
+    const blob = new Blob([content], {type:'text/plain;charset=utf-8'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = currentFile.split('/').pop();
+    a.click();
+    toast('💾 文件已下载', 'success', 1500);
+}
+
+// === Editor Stats ===
+function updateEditorStats() {
+    if (!editor) return;
+    const content = editor.getValue();
+    const lines = content.split('\n').length;
+    const words = content.replace(/\\[a-zA-Z]+/g, '').replace(/[{}\\%$&]/g, ' ').trim().split(/\s+/).filter(w=>w.length>0).length;
+    const el = document.getElementById('editor-stats');
+    if (el) el.textContent = `${words} 词 · ${lines} 行`;
+}
+
+// === Issues panel ===
+function renderIssues(path) {
+    const div = document.getElementById('issue-list');
+    const fname = path.split('/').pop();
+    document.getElementById('panel-title').textContent = `${fname}`;
+
+    let html = '';
+    let issueCount = 0;
+    let totalShown = 0;
+
+    for (const gate of report.gate_results) {
+        const fileIssues = [];
+        gate.issues.forEach((issue,idx) => { if(issueMatchesFile(issue,path)) fileIssues.push({issue,idx}); });
+        if (!fileIssues.length) continue;
+
+        // Apply filter
+        const filteredIssues = fileIssues.filter(({issue, idx}) => {
+            const isDismissed = report.dismissed_issues?.some(d=>d.gate_name===gate.gate_name&&d.issue_index===idx);
+            if (issueFilter === 'error') return !isDismissed && issue.severity === 'error';
+            if (issueFilter === 'warning') return !isDismissed && issue.severity === 'warning';
+            if (issueFilter === 'dismissed') return isDismissed;
+            // Text search filter
+            if (issueSearchQuery && !issue.message?.toLowerCase().includes(issueSearchQuery)
+                && !(issue.suggestion||'').toLowerCase().includes(issueSearchQuery)
+                && !(issue.location||'').toLowerCase().includes(issueSearchQuery)) return false;
+            return true; // 'all'
+        });
+        if (!filteredIssues.length) continue;
+
+        const info = GATE_INFO[gate.gate_name]||{name:gate.gate_name};
+        const gateId = `gate-section-${gate.gate_name}`;
+        const issueCountLabel = filteredIssues.length;
+        html += `<div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mt-4 mb-2 first:mt-0 cursor-pointer select-none flex items-center justify-between" onclick="toggleGateSection('${gateId}')">
+            <span>${info.icon||'📋'} ${info.name} <span class="text-slate-300 font-normal">(${issueCountLabel})</span></span>
+            <span class="gate-toggle" id="toggle-${gateId}" style="font-size:9px; transition:transform 0.2s;">▼</span>
+        </div>
+        <div id="${gateId}">`;
+
+        for (const {issue,idx} of filteredIssues) {
+            const isDismissed = report.dismissed_issues?.some(d=>d.gate_name===gate.gate_name&&d.issue_index===idx);
+            const dismissInfo = report.dismissed_issues?.find(d=>d.gate_name===gate.gate_name&&d.issue_index===idx);
+            const cls = isDismissed ? 'dismissed' : issue.severity;
+            if (!isDismissed && issue.severity==='error') issueCount++;
+            totalShown++;
+
+            const textColor = isDismissed ? 'text-slate-500' : issue.severity==='error' ? 'text-red-700' : 'text-amber-700';
+            const icon = isDismissed ? '✅' : issue.severity==='error' ? '❌' : '⚠️';
+            html += `<div class="issue-card ${cls}" onclick="focusIssue('${gate.gate_name}',${idx})" title="点击跳转到对应位置">
+                <p class="font-medium leading-snug ${textColor} text-[13px]">${icon} ${esc(issue.message)}</p>`;
+
+            if (isDismissed) {
+                html += `<p class="text-[11px] text-slate-400 mt-1 bg-slate-50 rounded p-1.5">🙋 "${esc(dismissInfo.reason)}"</p>`;
+            } else {
+                if (issue.suggestion) html += `<p class="text-[11px] text-slate-500 mt-1.5 leading-relaxed">💡 ${linkify(esc(issue.suggestion))}</p>`;
+                // Add "fetch official bib" button for reference issues with DOI link
+                if (gate.gate_name === 'reference_authenticity' && issue.suggestion?.includes('doi.org/')) {
+                    const doiMatch = issue.suggestion.match(/doi\.org\/([^\s<]+)/);
+                    if (doiMatch) {
+                        html += `<button onclick="event.stopPropagation();fetchOfficialBib('${doiMatch[1]}')" class="mt-1 text-[11px] bg-blue-50 border border-blue-200 text-blue-700 px-2.5 py-1 rounded font-medium hover:bg-blue-100 transition-colors">📥 获取官方 Bib</button> `;
+                    }
+                }
+                // Quick fix: add \label for figure/table issues
+                if (gate.gate_name === 'figure_table_crossref' && issue.message?.includes('NO \\label')) {
+                    const envType = issue.message.includes('Figure') ? 'fig' : 'tab';
+                    html += `<button onclick="event.stopPropagation();autoAddLabel(${issue.line||0},'${envType}')" class="mt-1 mr-1 text-[11px] bg-green-50 border border-green-200 text-green-700 px-2.5 py-1 rounded font-medium hover:bg-green-100 transition-colors">🔧 自动添加 label</button>`;
+                }
+                if (issue.severity==='error') {
+                    html += `<button onclick="event.stopPropagation();aiFixIssue('${esc(issue.message)}','${issue.file||''}',${issue.line||0})" class="mt-2 mr-1 text-[11px] bg-blue-50 border border-blue-200 text-blue-700 px-2.5 py-1 rounded font-medium hover:bg-blue-100 transition-colors">🤖 AI 修复</button>`;
+                    html += `<button onclick="event.stopPropagation();openDismiss('${gate.gate_name}',${idx})" class="mt-2 text-[11px] bg-amber-50 border border-amber-200 text-amber-700 px-2.5 py-1 rounded font-medium hover:bg-amber-100 transition-colors">🙋 这不是问题</button>`;
+                }
+            }
+            html += `</div>`;
+        }
+        html += `</div>`; // close gate-section
+    }
+
+    if (!totalShown) {
+        if (issueFilter === 'all') html = `<div class="text-center py-16 text-slate-400"><div class="text-4xl mb-3">✅</div><p class="text-sm">此文件无问题</p></div>`;
+        else html = `<div class="text-center py-12 text-slate-400"><p class="text-sm">无匹配的 ${issueFilter==='error'?'错误':issueFilter==='warning'?'警告':'已忽略'} 项</p></div>`;
+    }
+    div.innerHTML = html;
+
+    // Update badge
+    const badge = document.getElementById('panel-badge');
+    if (issueCount > 0) {
+        badge.textContent = issueCount;
+        badge.className = 'text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700';
+    } else {
+        badge.textContent = '✓';
+        badge.className = 'text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700';
+    }
+
+    // Update document title with issue count
+    const totalErrors = report.gate_results.reduce((s,g) => s + g.issues.filter(i=>i.severity==='error').length, 0);
+    const undismissedErrors = totalErrors - (report.dismissed_issues?.filter(d => report.gate_results.find(g=>g.gate_name===d.gate_name)?.issues[d.issue_index]?.severity==='error').length || 0);
+    if (undismissedErrors > 0) {
+        document.title = `(${undismissedErrors}) ${report.filename} | IntegrityGuard`;
+    } else {
+        document.title = `✅ ${report.filename} | IntegrityGuard`;
+    }
+}
+
+function focusIssue(gateName, idx) {
+    const gate = report.gate_results.find(g=>g.gate_name===gateName);
+    const issue = gate?.issues[idx]; if (!issue) return;
+    const lineNum = findIssueLine(issue);
+    if (lineNum!==null) {
+        editor.setCursor(lineNum, 0);
+        editor.scrollIntoView({line:lineNum, ch:0}, Math.floor(editor.getScrollInfo().clientHeight * 0.35));
+        // Flash animation: highlight → fade
+        editor.addLineClass(lineNum, 'background', 'cm-flash-line');
+        setTimeout(() => {
+            editor.removeLineClass(lineNum, 'background', 'cm-flash-line');
+            editor.addLineClass(lineNum, 'background', 'cm-error-line');
+        }, 800);
+    }
+}
+
+function findIssueLine(issue) {
+    const content = editor.getValue(); const lines = content.split('\n');
+    let lineNum = issue.line ? issue.line-1 : null;
+    if (lineNum===null && issue.location?.startsWith('bib:')) {
+        const key = issue.location.replace('bib:','');
+        for (let i=0;i<lines.length;i++) { if(lines[i].includes(key)){lineNum=i;break;} }
+    }
+    return lineNum;
+}
+
+// Jump to next issue (cycling through all issues in current file)
+let _issueNavIndex = -1;
+function jumpToNextIssue() {
+    if (!report || !currentFile) return;
+    // Collect all non-dismissed issues for current file
+    const allIssues = [];
+    for (const gate of report.gate_results) {
+        gate.issues.forEach((issue, idx) => {
+            if (!issueMatchesFile(issue, currentFile)) return;
+            const isDismissed = report.dismissed_issues?.some(d=>d.gate_name===gate.gate_name&&d.issue_index===idx);
+            if (isDismissed) return;
+            allIssues.push({issue, gateName: gate.gate_name, idx});
+        });
+    }
+    if (!allIssues.length) return;
+    _issueNavIndex = (_issueNavIndex + 1) % allIssues.length;
+    const {issue, gateName, idx} = allIssues[_issueNavIndex];
+    focusIssue(gateName, idx);
+}
+
+// === XP & Complete ===
+function updateXP() {
+    const score = report?.overall_score||0;
+    document.getElementById('xp-bar').style.width = score+'%';
+    const color = score>=90?'bg-green-500':score>=60?'bg-amber-500':'bg-red-500';
+    document.getElementById('xp-bar').className = `h-full rounded-full transition-all duration-500 ${color}`;
+    document.getElementById('xp-text').textContent = score.toFixed(0)+'%';
+    // Update header stats
+    const gates = report?.gate_results || [];
+    const passed = gates.filter(g=>g.passed).length;
+    const statsEl = document.getElementById('ws-stats');
+    if (passed === gates.length) {
+        statsEl.textContent = `✅ ${passed}/${gates.length} 通过`;
+        statsEl.style.cssText = 'background:#dcfce7; color:#166534;';
+    } else {
+        statsEl.textContent = `${passed}/${gates.length} 通过`;
+        statsEl.style.cssText = 'background:#fef3c7; color:#92400e;';
+    }
+}
+
+function updateCompleteBtn() {
+    let allHandled = true;
+    for (const gate of report.gate_results) {
+        gate.issues.forEach((issue, idx) => {
+            if (issue.severity !== 'error') return;
+            const dismissed = report.dismissed_issues?.some(d=>d.gate_name===gate.gate_name&&d.issue_index===idx);
+            if (!gate.passed && !dismissed) allHandled = false;
+        });
+    }
+    const btn = document.getElementById('complete-btn');
+    btn.disabled = !allHandled;
+    document.getElementById('complete-hint').textContent = allHandled ? '🎉 所有问题已处理，可以安全提交！' : '解决所有红色错误后可提交';
+}
+
+function completeSubmission() {
+    // Generate verification certificate
+    const certId = jobId + '-' + Date.now().toString(36);
+    const certHtml = `
+    <div style="text-align:center; padding:40px; font-family:serif;">
+        <div style="border:3px solid #10b981; border-radius:16px; padding:40px; max-width:600px; margin:0 auto;">
+            <div style="font-size:48px; margin-bottom:16px;">🛡️</div>
+            <h1 style="font-size:24px; color:#0f172a; margin:0;">IntegrityGuard Verification Certificate</h1>
+            <p style="color:#64748b; margin:8px 0 24px;">学术论文完整性检查通过证明</p>
+            <hr style="border:none; border-top:1px solid #e2e8f0; margin:20px 0;">
+            <p style="font-size:14px; color:#334155;"><strong>文件:</strong> ${report.filename}</p>
+            <p style="font-size:14px; color:#334155;"><strong>得分:</strong> ${report.overall_score.toFixed(0)}/100</p>
+            <p style="font-size:14px; color:#334155;"><strong>日期:</strong> ${new Date().toLocaleDateString('zh-CN')}</p>
+            <p style="font-size:14px; color:#334155;"><strong>检查项:</strong> ${report.gate_results.length} 个模块全部通过</p>
+            <p style="font-size:11px; color:#94a3b8; margin-top:24px;">Certificate ID: ${certId}</p>
+            <p style="font-size:11px; color:#94a3b8;">Verified by IntegrityGuard | integrityguard.ai</p>
+        </div>
+    </div>`;
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head><title>IntegrityGuard Certificate</title></head><body>${certHtml}<scr`+`ipt>setTimeout(()=>window.print(),500)</scr`+`ipt></body></html>`);
+    win.document.close();
+    toast('🎉 检查通过！证书已生成。', 'success', 5000);
+}
+
+// === Auto-save ===
+async function autoSave() {
+    if (!currentFile||!jobId) return;
+    const dot = document.getElementById('save-dot');
+    dot.className = 'w-2 h-2 rounded-full bg-amber-400';
+    await fetch(`/api/files/${jobId}/${currentFile}`, {method:'PUT', body:editor.getValue()});
+    dot.className = 'w-2 h-2 rounded-full bg-green-400';
+    setTimeout(()=>dot.className='w-2 h-2 rounded-full',1500);
+}
+
+// === Recheck ===
+async function doRecheck() {
+    const btn = document.getElementById('recheck-btn');
+    btn.disabled=true; btn.textContent='⏳ 检查中...';
+    await fetch(`/api/recheck/${jobId}`,{method:'POST'});
+    await waitForResult(); await loadReport();
+    refreshCredits();
+    updateXP(); loadFileTree(); updateCompleteBtn();
+    if(currentFile){highlightErrors();renderIssues(currentFile);}
+    btn.disabled=false; btn.textContent='🔄 重新质检';
+    toast(`✅ 质检完成！得分: ${report.overall_score.toFixed(0)}/100`, report.overall_passed ? 'success' : 'info');
+}
+
+// === Dismiss ===
+function openDismiss(gateName, idx) {
+    const gate = report.gate_results.find(g=>g.gate_name===gateName);
+    const issue = gate?.issues[idx]; if(!issue) return;
+    dismissCtx = {gate_name:gateName, issue_index:idx};
+    document.getElementById('modal-issue').textContent = issue.message;
+    document.getElementById('modal-reason').value = '';
+    document.getElementById('modal').classList.remove('hidden');
+}
+function closeModal() { document.getElementById('modal').classList.add('hidden'); dismissCtx=null; }
+async function submitDismiss() {
+    const reason = document.getElementById('modal-reason').value.trim();
+    if (!reason) { toast('请填写忽略理由', 'warning'); return; }
+    await fetch(`/api/dismiss/${jobId}`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...dismissCtx,reason})});
+    await loadReport(); updateXP(); loadFileTree(); updateCompleteBtn();
+    if(currentFile){highlightErrors();renderIssues(currentFile);}
+    closeModal();
+}
+
+// === Editor Theme Toggle ===
+function toggleEditorTheme() {
+    editorDark = !editorDark;
+    localStorage.setItem('editorTheme', editorDark ? 'dark' : 'light');
+    if (editor) editor.setOption('theme', editorDark ? 'material-darker' : 'default');
+}
+
+// === Context Menu ===
+function showContextMenu(x, y) {
+    const menu = document.getElementById('context-menu');
+    // Show AI polish options only when text is selected
+    const hasSelection = editor && editor.getSelection().length > 10;
+    document.getElementById('ctx-polish').style.display = hasSelection ? '' : 'none';
+    document.getElementById('ctx-concise').style.display = hasSelection ? '' : 'none';
+    document.getElementById('ctx-divider-ai').style.display = hasSelection ? '' : 'none';
+
+    menu.style.display = 'block';
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+    // Close on click outside
+    setTimeout(() => document.addEventListener('click', hideContextMenu, {once:true}), 10);
+}
+function hideContextMenu() {
+    document.getElementById('context-menu').style.display = 'none';
+}
+
+// === Quick Fixes & Bib Cleaning ===
+function autoAddLabel(lineNum, envType) {
+    if (!editor || !lineNum) { toast('无法定位到对应行', 'warning'); return; }
+    const line = lineNum - 1; // 0-indexed
+    const content = editor.getLine(line);
+    // Generate a label name from env type and line number
+    const labelName = `${envType}:${envType === 'fig' ? 'figure' : 'table'}_${lineNum}`;
+    // Insert \label{xxx} after the current line (inside the environment)
+    const insertLine = line + 1;
+    const indent = content.match(/^\s*/)[0] + '  ';
+    editor.replaceRange(`${indent}\\label{${labelName}}\n`, {line: insertLine, ch: 0});
+    editor.setCursor(insertLine, 0);
+    toast(`已添加 \\label{${labelName}}`, 'success');
+    autoSave();
+}
+
+async function fetchOfficialBib(doi) {
+    toast('正在获取官方 Bib...', 'info', 2000);
+    const r = await fetch(`/api/fetch-bib/${doi}`);
+    const d = await r.json();
+    if (d.status === 'found') {
+        // Find the current entry in the bib file
+        let oldEntry = '';
+        let replaceInfo = null;
+        if (currentFile?.endsWith('.bib') && editor) {
+            const content = editor.getValue();
+            const doiPattern = new RegExp(`doi\\s*=\\s*\\{[^}]*${doi.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^}]*\\}`, 'i');
+            const entryStart = content.search(doiPattern);
+            if (entryStart >= 0) {
+                let start = content.lastIndexOf('@', entryStart);
+                let depth = 0; let end = start;
+                for (let i = start; i < content.length; i++) {
+                    if (content[i] === '{') depth++;
+                    if (content[i] === '}') { depth--; if (depth === 0) { end = i + 1; break; } }
+                }
+                oldEntry = content.substring(start, end);
+                replaceInfo = {start, end, content};
+            }
+        }
+        // Show comparison modal
+        showBibCompareModal(oldEntry, d.bib, d.source, replaceInfo);
+    } else {
+        toast('未找到官方 Bib 条目', 'warning');
+    }
+}
+
+function showBibCompareModal(oldBib, newBib, source, replaceInfo) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-bg';
+    modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:24px; max-width:800px; width:90%; max-height:80vh; overflow-y:auto;">
+        <h3 style="font-size:16px; font-weight:700; margin:0 0 4px;">📥 官方 Bib 对比</h3>
+        <p style="font-size:12px; color:#64748b; margin:0 0 16px;">来源: ${esc(source)}</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div>
+                <p style="font-size:11px; font-weight:600; color:#ef4444; margin:0 0 6px;">当前版本</p>
+                <pre style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:12px; font-size:11px; overflow-x:auto; white-space:pre-wrap; max-height:300px; overflow-y:auto;">${esc(oldBib || '（未找到对应条目）')}</pre>
+            </div>
+            <div>
+                <p style="font-size:11px; font-weight:600; color:#22c55e; margin:0 0 6px;">官方版本</p>
+                <pre style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px; font-size:11px; overflow-x:auto; white-space:pre-wrap; max-height:300px; overflow-y:auto;">${esc(newBib)}</pre>
+            </div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:16px; justify-content:flex-end;">
+            <button onclick="this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-size:13px;">取消</button>
+            <button onclick="copyBibToClipboard(this, '${btoa(encodeURIComponent(newBib))}')" style="padding:8px 16px; border-radius:8px; border:none; background:#3b82f6; color:#fff; cursor:pointer; font-size:13px;">📋 复制</button>
+            ${replaceInfo ? `<button onclick="applyBibReplace(this)" style="padding:8px 16px; border-radius:8px; border:none; background:#22c55e; color:#fff; cursor:pointer; font-size:13px; font-weight:600;">✅ 替换</button>` : ''}
+        </div>
+    </div>`;
+    // Store replace info on the modal element
+    if (replaceInfo) modal._replaceInfo = replaceInfo;
+    modal._newBib = newBib;
+    document.body.appendChild(modal);
+}
+
+function copyBibToClipboard(btn, encoded) {
+    const text = decodeURIComponent(atob(encoded));
+    navigator.clipboard.writeText(text);
+    toast('已复制到剪贴板', 'success', 2000);
+    btn.closest('.modal-bg').remove();
+}
+
+function applyBibReplace(btn) {
+    const modal = btn.closest('.modal-bg');
+    const info = modal._replaceInfo;
+    const newBib = modal._newBib;
+    if (info && editor) {
+        const content = info.content;
+        editor.setValue(content.substring(0, info.start) + newBib + content.substring(info.end));
+        autoSave();
+        toast('✅ 已替换！', 'success', 3000);
+    }
+    modal.remove();
+}
+
+// === Pre-submission Checklist ===
+function showChecklist() {
+    const gates = report?.gate_results || [];
+    const structOk = gates.find(g=>g.gate_name==='structure_integrity')?.passed;
+    const citOk = gates.find(g=>g.gate_name==='citation_bib_consistency')?.passed;
+    const refOk = gates.find(g=>g.gate_name==='reference_authenticity')?.passed;
+    const figOk = gates.find(g=>g.gate_name==='figure_table_crossref')?.passed;
+    const writeOk = gates.find(g=>g.gate_name==='writing_quality')?.passed;
+
+    const items = [
+        { text: '所有 \\cite{} 在 .bib 中有对应条目', auto: citOk, category: '引用' },
+        { text: '引文 DOI/标题验证通过', auto: refOk, category: '引用' },
+        { text: '所有图表有 \\label 和 \\caption', auto: figOk, category: '图表' },
+        { text: '所有图表在正文中被 \\ref 引用', auto: figOk, category: '图表' },
+        { text: '文件结构完整（.bib 存在、无重复 label）', auto: structOk, category: '结构' },
+        { text: '写作质量检查通过（无 AI 痕迹/typo）', auto: writeOk, category: '写作' },
+        { text: '页数符合投稿要求（正文 ≤ 8/9 页）', auto: null, category: '格式' },
+        { text: '匿名化完成（[review] 模式）', auto: null, category: '匿名' },
+        { text: 'Supplementary materials 已准备', auto: null, category: '附件' },
+        { text: 'Acknowledgments 在 camera-ready 前隐藏', auto: null, category: '匿名' },
+        { text: 'PDF 无 metadata 泄露（pdfauthor 为空）', auto: null, category: '匿名' },
+        { text: '通讯作者/联系邮箱已确认', auto: null, category: '格式' },
+    ];
+
+    // Load saved checklist state
+    const saved = JSON.parse(localStorage.getItem(`checklist-${jobId}`) || '{}');
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-bg';
+    modal.onclick = e => { if(e.target===modal) modal.remove(); };
+
+    let html = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:24px; max-width:480px; width:90%; max-height:80vh; overflow-y:auto;">
+        <h3 style="font-size:16px; font-weight:700; margin:0 0 4px; color:#0f172a;">✅ 投稿前检查清单</h3>
+        <p style="font-size:11px; color:#64748b; margin:0 0 16px;">自动检查 + 手动确认，确保万无一失</p>
+        <div style="space-y:2;">`;
+
+    let lastCategory = '';
+    items.forEach((item, i) => {
+        if (item.category !== lastCategory) {
+            lastCategory = item.category;
+            html += `<p style="font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; margin:12px 0 4px;">${item.category}</p>`;
+        }
+        const checked = item.auto === true || saved[i] === true;
+        const isAuto = item.auto !== null;
+        const disabled = isAuto ? 'pointer-events:none; opacity:0.8;' : '';
+        const badge = isAuto ? (item.auto ? '<span style="font-size:9px; background:#dcfce7; color:#166534; padding:1px 4px; border-radius:3px; margin-left:4px;">自动</span>' : '<span style="font-size:9px; background:#fef2f2; color:#991b1b; padding:1px 4px; border-radius:3px; margin-left:4px;">未通过</span>') : '';
+        html += `<label style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:6px; cursor:pointer; font-size:12px; color:#334155; ${disabled}" onmouseover="if(!this.style.pointerEvents)this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+            <input type="checkbox" ${checked?'checked':''} data-idx="${i}" ${isAuto?'disabled':''} onchange="saveChecklistItem(${i},this.checked)" style="width:15px; height:15px; accent-color:#22c55e;">
+            <span>${item.text}${badge}</span>
+        </label>`;
+    });
+
+    const checkedCount = items.filter((item, i) => item.auto === true || saved[i] === true).length;
+    html += `</div>
+        <div style="margin-top:16px; padding-top:12px; border-top:1px solid #e2e8f0; display:flex; align-items:center; justify-content:space-between;">
+            <span style="font-size:12px; color:#64748b;">完成 <b style="color:#22c55e;">${checkedCount}</b>/${items.length} 项</span>
+            <button onclick="this.closest('.modal-bg').remove()" style="padding:8px 20px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:13px; color:#64748b;">关闭</button>
+        </div>
+    </div>`;
+    modal.innerHTML = html;
+    document.body.appendChild(modal);
+}
+
+function saveChecklistItem(idx, checked) {
+    const saved = JSON.parse(localStorage.getItem(`checklist-${jobId}`) || '{}');
+    saved[idx] = checked;
+    localStorage.setItem(`checklist-${jobId}`, JSON.stringify(saved));
+}
+
+// === Analysis Panel ===
+async function showAnalysis() {
+    toast('📊 加载分析数据...', 'info', 1500);
+    try {
+        const r = await fetch(`/api/analysis/${jobId}`);
+        const d = await r.json();
+
+        // Build section word count bars
+        const totalWords = d.sections.reduce((s, sec) => s + sec.words, 0);
+        const maxWords = Math.max(...d.sections.map(s => s.words), 1);
+        let sectionsHtml = d.sections.map(sec => {
+            const pct = (sec.words / maxWords * 100).toFixed(0);
+            const indent = (sec.level - 1) * 12;
+            const weight = sec.level === 1 ? 'font-weight:600;' : '';
+            return `<div style="margin-left:${indent}px; margin-bottom:4px;">
+                <div style="display:flex; justify-content:space-between; font-size:11px; ${weight} color:#334155;">
+                    <span>${esc(sec.title)}</span><span style="color:#64748b;">${sec.words}</span>
+                </div>
+                <div style="height:4px; background:#e2e8f0; border-radius:2px; overflow:hidden;">
+                    <div style="height:100%; width:${pct}%; background:${sec.level===1?'#3b82f6':'#93c5fd'}; border-radius:2px;"></div>
+                </div>
+            </div>`;
+        }).join('');
+
+        // Build citation year chart
+        let yearHtml = '';
+        if (d.citation_years && Object.keys(d.citation_years).length > 0) {
+            const maxCount = Math.max(...Object.values(d.citation_years));
+            const years = Object.entries(d.citation_years);
+            yearHtml = `<div style="margin-top:16px;">
+                <p style="font-size:12px; font-weight:600; color:#334155; margin:0 0 8px;">📅 引文年份分布</p>
+                <div style="display:flex; align-items:flex-end; gap:2px; height:60px;">
+                    ${years.map(([y, c]) => {
+                        const h = Math.max(6, (c / maxCount) * 100);
+                        const color = parseInt(y) >= 2022 ? '#22c55e' : parseInt(y) >= 2018 ? '#3b82f6' : '#94a3b8';
+                        return `<div style="flex:1; display:flex; flex-direction:column; align-items:center;">
+                            <span style="font-size:8px; color:#64748b;">${c}</span>
+                            <div style="width:100%; height:${h}%; background:${color}; border-radius:2px; min-height:4px;"></div>
+                        </div>`;
+                    }).join('')}
+                </div>
+                <div style="display:flex; gap:2px; margin-top:2px;">
+                    ${years.map(([y]) => `<span style="flex:1; text-align:center; font-size:8px; color:#94a3b8;">${y.slice(2)}</span>`).join('')}
+                </div>
+                <div style="margin-top:8px; font-size:11px; color:#64748b; display:flex; gap:12px; flex-wrap:wrap;">
+                    <span>中位年: <b style="color:${d.citation_stats.median_year && d.citation_stats.median_year < new Date().getFullYear()-8 ? '#ef4444' : '#334155'};">${d.citation_stats.median_year||'N/A'}</b></span>
+                    <span>近3年: <b style="color:${d.citation_stats.recent_pct < 15 ? '#ef4444' : d.citation_stats.recent_pct < 25 ? '#f59e0b' : '#22c55e'};">${d.citation_stats.recent_pct}%</b></span>
+                    <span>最旧: <b style="color:#64748b;">${d.citation_stats.oldest||'N/A'}</b></span>
+                    <span>总计: <b style="color:#334155;">${d.citation_stats.total}</b> 篇</span>
+                </div>
+                ${d.citation_stats.recent_pct < 20 ? '<p style="margin-top:6px; font-size:11px; color:#ef4444; background:#fef2f2; padding:6px 10px; border-radius:6px;">⚠️ 引文新鲜度不足 — 审稿人可能质疑你对最新进展的了解。建议补充近 2-3 年的文献。</p>' : d.citation_stats.recent_pct >= 40 ? '<p style="margin-top:6px; font-size:11px; color:#22c55e; background:#f0fdf4; padding:6px 10px; border-radius:6px;">✅ 引文新鲜度良好 — 近 3 年文献占比充足。</p>' : ''}
+            </div>`;
+        }
+
+        // Show modal
+        const modal = document.createElement('div');
+        modal.className = 'modal-bg';
+        modal.onclick = e => { if(e.target===modal) modal.remove(); };
+        modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:24px; max-width:520px; width:90%; max-height:80vh; overflow-y:auto;">
+            <h3 style="font-size:16px; font-weight:700; margin:0 0 4px; color:#0f172a;">📊 论文分析</h3>
+            <p style="font-size:11px; color:#64748b; margin:0 0 16px;">总字数: ${totalWords} 词 · ${d.sections.length} 个章节</p>
+            <p style="font-size:12px; font-weight:600; color:#334155; margin:0 0 8px;">📝 章节字数分布</p>
+            <div style="max-height:240px; overflow-y:auto; padding-right:8px;">${sectionsHtml}</div>
+            ${yearHtml}
+            <button onclick="this.closest('.modal-bg').remove()" style="margin-top:20px; width:100%; padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:13px; color:#64748b;">关闭</button>
+        </div>`;
+        document.body.appendChild(modal);
+    } catch(e) {
+        toast('分析加载失败: ' + e.message, 'error');
+    }
+}
+
+async function doTidyUp() {
+    if (!jobId) return;
+    toast('分析项目结构...', 'info', 2000);
+    const r = await fetch(`/api/tidyup/${jobId}`);
+    const d = await r.json();
+    if (!d.changes || d.changes.length === 0) {
+        toast('项目结构已经很整洁，无需调整', 'success', 3000);
+        return;
+    }
+    // Show popup with checkboxes for each change
+    const modal = document.createElement('div');
+    modal.className = 'modal-bg';
+    let checkboxes = d.changes.map((c, i) => {
+        const icon = c.type === 'extract_table' ? '📊' : c.type === 'extract_figure' ? '🖼️' : '📁';
+        return `<label style="display:flex; align-items:flex-start; gap:8px; padding:8px 0; border-bottom:1px solid #f1f5f9; cursor:pointer;">
+            <input type="checkbox" checked data-idx="${i}" style="margin-top:3px;">
+            <div>
+                <p style="font-size:13px; margin:0; color:#1e293b;">${icon} ${esc(c.description)}</p>
+                <p style="font-size:11px; margin:2px 0 0; color:#94a3b8;">${esc(c.source)} → ${esc(c.target)}</p>
+            </div>
+        </label>`;
+    }).join('');
+
+    modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:24px; max-width:650px; width:90%; max-height:80vh; display:flex; flex-direction:column;">
+        <h3 style="font-size:16px; font-weight:700; margin:0 0 4px;">🗂️ 整理项目结构</h3>
+        <p style="font-size:12px; color:#64748b; margin:0 0 16px;">以下改动将使你的项目更整洁。勾选要执行的操作：</p>
+        <div style="flex:1; overflow-y:auto; border:1px solid #e2e8f0; border-radius:8px; padding:12px;" id="tidyup-list">
+            ${checkboxes}
+        </div>
+        <div style="display:flex; gap:8px; margin-top:16px; justify-content:space-between; align-items:center;">
+            <span style="font-size:11px; color:#94a3b8;">${d.changes.length} 项建议改动</span>
+            <div style="display:flex; gap:8px;">
+                <button onclick="this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-size:13px;">取消</button>
+                <button onclick="executeTidyUp(this)" style="padding:8px 16px; border-radius:8px; border:none; background:#3b82f6; color:#fff; cursor:pointer; font-size:13px; font-weight:600;">执行选中项</button>
+            </div>
+        </div>
+    </div>`;
+    document.body.appendChild(modal);
+}
+
+async function executeTidyUp(btn) {
+    const modal = btn.closest('.modal-bg');
+    const checkboxes = modal.querySelectorAll('input[type=checkbox]:checked');
+    const selected = Array.from(checkboxes).map(cb => parseInt(cb.dataset.idx));
+    if (!selected.length) { toast('未选择任何操作', 'warning'); modal.remove(); return; }
+
+    btn.textContent = '执行中...'; btn.disabled = true;
+    const r = await fetch(`/api/tidyup/${jobId}`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({selected})
+    });
+    const d = await r.json();
+    modal.remove();
+    toast(`🗂️ 整理完成！执行了 ${d.count} 项改动`, 'success', 4000);
+    // Reload file tree and current file
+    loadFileTree();
+    if (currentFile) openFile(currentFile);
+}
+
+async function doBibClean() {
+    if (!jobId) return;
+    if (!confirm('📋 整理 Bib：\n\n1. 统一缩进和格式\n2. 去除 abstract/keywords 等冗余字段\n3. 按引用顺序排序\n4. 未引用条目移至 unused.bib（不删除）\n\n确定执行？')) return;
+    const r = await fetch(`/api/bib-clean/${jobId}`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({action:'all'})
+    });
+    const d = await r.json();
+    if (d.status === 'done') {
+        const summary = Object.entries(d.results).map(([k,v]) => `${k}: ${v.unused_entries||0} 条移至 unused.bib`).join(', ');
+        toast(`📋 Bib 整理完成！${summary}`, 'success', 5000);
+        // Reload current file if it's a .bib
+        if (currentFile?.endsWith('.bib')) openFile(currentFile);
+        loadFileTree();
+    }
+}
+
+// === Export ===
+async function exportReport() {
+    const r = await fetch(`/api/export/${jobId}`); const text = await r.text();
+    // Download as .md file
+    const blob = new Blob([text], {type:'text/markdown;charset=utf-8'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `质检报告_${report.filename.replace('.zip','')}.md`; a.click();
+    toast('📄 报告已下载（Markdown 格式）', 'success', 2000);
+}
+
+async function deleteCurrentJob() {
+    if (!jobId) return;
+    if (!confirm(`确定删除 "${report?.filename || jobId}" 的检查记录？\n此操作不可撤销。`)) return;
+    await fetch(`/api/job/${jobId}`, {method:'DELETE'});
+    jobId = null; report = null;
+    showScreen('screen-upload');
+    loadHistory();
+}
+
+function copyShareLink() {
+    const url = `${window.location.origin}/?job=${jobId}`;
+    navigator.clipboard.writeText(url).then(() => {
+        toast('🔗 分享链接已复制！发给导师即可查看结果。', 'success', 3000);
+    });
+}
+
+async function aiFixIssue(message, file, line) {
+    toast('🤖 正在生成修复建议...', 'info', 3000);
+    try {
+        const r = await fetch(`/api/ai-fix/${jobId}`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({message, file, line})
+        });
+        const d = await r.json();
+        if (d.status === 'ok' && d.suggestion) {
+            const suggestionEncoded = btoa(encodeURIComponent(d.suggestion));
+            const modal = document.createElement('div');
+            modal.className = 'modal-bg';
+            modal.onclick = e => { if(e.target===modal) modal.remove(); };
+            modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:24px; max-width:600px; width:90%; max-height:70vh; overflow-y:auto;">
+                <h3 style="font-size:16px; font-weight:700; margin:0 0 8px;">🤖 AI 修复建议</h3>
+                <p style="font-size:12px; color:#64748b; margin:0 0 12px;">问题: ${esc(message).slice(0,80)}</p>
+                <pre style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; font-size:12px; overflow-x:auto; white-space:pre-wrap; font-family:var(--font-mono);">${esc(d.suggestion)}</pre>
+                <div style="display:flex; gap:8px; margin-top:16px; justify-content:flex-end;">
+                    <button onclick="this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-size:13px;">关闭</button>
+                    <button onclick="navigator.clipboard.writeText(decodeURIComponent(atob('${suggestionEncoded}')));toast('已复制','success',1500);this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:none; background:#64748b; color:#fff; cursor:pointer; font-size:13px;">📋 复制</button>
+                    <button onclick="applyAiFix(${line||0}, decodeURIComponent(atob('${suggestionEncoded}')));this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:none; background:#22c55e; color:#fff; cursor:pointer; font-size:13px; font-weight:600;">✅ 应用到编辑器</button>
+                </div>
+            </div>`;
+            document.body.appendChild(modal);
+        } else {
+            toast('AI 修复暂不可用: ' + (d.detail||'未知错误'), 'warning');
+        }
+    } catch(e) {
+        toast('AI 修复请求失败', 'error');
+    }
+}
+
+function applyAiFix(lineNum, fixedCode) {
+    if (!editor) return;
+    if (lineNum > 0) {
+        // Replace the line and a few surrounding lines with the fix
+        const startLine = Math.max(0, lineNum - 2);
+        const endLine = Math.min(editor.lineCount() - 1, lineNum + 2);
+        const from = {line: startLine, ch: 0};
+        const to = {line: endLine, ch: editor.getLine(endLine).length};
+        editor.replaceRange(fixedCode, from, to);
+    } else {
+        // No specific line — append at cursor
+        editor.replaceSelection(fixedCode);
+    }
+    toast('✅ 已应用修复', 'success', 2000);
+}
+
+// === AI Polish (integrated into right-click) ===
+async function doPolishSelection(mode = 'academic') {
+    const selection = editor.getSelection();
+    if (!selection || selection.length < 10) {
+        toast('请先选中要润色的文本（至少 10 字符）', 'warning');
+        return;
+    }
+
+    const modeNames = {academic: '学术润色', concise: '精简', formal: '正式化'};
+    toast(`✨ 正在${modeNames[mode] || '润色'}...`, 'info', 3000);
+
+    try {
+        const r = await fetch(`/api/ai-polish/${jobId}`, {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({text: selection, mode}),
+        });
+        const d = await r.json();
+        if (d.status === 'ok' && d.polished) {
+            // Show diff modal with apply button
+            const modal = document.createElement('div');
+            modal.className = 'modal-bg';
+            modal.onclick = e => { if(e.target===modal) modal.remove(); };
+            const polishedEncoded = btoa(encodeURIComponent(d.polished));
+            modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:24px; max-width:700px; width:90%; max-height:80vh; overflow-y:auto;">
+                <h3 style="font-size:16px; font-weight:700; margin:0 0 12px;">✨ ${modeNames[mode] || '润色'}结果</h3>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div>
+                        <p style="font-size:10px; font-weight:600; color:#ef4444; margin:0 0 4px;">原文</p>
+                        <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:12px; font-size:12px; line-height:1.6; max-height:300px; overflow-y:auto; font-family:var(--font-mono);">${esc(selection)}</div>
+                    </div>
+                    <div>
+                        <p style="font-size:10px; font-weight:600; color:#22c55e; margin:0 0 4px;">润色后</p>
+                        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px; font-size:12px; line-height:1.6; max-height:300px; overflow-y:auto; font-family:var(--font-mono);">${esc(d.polished)}</div>
+                    </div>
+                </div>
+                <div style="display:flex; gap:8px; margin-top:16px; justify-content:flex-end;">
+                    <button onclick="this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-size:13px;">取消</button>
+                    <button onclick="editor.replaceSelection(decodeURIComponent(atob('${polishedEncoded}')));this.closest('.modal-bg').remove();toast('✨ 已替换','success',1500)" style="padding:8px 16px; border-radius:8px; border:none; background:#22c55e; color:#fff; cursor:pointer; font-size:13px; font-weight:600;">✅ 替换原文</button>
+                </div>
+            </div>`;
+            document.body.appendChild(modal);
+        } else {
+            toast('润色失败: ' + (d.detail || '未知错误'), 'error');
+        }
+    } catch(e) {
+        toast('润色请求失败: ' + e.message, 'error');
+    }
+}
+
+async function deleteJob(id) {
+    if (!confirm('确定删除此检查记录？')) return;
+    await fetch(`/api/job/${id}`, {method:'DELETE'});
+    loadHistory();
+}
+
+// === LaTeX Autocomplete ===
+const LATEX_COMMANDS = [
+    '\\begin{', '\\end{', '\\section{', '\\subsection{', '\\subsubsection{',
+    '\\cite{', '\\citep{', '\\citet{', '\\ref{', '\\cref{', '\\autoref{', '\\eqref{',
+    '\\label{', '\\caption{', '\\includegraphics', '\\input{', '\\include{',
+    '\\textbf{', '\\textit{', '\\emph{', '\\underline{', '\\textsc{', '\\texttt{',
+    '\\footnote{', '\\url{', '\\href{', '\\title{', '\\author{', '\\date{',
+    '\\documentclass', '\\usepackage{', '\\newcommand{', '\\renewcommand{',
+    '\\begin{figure}', '\\begin{table}', '\\begin{equation}', '\\begin{align}',
+    '\\begin{itemize}', '\\begin{enumerate}', '\\begin{abstract}', '\\begin{document}',
+    '\\begin{tabular}', '\\begin{proof}', '\\begin{theorem}', '\\begin{lemma}',
+    '\\hline', '\\toprule', '\\midrule', '\\bottomrule', '\\multicolumn{',
+    '\\frac{', '\\sqrt{', '\\sum', '\\prod', '\\int', '\\lim',
+    '\\alpha', '\\beta', '\\gamma', '\\delta', '\\epsilon', '\\lambda', '\\theta',
+    '\\mathbb{', '\\mathcal{', '\\mathrm{', '\\boldsymbol{',
+];
+
+function latexHint(cm) {
+    const cur = cm.getCursor();
+    const line = cm.getLine(cur.line);
+    // Find start of current command (backslash)
+    let start = cur.ch;
+    while (start > 0 && line[start-1] !== '\\' && line[start-1] !== ' ' && line[start-1] !== '{') start--;
+    if (start > 0 && line[start-1] === '\\') start--;
+
+    const prefix = line.slice(start, cur.ch).toLowerCase();
+    if (!prefix.startsWith('\\')) return null;
+
+    const matches = LATEX_COMMANDS.filter(cmd => cmd.toLowerCase().startsWith(prefix));
+    if (!matches.length) return null;
+
+    return {
+        list: matches.slice(0, 10),
+        from: CodeMirror.Pos(cur.line, start),
+        to: CodeMirror.Pos(cur.line, cur.ch),
+    };
+}
+
+function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function linkify(s){return s.replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" class="text-blue-600 underline hover:text-blue-800">$1</a>').replace(/\n/g,'<br>');}
+
+function toast(message, type='info', duration=4000) {
+    const container = document.getElementById('toast-container');
+    const el = document.createElement('div');
+    el.className = `toast toast-${type}`;
+    el.textContent = message;
+    container.appendChild(el);
+    setTimeout(() => { el.style.opacity='0'; el.style.transform='translateX(100%)'; setTimeout(()=>el.remove(), 300); }, duration);
+}
+
+// === History ===
+async function loadHistory() {
+    try {
+        const r = await fetch('/api/history');
+        const d = await r.json();
+        if (!d.jobs || !d.jobs.length) return;
+
+        const section = document.getElementById('history-section');
+        const list = document.getElementById('history-list');
+        section.style.display = 'block';
+
+        list.innerHTML = d.jobs.slice(0, 5).map(j => {
+            const date = new Date(j.timestamp);
+            const timeStr = date.toLocaleDateString('zh-CN', {month:'short', day:'numeric'}) + ' ' + date.toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
+            const scoreColor = j.score >= 90 ? '#22c55e' : j.score >= 60 ? '#f59e0b' : '#ef4444';
+            return `<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px; margin-bottom:6px; background:#f8fafc; border-radius:8px; border:1px solid #f1f5f9; cursor:pointer; transition:all 0.15s;" onmouseover="this.style.background='#eff6ff';this.style.borderColor='#bfdbfe'" onmouseout="this.style.background='#f8fafc';this.style.borderColor='#f1f5f9'" onclick="resumeJob('${j.job_id}')">
+                <div style="flex:1; min-width:0;">
+                    <p style="font-size:13px; font-weight:500; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#334155;">${esc(j.filename)}</p>
+                    <p style="font-size:11px; color:#94a3b8; margin:2px 0 0;">${timeStr} · ${j.gates_passed}/${j.gates_total} 关</p>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; flex-shrink:0; margin-left:12px;">
+                    <span style="font-size:14px; font-weight:700; color:${scoreColor};">${j.score.toFixed(0)}</span>
+                    <span style="font-size:10px; color:#94a3b8;">分</span>
+                    <span onclick="event.stopPropagation();deleteJob('${j.job_id}')" style="font-size:14px; color:#94a3b8; padding:2px 6px; border-radius:4px; cursor:pointer;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#94a3b8'" title="删除">🗑</span>
+                </div>
+            </div>`;
+        }).join('');
+    } catch(e) { /* silent fail */ }
+}
+
+async function resumeJob(id) {
+    jobId = id;
+    // Show overview with skeleton loading state
+    showScreen('screen-overview');
+    document.getElementById('overview-filename').textContent = '加载中...';
+    document.getElementById('overview-score').textContent = '--';
+    document.getElementById('overview-status-text').innerHTML = '';
+    document.getElementById('overview-nodes').innerHTML = Array(6).fill('').map(()=>`<div class="skeleton" style="width:42px;height:42px;border-radius:50%;"></div><div class="skeleton" style="height:2px;flex:1;"></div>`).join('');
+    document.getElementById('overview-gates').innerHTML = Array(4).fill('').map(()=>`<div class="skeleton" style="height:72px;width:100%;margin-bottom:12px;"></div>`).join('');
+
+    await loadReport();
+    if (report) showOverview();
+    else { showScreen('screen-upload'); toast('加载报告失败', 'error'); }
+}
+
+// === Auth System ===
+function showAuthModal(mode) {
+    authMode = mode || 'login';
+    switchAuthTab(authMode);
+    document.getElementById('auth-modal').classList.remove('hidden');
+    document.getElementById('auth-error').style.display = 'none';
+}
+
+function switchAuthTab(mode) {
+    authMode = mode;
+    const loginTab = document.getElementById('auth-tab-login');
+    const regTab = document.getElementById('auth-tab-register');
+    const nameField = document.getElementById('auth-name-field');
+    const submitBtn = document.getElementById('auth-submit-btn');
+    const title = document.getElementById('auth-title');
+
+    if (mode === 'login') {
+        loginTab.style.color = '#3b82f6'; loginTab.style.borderBottomColor = '#3b82f6'; loginTab.style.fontWeight = '600';
+        regTab.style.color = '#94a3b8'; regTab.style.borderBottomColor = 'transparent'; regTab.style.fontWeight = '500';
+        nameField.style.display = 'none';
+        submitBtn.textContent = '登录';
+        title.textContent = '登录';
+    } else {
+        regTab.style.color = '#3b82f6'; regTab.style.borderBottomColor = '#3b82f6'; regTab.style.fontWeight = '600';
+        loginTab.style.color = '#94a3b8'; loginTab.style.borderBottomColor = 'transparent'; loginTab.style.fontWeight = '500';
+        nameField.style.display = '';
+        submitBtn.textContent = '注册';
+        title.textContent = '注册';
+    }
+}
+
+async function handleAuth(e) {
+    e.preventDefault();
+    const email = document.getElementById('auth-email').value;
+    const password = document.getElementById('auth-password').value;
+    const name = document.getElementById('auth-name').value;
+    const errEl = document.getElementById('auth-error');
+    errEl.style.display = 'none';
+
+    const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
+    const body = authMode === 'login' ? {email, password} : {email, password, name};
+
+    try {
+        const r = await fetch(endpoint, {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body),
+        });
+        const d = await r.json();
+        if (!r.ok) {
+            errEl.textContent = d.detail || '操作失败';
+            errEl.style.display = 'block';
+            return;
+        }
+        // Success
+        currentUser = d.user;
+        localStorage.setItem('token', d.token);
+        document.getElementById('auth-modal').classList.add('hidden');
+        updateNavbar();
+        toast(authMode === 'login' ? `👋 欢迎回来，${currentUser.name}` : `🎉 注册成功！赠送 50 积分`, 'success', 3000);
+    } catch(err) {
+        errEl.textContent = '网络错误';
+        errEl.style.display = 'block';
+    }
+}
+
+function updateNavbar() {
+    const navAuth = document.getElementById('nav-auth');
+    if (currentUser) {
+        navAuth.innerHTML = `
+            <span style="font-size:12px; color:#64748b;">🎫 剩余 <b style="color:#0f172a;">${currentUser.credits}</b> 次</span>
+            <button onclick="document.getElementById('recharge-modal').classList.remove('hidden')" style="font-size:11px; padding:4px 10px; border-radius:5px; border:1px solid #bfdbfe; background:#eff6ff; color:#2563eb; cursor:pointer;">购买</button>
+            <div style="display:flex; align-items:center; gap:6px; padding:4px 10px; border-radius:6px; cursor:pointer; position:relative;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''" onclick="toggleUserMenu()">
+                <div style="width:26px; height:26px; border-radius:50%; background:#3b82f6; display:flex; align-items:center; justify-content:center; color:#fff; font-size:11px; font-weight:700;">${(currentUser.name||'U')[0].toUpperCase()}</div>
+                <span style="font-size:12px; color:#334155; font-weight:500;">${currentUser.name||currentUser.email.split('@')[0]}</span>
+            </div>
+        `;
+    } else {
+        navAuth.innerHTML = `
+            <button onclick="showAuthModal('login')" style="font-size:12px; padding:5px 14px; border-radius:6px; border:1px solid #e2e8f0; background:#fff; color:#334155; cursor:pointer; font-weight:500;">登录</button>
+            <button onclick="showAuthModal('register')" style="font-size:12px; padding:5px 14px; border-radius:6px; border:none; background:#3b82f6; color:#fff; cursor:pointer; font-weight:500;">注册</button>
+        `;
+    }
+}
+
+function toggleUserMenu() {
+    // Simple dropdown - for now just logout
+    if (confirm('退出登录？')) {
+        fetch('/api/auth/logout', {method:'POST'});
+        currentUser = null;
+        localStorage.removeItem('token');
+        updateNavbar();
+        toast('已退出登录', 'info', 2000);
+    }
+}
+
+function selectRecharge(el) {
+    document.querySelectorAll('.recharge-card').forEach(c => {
+        c.style.borderColor = '#e2e8f0'; c.style.background = '';
+    });
+    el.style.borderColor = '#3b82f6'; el.style.background = '#eff6ff';
+    el.classList.add('selected');
+}
+
+async function doRecharge() {
+    const selected = document.querySelector('.recharge-card[style*="border-color: rgb(59, 130, 246)"]');
+    if (!selected) { toast('请选择套餐', 'warning'); return; }
+    if (!currentUser) { showAuthModal('login'); document.getElementById('recharge-modal').classList.add('hidden'); return; }
+
+    const packageId = selected.dataset.pkg || 'pro';
+
+    try {
+        const r = await fetch('/api/payment/create', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({package_id: packageId}),
+        });
+        const d = await r.json();
+        if (!r.ok) { toast(d.detail || '创建订单失败', 'error'); return; }
+
+        if (d.sandbox) {
+            // Sandbox mode: credits added instantly
+            currentUser.credits = d.new_balance;
+            updateNavbar();
+            document.getElementById('recharge-modal').classList.add('hidden');
+            toast(`🎉 充值成功！+${d.credits} 积分，余额 ${d.new_balance}`, 'success', 4000);
+        } else {
+            // Production: show payment URL / QR code
+            toast('📱 请使用支付宝扫码支付', 'info', 5000);
+            // TODO: Show QR code with d.payment_url
+            // Poll for completion
+            pollPaymentStatus(d.order_id);
+        }
+    } catch(e) {
+        toast('充值请求失败: ' + e.message, 'error');
+    }
+}
+
+async function pollPaymentStatus(orderId) {
+    let attempts = 0;
+    const iv = setInterval(async () => {
+        attempts++;
+        if (attempts > 60) { clearInterval(iv); return; } // 2min timeout
+        try {
+            const r = await fetch(`/api/payment/status/${orderId}`);
+            const d = await r.json();
+            if (d.status === 'credited' || d.status === 'paid') {
+                clearInterval(iv);
+                await refreshCredits();
+                document.getElementById('recharge-modal').classList.add('hidden');
+                toast(`🎉 充值成功！+${d.credits} 积分`, 'success', 4000);
+            }
+        } catch(e) {}
+    }, 2000);
+}
+
+// Check auth state on page load
+async function checkAuthState() {
+    try {
+        const r = await fetch('/api/auth/me');
+        const d = await r.json();
+        if (d.authenticated) {
+            currentUser = d.user;
+            updateNavbar();
+        }
+    } catch(e) { /* not logged in */ }
+}
+
+async function refreshCredits() {
+    if (!currentUser) return;
+    try {
+        const r = await fetch('/api/auth/me');
+        const d = await r.json();
+        if (d.authenticated) {
+            currentUser = d.user;
+            updateNavbar();
+        }
+    } catch(e) {}
+}
+
+checkAuthState();
+
+// Load history on page load
+loadHistory();
+
+// Check for share link: ?job=xxx
+const urlParams = new URLSearchParams(window.location.search);
+const sharedJobId = urlParams.get('job');
+if (sharedJobId) {
+    jobId = sharedJobId;
+    loadReport().then(() => { if (report) showOverview(); });
+}
+
+// Request notification permission
+if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+}
+
+// Global keyboard shortcut: ? to show help
+document.addEventListener('keydown', e => {
+    // Only trigger when not typing in an input/textarea/codemirror
+    const tag = document.activeElement?.tagName?.toLowerCase();
+    const isEditor = document.activeElement?.closest('.CodeMirror');
+    if (tag === 'input' || tag === 'textarea' || isEditor) return;
+
+    if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
+        e.preventDefault();
+        document.getElementById('shortcuts-modal').classList.remove('hidden');
+    }
+    if (e.key === 'Escape') {
+        document.getElementById('shortcuts-modal').classList.add('hidden');
+    }
+});
+</script>
+</body>
+</html>

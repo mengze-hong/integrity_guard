@@ -1,0 +1,268 @@
+# IntegrityGuard - 产品开发 TODO
+
+> 目标：打造一款让人眼前一亮的学术论文提交前质检 SaaS 产品
+> 核心原则：宁可错杀不能放过（严格检查）、false positive 可接受、rule-based + LLM-based 结合
+
+---
+
+## 🔴 P0 — 核心功能完善（必须优先）
+
+### 检查引擎强化
+- [ ] **扩展引文数据库源**
+  - [x] 添加 Semantic Scholar API 作为第三验证源（覆盖 CS 领域最全）
+  - [x] 添加 OpenAlex API（免费、覆盖广、速度快）
+  - [ ] 添加 Google Scholar 爬虫备份（通过 SerpAPI 或 scholarly）
+  - [x] 对于无 DOI 论文，尝试 title search 在 Crossref/Semantic Scholar 中匹配
+- [ ] **强化引文检查规则**
+  - [x] 检查年份一致性（bib 中 year 与数据库 year 差 >1 年 → warning）
+  - [x] 检查 DOI 格式合法性（正则预筛，减少无效 API 调用）
+  - [x] 检测 GPT 生成的假作者模式（所有作者姓氏都在 top-20 常见姓列表）
+  - [x] 检查引文是否被 retracted（通过 Crossref metadata）
+  - [x] 检查自引比例（自引 > 30% → warning）
+- [x] **数据完整性检查强化**
+  - [x] 检测 Benford's Law 偏离（实验数据首位数字分布）
+  - [x] 检测过于整齐的 p-value（如 p=0.049, p=0.048...≥3个 → p-hacking 警告）
+  - [x] 检测结果数值与文字描述不一致（正文 achieve 0.86 vs 表格 0.85）
+  - [x] 检测 copy-paste 的图片（MD5 hash 比对图片文件）
+- [ ] **文件结构检查强化**
+  - [x] 检查 \bibliography{} 指向的 .bib 文件是否存在
+  - [x] 检查重复的 \label{} 定义
+  - [x] 检查孤立的 \ref{} （引用了不存在的 label）
+  - [x] 检查 appendix 中的 figure/table 不要求正文引用（修复当前误报）
+- [x] **新增 Gate 6: 文本质量检查（已实现为 writing_quality gate）**
+  - [ ] 检测段落级别的 AI 生成痕迹（perplexity 异常低 — 需要 LLM API）
+  - [x] 检测 abstract 与 conclusion 过度重复
+  - [x] 检测"万金油句子"（无实质内容的 filler text，>=5处 → warning）
+  - [x] 检测格式不规范（"et al" 格式检查已加入 gate_writing）
+
+### BibTeX 清理工具（核心特色功能）
+- [x] **Bib Tidy 功能**
+  - [x] 缩进整理（统一 2-space 缩进）
+  - [x] 去除 abstract、keywords、file 等无用字段
+  - [x] 字段名统一小写（Title → title）
+  - [x] 去除重复条目
+- [x] **按引用顺序排序 bib**（我们的特色：根据 .tex 中 \cite 出现顺序重排 .bib）
+- [x] **分离未引用条目**（自动把 tex 中没 \cite 的条目移到 unused.bib）
+- [x] **一键清理按钮**（在编辑器工具栏，点击后自动应用以上所有清理）
+
+### 写作质量检查（Rule-based）
+- [x] **AI 痕迹检测**
+  - [x] em-dash (—) 过多检测（>8个 → warning）
+  - [x] "Additionally", "Furthermore" 等 AI 常用连接词频率
+  - [x] 检测遗留的 prompt 痕迹（如 "As an AI", "I cannot" 等）
+  - [x] en-dash 滥用检测（>20次 → warning）
+- [x] **段落重复检测**（两个自然段相似度 > 80% → warning）
+- [x] **匿名化检查（Double-Blind）**
+  - [x] 检查 \author{} 是否为空或占位符
+  - [x] 检查自引暴露身份（"our previous work" 等）
+  - [x] 检查正文中是否出现作者真名
+  - [x] 检查 PDF metadata / comment 是否泄露作者信息（\hypersetup pdfauthor）
+- [x] **Typo 检测**（40+ 常见学术拼写错误词典）
+- [x] **Abstract vs Conclusion 重复检测**（>60% 相似 → warning）
+- [x] **"et al" 格式检查**（应为 "et al." 带句点）
+
+### 编辑器功能
+- [x] **鼠标滚动修复验证**（CodeMirror position:absolute + overflow-y:auto）
+- [x] **搜索替换功能**（Ctrl+F / Ctrl+G，通过 CodeMirror search addon）
+- [x] **撤销重做**（CodeMirror 自带，已确认工作）
+- [x] **多文件 tab**（点击文件打开新 tab，可关闭）
+- [x] **LaTeX 语法补全**（输入 \ 后自动弹出常用命令列表）
+
+---
+
+## 🟡 P1 — 产品功能（第二优先）
+
+### 用户系统
+- [ ] 用户注册/登录（邮箱 + 密码，或 OAuth: GitHub/Google）
+- [ ] 用户 dashboard（我的论文列表、历史记录、统计）
+- [x] 多论文管理（历史记录列表，每篇独立 job，可切换/删除）
+- [ ] 团队/导师模式（导师可查看学生的所有检查记录）
+- [x] 分享链接（?job=xxx URL，复制给导师即可查看）
+
+### Copilot 自动修复（LLM-based）
+- [x] "一键修复" 按钮：LLM 分析问题 → 弹窗展示建议代码 → 用户复制应用
+- [x] 引用修复：自动从 ACL/DBLP 拉取正确 bib 条目替换（📥 按钮一键替换）
+- [x] 格式修复：自动补全缺失的 \label（一键插入按钮）
+- [x] 语言润色建议（超长句子检测、被动语态过多提醒）
+
+### 订阅 & 付费
+- [ ] Free tier: 每月 3 次检查，基础规则
+- [ ] Pro tier: 无限检查 + LLM 深度分析 + Copilot 修复 + 优先 API
+- [ ] Team tier: 导师 dashboard + 批量检查 + API 接入
+- [ ] Stripe/支付宝 集成
+
+### 报告增强
+- [x] PDF 导出（打开打印窗口，浏览器另存为 PDF）
+- [x] 检查证书（通过后生成 Certificate，可打印为 PDF）
+- [x] 时间线视图（多次检查的分数变化趋势）
+- [ ] 对比视图（前后两次检查的 diff）
+
+---
+
+## 🟢 P2 — UI/UX 打磨
+
+### 响应式设计
+- [x] 手机端适配（upload 页单列、workspace 变垂直堆叠）
+- [x] iPad/平板适配（双栏布局收窄）
+- [x] 大屏居中问题修复
+- [x] 深色模式支持（编辑器 material-darker 主题 + 🌙 toggle）
+
+### 交互优化
+- [x] 上传进度条（XHR progress event，0-30% 上传，30-100% 检查）
+- [x] 检查进度动画（进度条 + 按钮文字实时更新 gate 名称）
+- [x] 键盘快捷键（Ctrl+S/Ctrl+Shift+R/F8）
+- [x] 右键菜单（跳转问题/重新质检/保存/整理Bib/导出报告）
+- [x] Toast 通知（保存成功、检查完成等非阻塞提示）
+- [x] 空状态设计（无问题时显示 ✅ 提示）
+
+### 视觉设计
+- [x] 统一设计系统（CSS variables: colors, radius, shadows, font-mono）
+- [x] 动画 transitions（fadeIn 页面切换 + slideUp issue 卡片）
+- [ ] Loading skeleton（加载时的骨架屏）
+- [x] 错误状态设计（网络错误 toast 提示、graceful fallback）
+
+---
+
+## 🔵 P3 — 技术债务 & 架构
+
+### 代码重构
+- [ ] 前端拆分：index.html → Vue/React SPA（组件化、状态管理）
+- [ ] CSS 提取：inline styles → CSS modules / Tailwind classes
+- [ ] API 类型安全：前后端共享 TypeScript types
+- [x] 测试覆盖：7 个单元测试（citations, structure, writing, data gates）
+- [x] Error handling：全局异常处理中间件（返回 JSON 错误）
+
+### 部署 & 运维
+- [x] Docker 化（Dockerfile + docker-compose.yml + requirements.txt）
+- [ ] CI/CD（GitHub Actions: lint + test + deploy）
+- [x] 日志系统（structured logging with timestamp, level, module）
+- [ ] 监控（uptime check、API 延迟、错误率）
+- [x] Rate limiting（IP 级别，每小时 10 次上传）
+- [x] 日志系统（structured logging 替换 print）
+- [x] 文件安全扫描（上传的 zip 删除 .exe/.sh 等危险文件 + 100MB 限制）
+
+### 数据库迁移
+- [ ] 从 JSON 文件迁移到 PostgreSQL/SQLite
+- [ ] 用户表、Job 表、Issue 表关系设计
+- [ ] 数据备份策略
+
+---
+
+## 📋 版本记录
+
+| 版本 | 日期 | 备份文件 | 改动 |
+|------|------|---------|------|
+| v0.1 | 2026-05-27 | (初始版本) | 基础 5-gate 系统 + 编辑器 + 检查 |
+| v0.2 | 2026-05-27 | v0.2_...persistence-and-ui-overhaul.zip | 持久化存储、UI 重设计、上传页品牌介绍、DOI 链接 |
+| v0.3 | 2026-05-27 | v0.3_...semantic-scholar-mobile-appendix-fix.zip | Semantic Scholar API、手机适配、appendix 图表豁免 |
+| v0.4 | 2026-05-27 | v0.4_...retraction-detect-progress-anim-responsive.zip | Retraction 检测、重复label/孤立ref检查、年份一致性、DOI格式预检、自引比例、质检进度动画、bib行号定位 |
+| v0.5 | 2026-05-27 | v0.5_...search-export-bibliography-check.zip | Ctrl+F搜索、\bibliography存在性检查、导出报告美化、Ctrl+Shift+R快捷键 |
+| v0.6 | 2026-05-28 | v0.6_...nav-buttons-delete-emoji.zip | 返回首页/删除按钮、emoji替换✗、issue可点击跳转、↓浮动按钮 |
+| v0.7 | 2026-05-28 | v0.7_...title-search-benford-dup-images.zip | 标题搜索验证无DOI引文、Benford定律、重复图片MD5检测 |
+| v0.8 | 2026-05-28 | v0.8_...writing-gate-bib-clean-pvalue.zip | Gate6写作质量(AI痕迹/匿名化/typo/段落重复)、Bib清理工具、p-value检测、LaTeX补全 |
+| v0.9 | 2026-05-28 | v0.9_...tabs-toast-openalex-abstract-etal.zip | 多文件tab、Toast通知、OpenAlex、abstract/conclusion重复、et al格式 |
+| v1.0 | 2026-05-28 | v1.0_...full-feature-complete.zip | GPT假作者检测、en-dash检测、LaTeX命令typo、双空格检测、header stats badge |
+| v1.1 | 2026-05-28 | v1.1_...filler-dedup-anonymize-names.zip | 万金油句子检测、bib去重、正文作者姓名检测 |
+| v1.2 | 2026-05-28 | v1.2_...progress-bar-cards-clickable-f8.zip | 进度条可视化、overview卡片可点击、F8快捷键 |
+| v1.3 | 2026-05-28 | v1.3_...fetch-official-bib-filler-detect.zip | 获取官方Bib按钮 |
+| v1.4 | 2026-05-28 | v1.4_...upload-progress-wording-fixes.zip | XHR上传进度、文案优化 |
+| v1.5 | 2026-05-28 | v1.5_...auto-replace-bib-notifications-ux.zip | 一键替换bib、浏览器通知、page title |
+| v1.6 | 2026-05-28 | v1.6_...stats-summary-page-title.zip | 统计摘要、页面标题动态更新 |
+| v1.7 | 2026-05-28 | v1.7_...wordcount-ref-detail-stats.zip | 词数统计、引文验证详情展开 |
+| v1.8 | 2026-05-28 | v1.8_...auto-label-wordcount-ref-details.zip | 自动添加label按钮、词数统计、引文详情 |
+| v1.9 | 2026-05-28 | v1.9_...dark-theme-auto-label-fix.zip | 深色主题编辑器、自动label修复 |
+| v2.0 | 2026-05-28 | v2.0_...context-menu-transitions-ctrlS.zip | 右键菜单、动画过渡、Ctrl+S保存 |
+| v2.1 | 2026-05-28 | v2.1_...error-handling-top-issues-linecount.zip | 全局异常处理、首要问题展示、行数统计 |
+| v2.2 | 2026-05-28 | v2.2_...bib-compare-modal-flash-fix-matching.zip | Bib对比弹窗、跳转闪烁效果、标题匹配优化 |
+| v2.3 | 2026-05-28 | v2.3_...white-theme-modular-showcase.zip | 白色首页主题、模块化功能展示区 |
+| v2.4 | 2026-05-28 | v2.4_...css-vars-lang-polish-animations.zip | CSS变量系统、语言润色、动画优化 |
+| v2.5 | 2026-05-28 | v2.5_...text-table-consistency-error-handler-polish.zip | 文本-表格一致性检测、错误处理、UI打磨 |
+| v2.6 | 2026-05-28 | v2.6_...share-link-pdf-metadata-changelog.zip | 分享链接、PDF metadata检查 |
+| v2.7 | 2026-05-28 | v2.7_...ai-fix-share-link-pdf-metadata.zip | AI修复建议、分享链接、PDF metadata |
+| v2.8 | 2026-05-28 | v2.8_...ai-fix-badges-favicon-share.zip | AI修复完善、状态徽章、favicon |
+| v2.9 | 2026-05-28 | v2.9_...tests-badges-favicon-final.zip | 单元测试、徽章系统、favicon最终版 |
+| v3.0 | 2026-05-28 | v3.0_...docker-tests-production-ready.zip | Docker化、测试覆盖、生产环境就绪 |
+| v3.1 | 2026-05-28 | v3.1_...ui-polish-bib-format-scroll-fix.zip | UI打磨、Bib格式化、滚动修复 |
+| v3.2 | 2026-05-28 | v3.2_...venue-quality-ethics-check.zip | 引用质量分析（venue分布）、学术伦理检查 |
+| v3.3 | 2026-05-28 | v3.3_...8-modules-venue-ethics.zip | 8模块展示区、venue质量完善 |
+| v3.4 | 2026-05-28 | v3.4_...pdf-export-ratelimit-logging-cert.zip | 导出报告、限流、日志系统、检查证书 |
+| v3.5 | 2026-05-28 | v3.5_...tidyup-tool-dragfix-exportfix.zip | 整理结构工具、拖拽修复、导出修复 |
+| v3.6 | 2026-05-28 | v3.6_...filter-trend-stats-shortcuts-markdown.zip | 问题过滤器、分数趋势图、编辑器统计、快捷键帮助、Markdown导出 |
+| v3.7 | 2026-05-28 | v3.7_...search-filter-skeleton-preview.zip | 问题搜索、骨架屏加载、Overview问题预览、script标签修复 |
+| v3.8 | 2026-05-28 | v3.8_...collapsible-copy-download-tooltip.zip | 折叠分组、复制问题列表、下载文件、gutter tooltip |
+| v3.9 | 2026-05-28 | v3.9_...analysis-checklist-citation-years.zip | 论文分析面板（章节字数+引文年份图）、投稿前清单 |
+| v4.0 | 2026-05-28 | v4.0_...citation-freshness-gate.zip | 引文新鲜度检测规则（中位年份/近3年占比/陈旧论文警告） |
+| v4.1 | 2026-05-28 | v4.1_...user-system-credits-sqlite.zip | 用户系统(注册/登录/JWT)、积分系统、SQLite数据库、交易记录 |
+| v4.2 | 2026-05-28 | v4.2_...auth-ui-navbar-recharge-modal.zip | 前端登录注册弹窗、Navbar用户栏、充值套餐弹窗、积分显示 |
+| v4.3 | 2026-05-28 | v4.3_...credits-integration-402-handling.zip | 积分扣减集成到upload/recheck、402余额不足弹窗、积分刷新 |
+| v4.4 | 2026-05-28 | v4.4_...payment-sandbox-recharge-flow.zip | 支付系统(sandbox模式即时到账)、充值API、订单轮询、管理员充值 |
+| v4.5 | 2026-05-28 | v4.5_...pricing-revamp-value-based.zip | 定价重设计(¥19.9/次)、注册送2次、按次计费 |
+| v4.6 | 2026-05-28 | v4.6_...page-limit-limitations-format-detect.zip | 页数超限检测、会议格式识别(17种)、Limitations强制检查、bib缺字段检查 |
+
+---
+
+## 🚀 P0 — AI 功能增强（商业化核心卖点）
+
+> 参考论文: [Multimodal Peer Review Simulation (WWW 2025 Demo)](https://arxiv.org/abs/2511.10902)
+> 核心优势: 内部 LiteLLM 无限额度，AI 功能成本 ≈ ¥0，但用户感知价值极高
+
+### 🎯 多模态审稿模拟（核心特色，来自 WWW Demo 论文）
+- [ ] **RAG-based Reviewer Simulation**
+  - [ ] 爬取 OpenReview 数据构建 review 知识库（按 venue/topic 分类）
+  - [ ] 用户上传论文后，检索相似论文的真实 review 作为 few-shot context
+  - [ ] 多模态 LLM 分析正文 + 图表（不只是文字，还看图是否清晰、表格是否规范）
+  - [ ] 输出结构化 review: Strengths / Weaknesses / Questions / Score
+- [ ] **Action:Objective To-Do 生成**
+  - [ ] 将审稿意见转化为可执行的修改建议（Action:Objective[#] 格式）
+  - [ ] 每条建议可点击跳转到论文对应位置
+  - [ ] 用户可勾选完成状态，追踪修改进度
+- [ ] **多维度评分**
+  - [ ] Novelty / Soundness / Clarity / Significance 四维雷达图
+  - [ ] 对比同 venue 论文的平均分（基于 OpenReview 数据）
+
+### ✨ AI 写作助手（已有 API，需加前端入口）
+- [x] AI 单条修复建议（`/api/ai-fix`）
+- [x] AI 审稿人模拟（`/api/ai-review` — 简版，已实现后端）
+- [x] AI 段落润色（`/api/ai-polish` — 3 种模式：学术/精简/正式）
+- [x] AI Abstract 优化（`/api/ai-abstract`）
+- [ ] **前端集成这些 API**
+  - [ ] 工具栏添加 "🤖 AI 助手" 下拉菜单
+  - [ ] 选中文本右键 → "AI 润色" / "AI 精简"
+  - [ ] Overview 页面添加 "模拟审稿" 按钮
+  - [ ] Abstract 检测到问题时显示 "AI 优化" 按钮
+- [ ] **AI 一键修复全部**
+  - [ ] 收集所有可自动修复的 issue → 批量调用 LLM → 生成 diff → 用户一键应用
+- [ ] **AI 论文诊断报告**
+  - [ ] 综合所有 gate 结果 + LLM 分析 → 生成一页诊断报告
+  - [ ] 包含：核心问题、修改优先级排序、预估修改时间
+
+### 📊 智能分析（低成本高价值）
+- [x] 章节字数分布
+- [x] 引文年份分布 + 新鲜度
+- [ ] **引文网络可视化**（引用了谁、被谁引用 — 基于 S2 API）
+- [ ] **写作风格分析**（词汇多样性、句式复杂度、与顶会论文的差距）
+- [ ] **图表质量评估**（分辨率检查、图表是否有标题、字体大小是否可读）
+
+### 🔧 格式自动修复（零 LLM 成本）
+- [ ] **一键格式规范化**
+  - [ ] 统一引用格式（\cite vs \citep vs \citet）
+  - [ ] 统一数字格式（Table 1 vs Table~1 vs table 1）
+  - [ ] 统一缩写（Fig. vs Figure）
+  - [ ] 去除多余空行 / 修复缩进
+- [ ] **Bib 自动补全**
+  - [ ] 缺少 DOI 的条目自动从 Crossref 补全
+  - [ ] 缺少 URL 的条目自动补全 Semantic Scholar 链接
+- [ ] **图片优化建议**
+  - [ ] 检测低分辨率图片（< 300 DPI）
+  - [ ] 检测过大的 PDF 图片（可压缩）
+  - [ ] 建议矢量图替代位图
+
+---
+
+## 当前状态
+
+- 服务运行在 http://localhost:8001（8000 被占用）
+- 数据库: `data/integrity.db`（SQLite）
+- 备份目录：`C:\Users\mengzehong\Desktop\integrity-assurance-backups\`
+- 每次重大改动前备份，格式：`v{版本}_{日期}_{描述}.zip`
+- 当前版本: v4.6（50+ 检测规则 + 用户系统 + 积分 + 支付）
