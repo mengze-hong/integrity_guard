@@ -536,7 +536,7 @@
                 <button onclick="showChecklist()" class="toolbar-btn">✅ 清单</button>
                 <button onclick="showVenueChecklist()" class="toolbar-btn">📝 ARR/NeurIPS</button>
                 <span style="width:1px; height:20px; background:#e2e8f0; margin:0 4px;"></span>
-                <button onclick="doRecheck()" id="recheck-btn" class="toolbar-btn-primary" title="重新运行质检 (Ctrl+Shift+R)">🔄 重新质检</button>
+                <button onclick="doRecheck()" id="recheck-btn" class="toolbar-btn-primary" title="重新运行质检 (Ctrl+Shift+R)">重新质检</button>
                 <button onclick="exportReport()" class="toolbar-btn">📄 导出</button>
                 <button onclick="document.getElementById('shortcuts-modal').classList.remove('hidden')" class="toolbar-btn" style="padding:4px 6px;" title="快捷键帮助 (?)">⌨️</button>
             </div>
@@ -1632,14 +1632,26 @@ async function autoSave() {
 // === Recheck ===
 async function doRecheck() {
     const btn = document.getElementById('recheck-btn');
-    btn.disabled=true; btn.textContent='⏳ 检查中...';
+    const prevScore = report?.overall_score || 0;
+    const prevErrors = report ? report.gate_results.reduce((s,g) => s + g.issues.filter(i=>i.severity==='error').length, 0) : 0;
+
+    btn.disabled=true; btn.textContent='检查中...';
     await fetch(`/api/recheck/${jobId}`,{method:'POST'});
     await waitForResult(); await loadReport();
     refreshCredits();
     updateXP(); loadFileTree(); updateCompleteBtn();
     if(currentFile){highlightErrors();renderIssues(currentFile);}
-    btn.disabled=false; btn.textContent='🔄 重新质检';
-    toast(`✅ 质检完成！得分: ${report.overall_score.toFixed(0)}/100`, report.overall_passed ? 'success' : 'info');
+    btn.disabled=false; btn.textContent='重新质检';
+
+    // Show improvement diff
+    const newScore = report.overall_score;
+    const newErrors = report.gate_results.reduce((s,g) => s + g.issues.filter(i=>i.severity==='error').length, 0);
+    const scoreDiff = newScore - prevScore;
+    const errDiff = newErrors - prevErrors;
+    let msg = `质检完成 · ${newScore.toFixed(0)}/100`;
+    if (scoreDiff > 0) msg += ` · 提升 +${scoreDiff.toFixed(1)}`;
+    if (errDiff < 0) msg += ` · 修复 ${Math.abs(errDiff)} 个错误`;
+    toast(msg, report.overall_passed ? 'success' : 'info', 4000);
 }
 
 // === Dismiss ===
