@@ -621,41 +621,62 @@ class WritingQualityGate(BaseGate):
 
             conf_info = cls._CONFERENCE_LIMITS[detected_conf]
 
-            # Estimate page count (rough: ~300 words per page for 2-column, ~500 for 1-column)
-            # Remove comments and commands for word count
+            # Detect column layout for accurate word-per-page estimation
+            is_single_column = detected_conf in ("neurips", "icml", "iclr")
+            # Check explicit twocolumn/onecolumn in source
+            if re.search(r"\\(?:twocolumn|begin\{multicols\}\{2\})", text):
+                is_single_column = False
+            elif re.search(r"\\onecolumn|\\begin\{multicols\}\{1\}", text):
+                is_single_column = True
+
+            # Word count (strip comments, floats, commands)
             clean = re.sub(r"%.*", "", text)
             clean = re.sub(r"\\begin\{(?:figure|table|equation|align)\*?\}.*?\\end\{(?:figure|table|equation|align)\*?\}", " [FLOAT] ", clean, flags=re.DOTALL)
             clean = re.sub(r"\\[a-zA-Z]+(\{[^}]*\})*", " ", clean)
             clean = re.sub(r"[{}\\$%&~^_]", " ", clean)
             words = len([w for w in clean.split() if len(w) > 1])
 
-            # Two-column formats (ACL, NeurIPS, ICML etc.) ≈ 600 words/page
-            words_per_page = 600 if detected_conf in ("neurips", "icml", "iclr", "cvpr", "iccv") else 550
+            # Words-per-page calibration:
+            # Single column (NeurIPS/ICLR): ~400 words/page (wider margins, larger font)
+            # Two column (ACL/CVPR/AAAI): ~700 words/page (dense, small font)
+            if is_single_column:
+                words_per_page = 420
+            else:
+                words_per_page = 700
+
             est_pages = words / words_per_page
 
-            # Count floats (each takes ~0.3 page)
-            float_count = len(re.findall(r"\\begin\{(?:figure|table)\*?\}", text))
-            est_pages += float_count * 0.3
+            # Float estimation: full-width (*) floats ≈ 0.4 page, column floats ≈ 0.25 page
+            full_floats = len(re.findall(r"\\begin\{(?:figure|table)\*\}", text))
+            col_floats = len(re.findall(r"\\begin\{(?:figure|table)\}", text))
+            if is_single_column:
+                est_pages += (full_floats + col_floats) * 0.35
+            else:
+                est_pages += full_floats * 0.4 + col_floats * 0.2
 
             max_pages = conf_info["main_pages"]
+            layout_desc = "单栏" if is_single_column else "双栏"
 
             if est_pages > max_pages + 1:
+                total_floats = full_floats + col_floats
                 issues.append(Issue(
                     severity=Severity.ERROR,
-                    message=f"页数可能超限: 估算 ~{est_pages:.1f} 页（{conf_info['name']} 限制 {max_pages} 页正文）",
+                    message=f"页数可能超限: 估算 ~{est_pages:.1f} 页（{conf_info['name']} 限 {max_pages} 页，{layout_desc}）",
                     location=tex_file.path.name,
                     file=tex_file.path.name,
                     suggestion=f"{conf_info['name']} 正文限制 {max_pages} 页（+1 页 references）。"
-                    f"当前估算约 {est_pages:.1f} 页（{words} 词 + {float_count} 个浮动体）。"
-                    f"请精简内容或将部分内容移至附录。",
+                    f"当前估算约 {est_pages:.1f} 页（{words} 词 + {total_floats} 个浮动体，{layout_desc} {words_per_page} 词/页）。"
+                    f"⚠️ 这只是估算，请以编译后的 PDF 为准。建议精简内容或移至附录。",
                 ))
-            elif est_pages > max_pages * 0.95:
+            elif est_pages > max_pages * 0.9:
+                total_floats = full_floats + col_floats
                 issues.append(Issue(
                     severity=Severity.WARNING,
-                    message=f"页数接近上限: 估算 ~{est_pages:.1f} 页（{conf_info['name']} 限制 {max_pages} 页）",
+                    message=f"页数接近上限: 估算 ~{est_pages:.1f} 页（{conf_info['name']} 限 {max_pages} 页，{layout_desc}）",
                     location=tex_file.path.name,
                     file=tex_file.path.name,
-                    suggestion=f"当前约 {est_pages:.1f}/{max_pages} 页，接近上限。编译后请确认不超页。",
+                    suggestion=f"当前约 {est_pages:.1f}/{max_pages} 页（{layout_desc} {words_per_page} 词/页）。"
+                    f"⚠️ 仅为估算值，实际以 PDF 编译结果为准。建议留出余量。",
                 ))
 
     @staticmethod
