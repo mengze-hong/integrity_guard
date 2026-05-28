@@ -575,8 +575,9 @@
                 <div id="issue-list"></div>
                 <div id="check-panel-footer">
                     <div class="flex gap-2 mb-2">
-                        <button onclick="copyIssueList()" class="flex-1 py-2 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors border-none cursor-pointer" title="复制问题列表发给导师">📋 复制问题</button>
-                        <button onclick="downloadCurrentFile()" class="flex-1 py-2 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors border-none cursor-pointer" title="下载当前文件">💾 下载文件</button>
+                        <button onclick="doBatchFix()" class="flex-1 py-2 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border:1px solid #bfdbfe cursor-pointer" title="AI 一键修复所有可修复问题">🤖 一键修复</button>
+                        <button onclick="copyIssueList()" class="flex-1 py-2 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors border-none cursor-pointer" title="复制问题列表发给导师">📋 复制</button>
+                        <button onclick="downloadCurrentFile()" class="flex-1 py-2 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors border-none cursor-pointer" title="下载当前文件">💾 下载</button>
                     </div>
                     <button id="complete-btn" disabled onclick="completeSubmission()" class="w-full py-2.5 rounded-lg font-bold text-sm transition-all disabled:bg-slate-100 disabled:text-slate-300 disabled:cursor-not-allowed bg-green-600 text-white hover:bg-green-700 shadow disabled:shadow-none">
                         ✅ 确认提交
@@ -981,6 +982,7 @@ function showOverview() {
 
     // Load score trend
     loadScoreTrend();
+    loadComparison();
 }
 
 async function loadScoreTrend() {
@@ -1010,6 +1012,24 @@ async function loadScoreTrend() {
             const date = new Date(t.timestamp);
             return `<span style="flex:1; text-align:center; font-size:9px; color:#94a3b8;">${date.getMonth()+1}/${date.getDate()}</span>`;
         }).join('');
+    } catch(e) { /* silent */ }
+}
+
+async function loadComparison() {
+    try {
+        const r = await fetch(`/api/compare/${jobId}`);
+        const d = await r.json();
+        if (!d.has_previous) return;
+
+        // Show comparison badge near the score
+        const scoreEl = document.getElementById('overview-status-text');
+        const diff = d.score_diff;
+        const diffColor = diff > 0 ? '#22c55e' : diff < 0 ? '#ef4444' : '#64748b';
+        const diffIcon = diff > 0 ? '📈' : diff < 0 ? '📉' : '➡️';
+        const errDiff = d.error_diff;
+        const errText = errDiff < 0 ? `<span style="color:#22c55e;">错误 ${errDiff}</span>` : errDiff > 0 ? `<span style="color:#ef4444;">错误 +${errDiff}</span>` : '';
+
+        scoreEl.innerHTML += `<br><span style="font-size:12px; color:${diffColor}; margin-top:4px; display:inline-block;">${diffIcon} 较上次: ${diff>0?'+':''}${diff.toFixed(1)} 分 ${errText}</span>`;
     } catch(e) { /* silent */ }
 }
 
@@ -1925,6 +1945,86 @@ async function executeTidyUp(btn) {
     // Reload file tree and current file
     loadFileTree();
     if (currentFile) openFile(currentFile);
+}
+
+// === AI Batch Fix ===
+async function doBatchFix() {
+    if (!jobId) return;
+    toast('🤖 正在批量分析所有问题...', 'info', 5000);
+
+    try {
+        const r = await fetch(`/api/ai-batch-fix/${jobId}`, {method: 'POST'});
+        const d = await r.json();
+
+        if (d.status === 'ok' && d.fixes && d.fixes.length > 0) {
+            // Show batch fix modal with all suggestions
+            const modal = document.createElement('div');
+            modal.className = 'modal-bg';
+            modal.onclick = e => { if(e.target===modal) modal.remove(); };
+
+            let fixesHtml = d.fixes.map((fix, i) => `
+                <div style="border:1px solid #e2e8f0; border-radius:10px; padding:14px; margin-bottom:10px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                        <span style="font-size:12px; font-weight:600; color:#1e293b;">${esc(fix.message).slice(0,60)}</span>
+                        <button onclick="applyBatchFix(${i})" style="font-size:11px; padding:4px 10px; border-radius:6px; border:none; background:#22c55e; color:#fff; cursor:pointer; font-weight:600;">应用</button>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:11px;">
+                        <div style="background:#fef2f2; padding:8px; border-radius:6px; font-family:var(--font-mono); white-space:pre-wrap; max-height:80px; overflow:hidden;">${esc(fix.original)}</div>
+                        <div style="background:#f0fdf4; padding:8px; border-radius:6px; font-family:var(--font-mono); white-space:pre-wrap; max-height:80px; overflow:hidden;">${esc(fix.fixed)}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:24px; max-width:700px; width:90%; max-height:80vh; overflow-y:auto;">
+                <h3 style="font-size:16px; font-weight:700; margin:0 0 4px;">🤖 AI 批量修复</h3>
+                <p style="font-size:12px; color:#64748b; margin:0 0 16px;">找到 ${d.fixes.length}/${d.total_fixable} 个可修复问题</p>
+                <div id="batch-fixes-list">${fixesHtml}</div>
+                <div style="display:flex; gap:8px; margin-top:16px; justify-content:flex-end;">
+                    <button onclick="this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-size:13px;">关闭</button>
+                    <button onclick="applyAllBatchFixes();this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:none; background:#22c55e; color:#fff; cursor:pointer; font-size:13px; font-weight:600;">✅ 全部应用</button>
+                </div>
+            </div>`;
+            document.body.appendChild(modal);
+
+            // Store fixes globally for apply functions
+            window._batchFixes = d.fixes;
+        } else {
+            toast(d.message || '没有可自动修复的问题', 'success', 2000);
+        }
+    } catch(e) {
+        toast('批量修复请求失败: ' + e.message, 'error');
+    }
+}
+
+function applyBatchFix(index) {
+    const fix = window._batchFixes?.[index];
+    if (!fix || !editor) return;
+    // Find and replace the original text in the editor
+    const content = editor.getValue();
+    if (content.includes(fix.original)) {
+        editor.setValue(content.replace(fix.original, fix.fixed));
+        toast(`✅ 已应用修复 #${index+1}`, 'success', 1500);
+    } else {
+        toast('无法定位原文，可能已被修改', 'warning');
+    }
+}
+
+function applyAllBatchFixes() {
+    if (!window._batchFixes || !editor) return;
+    let content = editor.getValue();
+    let applied = 0;
+    for (const fix of window._batchFixes) {
+        if (content.includes(fix.original)) {
+            content = content.replace(fix.original, fix.fixed);
+            applied++;
+        }
+    }
+    if (applied > 0) {
+        editor.setValue(content);
+        toast(`✅ 已应用 ${applied} 个修复`, 'success', 3000);
+    } else {
+        toast('无法匹配原文', 'warning');
+    }
 }
 
 async function doFormatNormalize() {

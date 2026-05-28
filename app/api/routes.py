@@ -649,6 +649,83 @@ async def ai_fix_suggestion(job_id: str, request: Request):
         return {"status": "error", "detail": str(e)[:100]}
 
 
+@router.post("/ai-batch-fix/{job_id}")
+async def ai_batch_fix(job_id: str, request: Request):
+    """Batch AI fix: attempt to fix all auto-fixable issues at once."""
+    if job_id not in _job_dirs:
+        _get_report(job_id)
+    project_dir = _job_dirs.get(job_id)
+    if not project_dir:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    report = _get_report(job_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    # Collect fixable issues (errors with file+line info)
+    fixable = []
+    for gate in report.gate_results:
+        for idx, issue in enumerate(gate.issues):
+            if issue.severity != Severity.ERROR:
+                continue
+            # Skip if dismissed
+            if any(d.gate_name == gate.gate_name and d.issue_index == idx
+                   for d in report.dismissed_issues):
+                continue
+            if issue.file and issue.line:
+                fixable.append({
+                    "message": issue.message,
+                    "file": issue.file,
+                    "line": issue.line,
+                    "suggestion": issue.suggestion or "",
+                })
+
+    if not fixable:
+        return {"status": "ok", "fixes": [], "message": "没有可自动修复的问题"}
+
+    # Batch: get context for each fixable issue and call LLM
+    import httpx
+    fixes = []
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        for item in fixable[:5]:  # Limit to 5 at a time to avoid timeout
+            target = project_dir / item["file"]
+            if not target.exists():
+                continue
+            lines = target.read_text(encoding="utf-8", errors="replace").split("\n")
+            start = max(0, item["line"] - 4)
+            end = min(len(lines), item["line"] + 4)
+            context = "\n".join(lines[start:end])
+
+            try:
+                resp = await client.post(
+                    f"{settings.llm_base_url}/chat/completions",
+                    headers={"Authorization": f"Bearer {settings.llm_api_key}"},
+                    json={
+                        "model": settings.llm_model,
+                        "messages": [
+                            {"role": "system", "content": "你是 LaTeX 学术论文修复助手。根据问题和上下文，给出修复后的代码片段。只输出修复后的代码，不要解释。"},
+                            {"role": "user", "content": f"问题: {item['message']}\n建议: {item['suggestion']}\n\n代码:\n```latex\n{context}\n```\n\n修复后:"},
+                        ],
+                        "max_tokens": 400,
+                        "temperature": 0.2,
+                    },
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    fix_text = data["choices"][0]["message"]["content"].strip()
+                    fixes.append({
+                        "file": item["file"],
+                        "line": item["line"],
+                        "message": item["message"],
+                        "original": context,
+                        "fixed": fix_text,
+                    })
+            except Exception:
+                continue
+
+    return {"status": "ok", "fixes": fixes, "total_fixable": len(fixable)}
+
+
 @router.post("/ai-review/{job_id}")
 async def ai_reviewer_simulation(job_id: str, request: Request):
     """Simulate a peer reviewer reading the paper — identify weaknesses and questions."""
@@ -818,6 +895,58 @@ async def ai_optimize_abstract(job_id: str, request: Request):
 async def get_history():
     """Return list of recent jobs for the history panel."""
     return {"jobs": storage.list_jobs(limit=50)}
+
+
+@router.get("/compare/{job_id}")
+async def compare_with_previous(job_id: str):
+    """Compare current check results with the previous check of the same file."""
+    report = _get_report(job_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    # Find previous check of same filename
+    all_jobs = storage.list_jobs(limit=50)
+    same_file = [j for j in all_jobs if j["filename"] == report.filename and j["job_id"] != job_id]
+    same_file.sort(key=lambda x: x["timestamp"], reverse=True)
+
+    if not same_file:
+        return {"has_previous": False}
+
+    prev_job = same_file[0]
+    prev_report = storage.load_report(prev_job["job_id"])
+    if not prev_report:
+        return {"has_previous": False}
+
+    # Compute diff
+    curr_errors = sum(len([i for i in g.issues if i.severity == Severity.ERROR]) for g in report.gate_results)
+    prev_errors = sum(len([i for i in g.issues if i.severity == Severity.ERROR]) for g in prev_report.gate_results)
+    curr_warnings = sum(len([i for i in g.issues if i.severity == Severity.WARNING]) for g in report.gate_results)
+    prev_warnings = sum(len([i for i in g.issues if i.severity == Severity.WARNING]) for g in prev_report.gate_results)
+
+    gate_diffs = []
+    for curr_gate in report.gate_results:
+        prev_gate = next((g for g in prev_report.gate_results if g.gate_name == curr_gate.gate_name), None)
+        if prev_gate:
+            gate_diffs.append({
+                "gate": curr_gate.gate_name,
+                "curr_passed": curr_gate.passed,
+                "prev_passed": prev_gate.passed,
+                "curr_score": curr_gate.score,
+                "prev_score": prev_gate.score,
+                "improved": curr_gate.score > prev_gate.score,
+            })
+
+    return {
+        "has_previous": True,
+        "previous_job_id": prev_job["job_id"],
+        "previous_timestamp": prev_job["timestamp"],
+        "score_diff": report.overall_score - prev_report.overall_score,
+        "curr_score": report.overall_score,
+        "prev_score": prev_report.overall_score,
+        "error_diff": curr_errors - prev_errors,
+        "warning_diff": curr_warnings - prev_warnings,
+        "gates": gate_diffs,
+    }
 
 
 @router.get("/score-trend/{job_id}")
