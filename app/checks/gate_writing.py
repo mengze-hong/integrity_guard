@@ -501,9 +501,6 @@ class WritingQualityGate(BaseGate):
                             suggestion="标准格式为 \"et al.\"（带句点）。建议使用 \\textit{et al.} 或定义 \\newcommand{\\etal}{\\textit{et al.}}",
                         ))
 
-        # === Conference Format & Page Limit Detection ===
-        self._check_format_and_pages(paper.tex_files, issues)
-
         # === Missing Required Sections ===
         self._check_required_sections(paper.tex_files, issues)
 
@@ -561,123 +558,6 @@ class WritingQualityGate(BaseGate):
                 paragraphs.append({"text": text_block, "line": start_line})
 
         return paragraphs
-
-    # === Conference Format & Page Count ===
-
-    # Known conference templates and their page limits
-    _CONFERENCE_LIMITS = {
-        "acl": {"name": "ACL/EMNLP/NAACL", "main_pages": 8, "total_pages": 9},
-        "emnlp": {"name": "EMNLP", "main_pages": 8, "total_pages": 9},
-        "naacl": {"name": "NAACL", "main_pages": 8, "total_pages": 9},
-        "eacl": {"name": "EACL", "main_pages": 8, "total_pages": 9},
-        "coling": {"name": "COLING", "main_pages": 8, "total_pages": 9},
-        "neurips": {"name": "NeurIPS", "main_pages": 9, "total_pages": 15},
-        "nips": {"name": "NeurIPS", "main_pages": 9, "total_pages": 15},
-        "icml": {"name": "ICML", "main_pages": 8, "total_pages": 14},
-        "iclr": {"name": "ICLR", "main_pages": 9, "total_pages": 15},
-        "aaai": {"name": "AAAI", "main_pages": 7, "total_pages": 8},
-        "ijcai": {"name": "IJCAI", "main_pages": 7, "total_pages": 7},
-        "cvpr": {"name": "CVPR", "main_pages": 8, "total_pages": 14},
-        "iccv": {"name": "ICCV", "main_pages": 8, "total_pages": 14},
-        "eccv": {"name": "ECCV", "main_pages": 14, "total_pages": 14},
-        "sigir": {"name": "SIGIR", "main_pages": 9, "total_pages": 12},
-        "www": {"name": "WWW", "main_pages": 9, "total_pages": 12},
-        "kdd": {"name": "KDD", "main_pages": 9, "total_pages": 9},
-    }
-
-    @classmethod
-    def _check_format_and_pages(cls, tex_files: list, issues: list):
-        """Detect conference format and estimate page count."""
-        for tex_file in tex_files:
-            if not tex_file.is_main:
-                continue
-            text = tex_file.raw_text
-
-            # Detect conference from \usepackage or \documentclass
-            detected_conf = None
-            for conf_key in cls._CONFERENCE_LIMITS:
-                if re.search(
-                    rf"\\(?:usepackage|documentclass).*\b{conf_key}\b",
-                    text, re.IGNORECASE
-                ):
-                    detected_conf = conf_key
-                    break
-
-            # Also check for common style files in text
-            if not detected_conf:
-                style_patterns = {
-                    "acl": r"acl(?:_natbib|2\d{3}|anthology)",
-                    "neurips": r"neurips_\d{4}",
-                    "icml": r"icml\d{4}",
-                    "iclr": r"iclr\d{4}",
-                }
-                for key, pattern in style_patterns.items():
-                    if re.search(pattern, text, re.IGNORECASE):
-                        detected_conf = key
-                        break
-
-            if not detected_conf:
-                continue
-
-            conf_info = cls._CONFERENCE_LIMITS[detected_conf]
-
-            # Detect column layout for accurate word-per-page estimation
-            is_single_column = detected_conf in ("neurips", "icml", "iclr")
-            # Check explicit twocolumn/onecolumn in source
-            if re.search(r"\\(?:twocolumn|begin\{multicols\}\{2\})", text):
-                is_single_column = False
-            elif re.search(r"\\onecolumn|\\begin\{multicols\}\{1\}", text):
-                is_single_column = True
-
-            # Word count (strip comments, floats, commands)
-            clean = re.sub(r"%.*", "", text)
-            clean = re.sub(r"\\begin\{(?:figure|table|equation|align)\*?\}.*?\\end\{(?:figure|table|equation|align)\*?\}", " [FLOAT] ", clean, flags=re.DOTALL)
-            clean = re.sub(r"\\[a-zA-Z]+(\{[^}]*\})*", " ", clean)
-            clean = re.sub(r"[{}\\$%&~^_]", " ", clean)
-            words = len([w for w in clean.split() if len(w) > 1])
-
-            # Words-per-page calibration:
-            # Single column (NeurIPS/ICLR): ~400 words/page (wider margins, larger font)
-            # Two column (ACL/CVPR/AAAI): ~700 words/page (dense, small font)
-            if is_single_column:
-                words_per_page = 420
-            else:
-                words_per_page = 700
-
-            est_pages = words / words_per_page
-
-            # Float estimation: full-width (*) floats ≈ 0.4 page, column floats ≈ 0.25 page
-            full_floats = len(re.findall(r"\\begin\{(?:figure|table)\*\}", text))
-            col_floats = len(re.findall(r"\\begin\{(?:figure|table)\}", text))
-            if is_single_column:
-                est_pages += (full_floats + col_floats) * 0.35
-            else:
-                est_pages += full_floats * 0.4 + col_floats * 0.2
-
-            max_pages = conf_info["main_pages"]
-            layout_desc = "单栏" if is_single_column else "双栏"
-
-            if est_pages > max_pages + 1:
-                total_floats = full_floats + col_floats
-                issues.append(Issue(
-                    severity=Severity.ERROR,
-                    message=f"页数可能超限: 估算 ~{est_pages:.1f} 页（{conf_info['name']} 限 {max_pages} 页，{layout_desc}）",
-                    location=tex_file.path.name,
-                    file=tex_file.path.name,
-                    suggestion=f"{conf_info['name']} 正文限制 {max_pages} 页（+1 页 references）。"
-                    f"当前估算约 {est_pages:.1f} 页（{words} 词 + {total_floats} 个浮动体，{layout_desc} {words_per_page} 词/页）。"
-                    f"⚠️ 这只是估算，请以编译后的 PDF 为准。建议精简内容或移至附录。",
-                ))
-            elif est_pages > max_pages * 0.9:
-                total_floats = full_floats + col_floats
-                issues.append(Issue(
-                    severity=Severity.WARNING,
-                    message=f"页数接近上限: 估算 ~{est_pages:.1f} 页（{conf_info['name']} 限 {max_pages} 页，{layout_desc}）",
-                    location=tex_file.path.name,
-                    file=tex_file.path.name,
-                    suggestion=f"当前约 {est_pages:.1f}/{max_pages} 页（{layout_desc} {words_per_page} 词/页）。"
-                    f"⚠️ 仅为估算值，实际以 PDF 编译结果为准。建议留出余量。",
-                ))
 
     @staticmethod
     def _check_required_sections(tex_files: list, issues: list):
