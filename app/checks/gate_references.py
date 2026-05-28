@@ -550,9 +550,23 @@ class ReferenceAuthenticityGate(BaseGate):
             except (ValueError, TypeError):
                 pass
 
-        # 判定最终状态
+        # 5-level classification (matching GPTZero's taxonomy)
         has_errors = any(i.severity == Severity.ERROR for i in issues)
-        meta["status"] = "fail" if has_errors else "pass"
+        has_warnings = any(i.severity == Severity.WARNING for i in issues)
+
+        if has_errors:
+            # Check if it's truly fake or just unverifiable
+            error_msgs = " ".join(i.message for i in issues if i.severity == Severity.ERROR)
+            if "不匹配" in error_msgs or "无法解析" in error_msgs:
+                meta["status"] = "fake"  # Fabricated or unmatched
+            else:
+                meta["status"] = "unsure"  # Cannot determine
+        elif has_warnings:
+            meta["status"] = "minor_issues"  # Real but with discrepancies
+        elif meta.get("source") is None and not entry.doi:
+            meta["status"] = "unknown"  # Cannot verify (no DOI, no source found)
+        else:
+            meta["status"] = "pass"  # Verified real source
 
         return issues, meta
 

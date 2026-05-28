@@ -967,7 +967,8 @@ function showOverview() {
             cardsHtml += `<details class="mt-2"><summary class="text-[11px] text-blue-600 cursor-pointer hover:underline">查看引文验证详情 (${g.metadata.verified_entries.length} 条)</summary>
             <div class="mt-2 max-h-48 overflow-y-auto text-[11px] space-y-1">`;
             for (const entry of g.metadata.verified_entries) {
-                const icon = entry.status === 'pass' ? '✅' : entry.status === 'no_doi_but_url' || entry.status === 'verified_by_title_search' ? '🟡' : '❌';
+                const statusMap = {'pass':'✅','minor_issues':'🟡','unknown':'⚪','unsure':'🟠','fake':'❌','no_doi_but_url':'🟡','verified_by_title_search':'🟡'};
+                const icon = statusMap[entry.status] || '❌';
                 const link = entry.doi_link ? `<a href="${entry.doi_link}" target="_blank" class="text-blue-500 hover:underline ml-1">↗</a>` : '';
                 cardsHtml += `<div class="flex items-center gap-1">${icon} <span class="font-mono">${esc(entry.key)}</span>${link}</div>`;
             }
