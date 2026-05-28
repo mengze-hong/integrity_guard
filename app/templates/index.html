@@ -202,6 +202,21 @@
             border-radius:6px;
         }
         @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+        /* Module cards */
+        .module-card {
+            background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:20px;
+            transition:all 0.2s ease; cursor:pointer; position:relative; overflow:hidden;
+        }
+        .module-card:hover { transform:translateY(-3px); box-shadow:0 8px 24px rgba(0,0,0,0.08); border-color:#cbd5e1; }
+        .module-card::after { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:inherit; border-radius:14px 14px 0 0; opacity:0; transition:opacity 0.2s; }
+        .module-card:hover::after { opacity:1; }
+        .module-icon {
+            width:36px; height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center;
+            font-size:16px; margin-bottom:10px; color:#fff; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        }
+        .module-title { font-weight:600; font-size:13px; color:#0f172a; margin:0; }
+        .module-desc { font-size:11px; color:#64748b; margin:5px 0 0; line-height:1.4; }
         #screen-upload:not(.hidden), #screen-overview:not(.hidden), #screen-workspace:not(.hidden) { animation: fadeIn 0.25s ease; }
 
         /* Context menu */
@@ -259,21 +274,23 @@
 <div id="app">
 
     <!-- ====== Global Navbar ====== -->
-    <div id="navbar" style="display:flex; align-items:center; justify-content:space-between; padding:0 20px; height:44px; background:#fff; border-bottom:1px solid #e2e8f0; flex-shrink:0; z-index:50;">
-        <div style="display:flex; align-items:center; gap:10px;">
-            <span style="font-size:20px;">🛡️</span>
-            <span style="font-size:14px; font-weight:700; color:#0f172a;">IntegrityGuard</span>
+    <div id="navbar" style="display:flex; align-items:center; justify-content:space-between; padding:0 24px; height:48px; background:rgba(255,255,255,0.9); backdrop-filter:blur(12px); border-bottom:1px solid rgba(226,232,240,0.8); flex-shrink:0; z-index:50;">
+        <div style="display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="showScreen('screen-upload');loadHistory();">
+            <div style="width:28px; height:28px; background:linear-gradient(135deg,#3b82f6,#1d4ed8); border-radius:7px; display:flex; align-items:center; justify-content:center;">
+                <span style="font-size:14px; filter:brightness(10);">🛡</span>
+            </div>
+            <span style="font-size:14px; font-weight:700; color:#0f172a; letter-spacing:-0.3px;">IntegrityGuard</span>
+            <span style="font-size:9px; padding:2px 5px; background:#eff6ff; color:#3b82f6; border-radius:4px; font-weight:600;">PRO</span>
         </div>
         <div id="nav-auth" style="display:flex; align-items:center; gap:12px;">
-            <!-- Populated by JS based on auth state -->
-            <button onclick="showAuthModal('login')" id="nav-login-btn" style="font-size:12px; padding:5px 14px; border-radius:6px; border:1px solid #e2e8f0; background:#fff; color:#334155; cursor:pointer; font-weight:500;">登录</button>
-            <button onclick="showAuthModal('register')" id="nav-register-btn" style="font-size:12px; padding:5px 14px; border-radius:6px; border:none; background:#3b82f6; color:#fff; cursor:pointer; font-weight:500;">注册</button>
+            <button onclick="showAuthModal('login')" id="nav-login-btn" style="font-size:12px; padding:6px 16px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; color:#334155; cursor:pointer; font-weight:500; transition:all 0.15s;" onmouseover="this.style.background='#f8fafc';this.style.borderColor='#cbd5e1'" onmouseout="this.style.background='#fff';this.style.borderColor='#e2e8f0'">登录</button>
+            <button onclick="showAuthModal('register')" id="nav-register-btn" style="font-size:12px; padding:6px 16px; border-radius:8px; border:none; background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; cursor:pointer; font-weight:600; box-shadow:0 2px 8px rgba(59,130,246,0.3); transition:all 0.15s;" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 12px rgba(59,130,246,0.4)'" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 8px rgba(59,130,246,0.3)'">免费试用</button>
         </div>
     </div>
 
     <!-- ====== SCREEN 1: Upload ====== -->
-    <div id="screen-upload" class="flex-1" style="background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%); overflow-y:auto;">
-        <div style="display:flex; align-items:center; gap:60px; max-width:1100px; width:100%; padding:40px 40px 0; margin:0 auto;">
+    <div id="screen-upload" class="flex-1" style="background:linear-gradient(180deg,#ffffff 0%,#f8fafc 50%,#f1f5f9 100%); overflow-y:auto;">
+        <div style="display:flex; align-items:center; gap:60px; max-width:1100px; width:100%; padding:28px 40px 0; margin:0 auto;">
             <!-- Left: Branding & Features -->
             <div id="upload-intro" style="flex:1; color:#1e293b;">
                 <div style="display:flex; align-items:center; gap:14px; margin-bottom:28px;">
@@ -323,9 +340,9 @@
             </div>
 
             <!-- Right: Upload Card -->
-            <div style="background:#fff; border-radius:16px; box-shadow:0 4px 24px rgba(0,0,0,0.08); border:1px solid #e2e8f0; padding:36px; width:400px; flex-shrink:0;">
-                <div style="text-align:center; margin-bottom:28px;">
-                    <h2 style="font-size:20px; font-weight:700; color:#1e293b; margin:0;">上传论文开始检查</h2>
+            <div style="background:#fff; border-radius:20px; box-shadow:0 4px 24px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04); border:1px solid rgba(226,232,240,0.8); padding:36px; width:420px; flex-shrink:0;">
+                <div style="text-align:center; margin-bottom:24px;">
+                    <h2 style="font-size:20px; font-weight:700; color:#0f172a; margin:0;">上传论文开始检查</h2>
                     <p style="color:#94a3b8; font-size:13px; margin:6px 0 0;">支持 Overleaf 导出的 ZIP 压缩包</p>
                 </div>
                 <form id="upload-form">
@@ -336,7 +353,7 @@
                         <input id="file-input" type="file" accept=".zip" style="display:none;" onchange="handleUpload(this)">
                     </div>
                     <div id="file-info" class="hidden" style="margin-top:12px; font-size:13px; color:#64748b; text-align:center;"></div>
-                    <button type="submit" id="submit-btn" disabled style="margin-top:20px; width:100%; background:#3b82f6; color:#fff; padding:12px; border-radius:12px; font-weight:700; font-size:15px; border:none; cursor:pointer; opacity:0.4; transition:all 0.2s;" onmouseover="if(!this.disabled)this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">开始质检</button>
+                    <button type="submit" id="submit-btn" disabled style="margin-top:20px; width:100%; background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; padding:13px; border-radius:12px; font-weight:700; font-size:15px; border:none; cursor:pointer; opacity:0.35; transition:all 0.2s; box-shadow:0 4px 12px rgba(59,130,246,0.25);" onmouseover="if(!this.disabled){this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 16px rgba(59,130,246,0.35)'}" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 12px rgba(59,130,246,0.25)'">开始质检</button>
                     <!-- Check progress bar (hidden by default) -->
                     <div id="check-progress" style="display:none; margin-top:12px;">
                         <div style="display:flex; justify-content:space-between; font-size:11px; color:#64748b; margin-bottom:4px;">
@@ -362,51 +379,51 @@
         </div>
 
         <!-- Feature Modules Showcase -->
-        <div style="max-width:1100px; width:100%; margin:0 auto; padding:48px 40px 40px;">
-            <div style="text-align:center; margin-bottom:28px;">
-                <h2 style="font-size:20px; font-weight:700; color:#0f172a; margin:0;">模块化检查能力</h2>
-                <p style="font-size:13px; color:#64748b; margin:6px 0 0;">每个模块独立运行，精准定位论文问题</p>
+        <div style="max-width:1100px; width:100%; margin:0 auto; padding:40px 40px 48px;">
+            <div style="text-align:center; margin-bottom:32px;">
+                <h2 style="font-size:22px; font-weight:700; color:#0f172a; margin:0; letter-spacing:-0.3px;">模块化检查能力</h2>
+                <p style="font-size:13px; color:#64748b; margin:8px 0 0;">每个模块独立运行，精准定位论文问题</p>
             </div>
-            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:14px;">
-                <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:18px; transition:all 0.15s; cursor:pointer;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.06)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
-                    <div style="font-size:22px; margin-bottom:6px;">🔍</div>
-                    <p style="font-weight:600; font-size:13px; color:#1e293b; margin:0;">引文验证</p>
-                    <p style="font-size:11px; color:#64748b; margin:4px 0 0; line-height:1.4;">Crossref/S2/OpenAlex 交叉验证真实性</p>
+            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:16px;">
+                <div class="module-card" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
+                    <div class="module-icon" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);">🔍</div>
+                    <p class="module-title">引文验证</p>
+                    <p class="module-desc">Crossref/S2/OpenAlex 交叉验证</p>
                 </div>
-                <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:18px; transition:all 0.15s; cursor:pointer;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.06)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
-                    <div style="font-size:22px; margin-bottom:6px;">📋</div>
-                    <p style="font-weight:600; font-size:13px; color:#1e293b; margin:0;">Bib 整理</p>
-                    <p style="font-size:11px; color:#64748b; margin:4px 0 0; line-height:1.4;">格式化、按引用排序、分离未引用条目</p>
+                <div class="module-card" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
+                    <div class="module-icon" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);">📋</div>
+                    <p class="module-title">Bib 整理</p>
+                    <p class="module-desc">格式化、排序、分离未引用条目</p>
                 </div>
-                <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:18px; transition:all 0.15s; cursor:pointer;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.06)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
-                    <div style="font-size:22px; margin-bottom:6px;">✍️</div>
-                    <p style="font-weight:600; font-size:13px; color:#1e293b; margin:0;">写作质量</p>
-                    <p style="font-size:11px; color:#64748b; margin:4px 0 0; line-height:1.4;">AI 痕迹、套话检测、被动语态分析</p>
+                <div class="module-card" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
+                    <div class="module-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);">✍️</div>
+                    <p class="module-title">写作质量</p>
+                    <p class="module-desc">AI 痕迹、套话、被动语态检测</p>
                 </div>
-                <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:18px; transition:all 0.15s; cursor:pointer;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.06)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
-                    <div style="font-size:22px; margin-bottom:6px;">🧪</div>
-                    <p style="font-weight:600; font-size:13px; color:#1e293b; margin:0;">数据完整性</p>
-                    <p style="font-size:11px; color:#64748b; margin:4px 0 0; line-height:1.4;">Benford 定律、重复行、p-value 异常</p>
+                <div class="module-card" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
+                    <div class="module-icon" style="background:linear-gradient(135deg,#10b981,#059669);">🧪</div>
+                    <p class="module-title">数据完整性</p>
+                    <p class="module-desc">Benford 定律、重复行、p-hacking</p>
                 </div>
-                <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:18px; transition:all 0.15s; cursor:pointer;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.06)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
-                    <div style="font-size:22px; margin-bottom:6px;">📊</div>
-                    <p style="font-weight:600; font-size:13px; color:#1e293b; margin:0;">图表引用</p>
-                    <p style="font-size:11px; color:#64748b; margin:4px 0 0; line-height:1.4;">label/caption/ref 完整性验证</p>
+                <div class="module-card" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
+                    <div class="module-icon" style="background:linear-gradient(135deg,#ec4899,#db2777);">📊</div>
+                    <p class="module-title">图表引用</p>
+                    <p class="module-desc">label/caption/ref 完整性</p>
                 </div>
-                <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:18px; transition:all 0.15s; cursor:pointer;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.06)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
-                    <div style="font-size:22px; margin-bottom:6px;">🏆</div>
-                    <p style="font-weight:600; font-size:13px; color:#1e293b; margin:0;">引用质量</p>
-                    <p style="font-size:11px; color:#64748b; margin:4px 0 0; line-height:1.4;">顶会覆盖率、venue 分布分析</p>
+                <div class="module-card" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
+                    <div class="module-icon" style="background:linear-gradient(135deg,#06b6d4,#0891b2);">🏆</div>
+                    <p class="module-title">引用质量</p>
+                    <p class="module-desc">顶会覆盖率、新鲜度分析</p>
                 </div>
-                <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:18px; transition:all 0.15s; cursor:pointer;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.06)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
-                    <div style="font-size:22px; margin-bottom:6px;">⚖️</div>
-                    <p style="font-weight:600; font-size:13px; color:#1e293b; margin:0;">学术伦理</p>
-                    <p style="font-size:11px; color:#64748b; margin:4px 0 0; line-height:1.4;">Ethics/Limitations 章节、标注者信息</p>
+                <div class="module-card" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
+                    <div class="module-icon" style="background:linear-gradient(135deg,#f43f5e,#e11d48);">⚖️</div>
+                    <p class="module-title">学术伦理</p>
+                    <p class="module-desc">Limitations、Ethics 章节检查</p>
                 </div>
-                <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:18px; transition:all 0.15s; cursor:pointer;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.06)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
-                    <div style="font-size:22px; margin-bottom:6px;">🔒</div>
-                    <p style="font-weight:600; font-size:13px; color:#1e293b; margin:0;">匿名化</p>
-                    <p style="font-size:11px; color:#64748b; margin:4px 0 0; line-height:1.4;">[review] 模式、metadata、自引泄露</p>
+                <div class="module-card" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
+                    <div class="module-icon" style="background:linear-gradient(135deg,#64748b,#475569);">🔒</div>
+                    <p class="module-title">匿名化</p>
+                    <p class="module-desc">[review] 模式、metadata 泄露</p>
                 </div>
             </div>
         </div>
