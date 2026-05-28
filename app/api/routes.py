@@ -889,6 +889,125 @@ async def ai_optimize_abstract(job_id: str, request: Request):
         return {"status": "error", "detail": str(e)[:100]}
 
 
+# ─── Venue Checklist (ARR / NeurIPS) ─────────────────────────
+
+ARR_CHECKLIST = [
+    {"id": "A1", "section": "Every Submission", "text": "Did you describe the limitations of your work?"},
+    {"id": "A2", "section": "Every Submission", "text": "Did you discuss any potential risks of your work?"},
+    {"id": "B1", "section": "Scientific Artifacts", "text": "Did you cite the creators of artifacts you used?"},
+    {"id": "B2", "section": "Scientific Artifacts", "text": "Did you discuss the license or terms for artifacts?"},
+    {"id": "B3", "section": "Scientific Artifacts", "text": "Did you discuss if your use is consistent with intended use?"},
+    {"id": "B4", "section": "Scientific Artifacts", "text": "Did you check for offensive content or identifying info in data?"},
+    {"id": "B5", "section": "Scientific Artifacts", "text": "Did you document your artifacts (e.g., data card)?"},
+    {"id": "B6", "section": "Scientific Artifacts", "text": "Did you report relevant statistics about your data?"},
+    {"id": "C1", "section": "Computational Experiments", "text": "Did you report model size, compute budget, and infrastructure?"},
+    {"id": "C2", "section": "Computational Experiments", "text": "Did you discuss experimental setup and hyperparameter search?"},
+    {"id": "C3", "section": "Computational Experiments", "text": "Did you report descriptive statistics (mean, variance, etc.)?"},
+    {"id": "C4", "section": "Computational Experiments", "text": "Did you report implementation details for reproducibility?"},
+    {"id": "D1", "section": "Human Annotators", "text": "Did you report full text of instructions given to annotators?"},
+    {"id": "D2", "section": "Human Annotators", "text": "Did you report info about recruitment and payment?"},
+    {"id": "D3", "section": "Human Annotators", "text": "Did you discuss consent from data subjects?"},
+    {"id": "D4", "section": "Human Annotators", "text": "Did you get ethics board approval or confirm exemption?"},
+    {"id": "D5", "section": "Human Annotators", "text": "Did you report annotator demographics?"},
+    {"id": "E1", "section": "AI Assistants", "text": "Did you disclose AI assistant use in research/coding/writing?"},
+]
+
+NEURIPS_CHECKLIST = [
+    {"id": "N1", "section": "Claims", "text": "Do the main claims match the paper's theoretical/experimental results?"},
+    {"id": "N2", "section": "Limitations", "text": "Does the paper discuss limitations of the work?"},
+    {"id": "N3", "section": "Theory", "text": "Are all theoretical claims supported by formal proofs?"},
+    {"id": "N4", "section": "Experiments", "text": "Are all experimental results reproducible?"},
+    {"id": "N5", "section": "Experiments", "text": "Are error bars and statistical tests reported?"},
+    {"id": "N6", "section": "Compute", "text": "Is the computational cost and resource usage reported?"},
+    {"id": "N7", "section": "Code", "text": "Is code submitted or will be released for reproducibility?"},
+    {"id": "N8", "section": "Data", "text": "Are datasets clearly described with access instructions?"},
+    {"id": "N9", "section": "Ethics", "text": "Are there potential negative societal impacts discussed?"},
+    {"id": "N10", "section": "Ethics", "text": "Are safeguards discussed if the work has dual-use potential?"},
+]
+
+
+@router.post("/venue-checklist/{job_id}")
+async def generate_venue_checklist(job_id: str, request: Request):
+    """AI auto-fill venue-specific checklist (ARR or NeurIPS) based on paper content."""
+    if job_id not in _job_dirs:
+        _get_report(job_id)
+    project_dir = _job_dirs.get(job_id)
+    if not project_dir:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    body = await request.json()
+    venue = body.get("venue", "arr")  # 'arr' | 'neurips'
+
+    checklist = ARR_CHECKLIST if venue == "arr" else NEURIPS_CHECKLIST
+
+    # Get paper content
+    main_text = ""
+    for f in project_dir.rglob("*.tex"):
+        content = f.read_text(encoding="utf-8", errors="replace")
+        if "\\documentclass" in content:
+            main_text = content[:10000]
+            break
+
+    if not main_text:
+        return {"status": "error", "detail": "No main .tex found"}
+
+    # Build prompt
+    checklist_str = "\n".join([f"- [{item['id']}] {item['text']}" for item in checklist])
+
+    import httpx
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            resp = await client.post(
+                f"{settings.llm_base_url}/chat/completions",
+                headers={"Authorization": f"Bearer {settings.llm_api_key}"},
+                json={
+                    "model": settings.llm_model,
+                    "messages": [
+                        {"role": "system", "content": f"""You are an academic checklist assistant. Based on the paper content, determine for each checklist item:
+- "yes": The paper addresses this item
+- "no": The paper does NOT address this item (needs attention)
+- "na": Not applicable to this paper
+
+For each item, provide a brief justification (1 sentence, in Chinese).
+
+Output as JSON array: [{{"id":"A1","answer":"yes","reason":"论文第6节讨论了局限性"}}]"""},
+                        {"role": "user", "content": f"Checklist items:\n{checklist_str}\n\nPaper content:\n{main_text[:6000]}"},
+                    ],
+                    "max_tokens": 2000,
+                    "temperature": 0.3,
+                },
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                result_text = data["choices"][0]["message"]["content"].strip()
+                # Parse JSON from response
+                import json
+                # Try to extract JSON array
+                json_match = result_text
+                if "```" in json_match:
+                    json_match = json_match.split("```")[1].replace("json", "").strip()
+                try:
+                    answers = json.loads(json_match)
+                except json.JSONDecodeError:
+                    answers = []
+
+                # Merge answers with checklist items
+                result = []
+                for item in checklist:
+                    answer_data = next((a for a in answers if a.get("id") == item["id"]), None)
+                    result.append({
+                        **item,
+                        "answer": answer_data.get("answer", "unknown") if answer_data else "unknown",
+                        "reason": answer_data.get("reason", "") if answer_data else "",
+                    })
+
+                return {"status": "ok", "venue": venue, "checklist": result}
+            else:
+                return {"status": "error", "detail": f"LLM returned {resp.status_code}"}
+    except Exception as e:
+        return {"status": "error", "detail": str(e)[:100]}
+
+
 # ─── History & Cleanup ────────────────────────────────────────
 
 @router.get("/history")
