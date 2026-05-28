@@ -1894,7 +1894,7 @@ async function generateVenueChecklist(venue) {
                     <span style="flex-shrink:0;">${icon}</span>
                     <div>
                         <p style="font-size:12px; color:#1e293b; margin:0; font-weight:500;">[${item.id}] ${item.text}</p>
-                        ${item.reason ? `<p style="font-size:11px; color:#64748b; margin:2px 0 0;">${esc(item.reason)}</p>` : ''}
+                        ${item.justification ? `<p style="font-size:11px; color:#475569; margin:4px 0 0; background:#f8fafc; padding:4px 8px; border-radius:4px; border:1px solid #e2e8f0; cursor:pointer; user-select:all;" title="点击复制" onclick="event.stopPropagation();navigator.clipboard.writeText(this.textContent);toast('已复制','success',1000)">${esc(item.justification)}</p>` : ''}
                     </div>
                 </div>`;
             }).join('');

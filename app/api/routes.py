@@ -963,18 +963,25 @@ async def generate_venue_checklist(job_id: str, request: Request):
                 json={
                     "model": settings.llm_model,
                     "messages": [
-                        {"role": "system", "content": f"""You are an academic checklist assistant. Based on the paper content, determine for each checklist item:
-- "yes": The paper addresses this item
-- "no": The paper does NOT address this item (needs attention)
-- "na": Not applicable to this paper
+                        {"role": "system", "content": f"""You are an academic checklist assistant helping authors fill out venue submission checklists.
 
-For each item, provide a brief justification (1 sentence, in Chinese).
+For each checklist item, determine:
+- "yes": The paper addresses this. Provide the EXACT section/paragraph reference (e.g., "Section 5, paragraph 2")
+- "no": The paper does NOT address this. Write a brief justification that the author can paste directly into the checklist form.
+- "na": Not applicable. Explain why in one sentence.
 
-Output as JSON array: [{{"id":"A1","answer":"yes","reason":"论文第6节讨论了局限性"}}]"""},
+IMPORTANT: The justification must be a complete sentence that can be directly pasted into the submission form. Write in English (this is for conference submission).
+
+Examples:
+- {{"id":"A1","answer":"yes","justification":"We discuss limitations in Section 6, including the limited domain coverage and reliance on English-only data."}}
+- {{"id":"D1","answer":"no","justification":"Our work does not involve human annotators or participants."}}
+- {{"id":"B2","answer":"yes","justification":"We discuss dataset licenses in Section 3.1. All datasets used are publicly available under CC-BY-4.0."}}
+
+Output as JSON array."""},
                         {"role": "user", "content": f"Checklist items:\n{checklist_str}\n\nPaper content:\n{main_text[:6000]}"},
                     ],
-                    "max_tokens": 2000,
-                    "temperature": 0.3,
+                    "max_tokens": 3000,
+                    "temperature": 0.2,
                 },
             )
             if resp.status_code == 200:
@@ -998,7 +1005,7 @@ Output as JSON array: [{{"id":"A1","answer":"yes","reason":"论文第6节讨论�
                     result.append({
                         **item,
                         "answer": answer_data.get("answer", "unknown") if answer_data else "unknown",
-                        "reason": answer_data.get("reason", "") if answer_data else "",
+                        "justification": answer_data.get("justification", answer_data.get("reason", "")) if answer_data else "",
                     })
 
                 return {"status": "ok", "venue": venue, "checklist": result}
