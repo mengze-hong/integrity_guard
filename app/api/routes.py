@@ -549,6 +549,47 @@ async def execute_tidyup(job_id: str, request: Request):
     return {"status": "done", "executed": executed, "count": len(executed)}
 
 
+# ─── Format Normalization ────────────────────────────────────
+
+@router.post("/format-normalize/{job_id}")
+async def format_normalize(job_id: str, request: Request):
+    """Auto-fix formatting inconsistencies in .tex files."""
+    if job_id not in _job_dirs:
+        _get_report(job_id)
+    project_dir = _job_dirs.get(job_id)
+    if not project_dir:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    body = await request.json()
+    file_path = body.get("file")  # specific file, or None for all
+    rules = body.get("rules")  # specific rules, or None for all
+
+    from app.tools.format_normalizer import normalize_format
+
+    all_changes = []
+    targets = []
+
+    if file_path:
+        target = project_dir / file_path
+        if target.exists() and target.suffix == ".tex":
+            targets.append(target)
+    else:
+        targets = list(project_dir.rglob("*.tex"))
+
+    for target in targets:
+        content = target.read_text(encoding="utf-8")
+        normalized, changes = normalize_format(content, rules)
+        if changes:
+            target.write_text(normalized, encoding="utf-8")
+            all_changes.extend([f"[{target.name}] {c}" for c in changes])
+
+    return {
+        "status": "ok",
+        "changes": all_changes,
+        "files_modified": len([t for t in targets if any(t.name in c for c in all_changes)]),
+    }
+
+
 # ─── AI-Powered Fix Suggestions ──────────────────────────────
 
 @router.post("/ai-fix/{job_id}")

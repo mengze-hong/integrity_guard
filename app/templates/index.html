@@ -683,6 +683,7 @@
     <div class="ctx-item" id="ctx-concise" style="display:none;" onclick="doPolishSelection('concise'); hideContextMenu()">✂️ 精简选中文本</div>
     <div style="height:1px; background:#e2e8f0; margin:4px 0;" id="ctx-divider-ai" style="display:none;"></div>
     <div class="ctx-item" onclick="doBibClean(); hideContextMenu()">📋 整理 Bib</div>
+    <div class="ctx-item" onclick="doFormatNormalize(); hideContextMenu()">🔧 格式规范化</div>
     <div class="ctx-item" onclick="exportReport(); hideContextMenu()">📄 导出报告</div>
 </div>
 
@@ -1923,6 +1924,38 @@ async function executeTidyUp(btn) {
     // Reload file tree and current file
     loadFileTree();
     if (currentFile) openFile(currentFile);
+}
+
+async function doFormatNormalize() {
+    if (!jobId) return;
+    toast('🔧 正在规范化格式...', 'info', 2000);
+    try {
+        const r = await fetch(`/api/format-normalize/${jobId}`, {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({file: currentFile}),
+        });
+        const d = await r.json();
+        if (d.status === 'ok' && d.changes.length > 0) {
+            // Reload file to show changes
+            if (currentFile) await openFile(currentFile);
+            toast(`🔧 格式规范化完成：${d.changes.length} 处修改`, 'success', 4000);
+            // Show details in a quick modal
+            const detail = d.changes.join('\n');
+            const modal = document.createElement('div');
+            modal.className = 'modal-bg';
+            modal.onclick = e => { if(e.target===modal) modal.remove(); };
+            modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:24px; max-width:500px; width:90%; max-height:60vh; overflow-y:auto;">
+                <h3 style="font-size:16px; font-weight:700; margin:0 0 12px;">🔧 格式规范化结果</h3>
+                <div style="font-size:12px; color:#334155; line-height:1.8; white-space:pre-wrap; background:#f8fafc; padding:14px; border-radius:8px; border:1px solid #e2e8f0;">${esc(detail)}</div>
+                <button onclick="this.closest('.modal-bg').remove()" style="margin-top:16px; width:100%; padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:13px; color:#64748b;">关闭</button>
+            </div>`;
+            document.body.appendChild(modal);
+        } else {
+            toast('✅ 格式已经很规范，无需修改', 'success', 2000);
+        }
+    } catch(e) {
+        toast('格式化失败: ' + e.message, 'error');
+    }
 }
 
 async function doBibClean() {
