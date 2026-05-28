@@ -160,9 +160,10 @@
         .issue-card.dismissed { background:#f8fafc; border-color:#e2e8f0; opacity:0.7; }
 
         /* Progress nodes */
-        .node { width:2.6rem; height:2.6rem; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:0.9rem; border:2.5px solid; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
-        .node-pass { background:#10b981; border-color:#059669; color:white; }
-        .node-fail { background:#ef4444; border-color:#dc2626; color:white; }
+        .node { width:2.8rem; height:2.8rem; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:0.9rem; border:2.5px solid; box-shadow:0 3px 8px rgba(0,0,0,0.12); transition:transform 0.2s; }
+        .node:hover { transform:scale(1.1); }
+        .node-pass { background:linear-gradient(135deg,#10b981,#059669); border-color:#047857; color:white; }
+        .node-fail { background:linear-gradient(135deg,#ef4444,#dc2626); border-color:#b91c1c; color:white; }
         .node-pending { background:#e2e8f0; border-color:#cbd5e1; color:#94a3b8; }
         .conn { height:2px; flex:1; border-radius:1px; margin:0 4px; }
         .conn-pass { background:#10b981; }
@@ -350,7 +351,25 @@
                     </div>
                 </div>
                 <div style="margin-top:32px; padding-top:20px; border-top:1px solid #e2e8f0;">
-                    <p style="font-size:11px; color:#94a3b8;">已为 <span style="color:#3b82f6; font-weight:700;">200+</span> 篇论文提供质检服务 · 支持 ACL / NeurIPS / EMNLP / ICLR 等顶会格式</p>
+                    <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span style="font-size:18px; font-weight:800; color:#3b82f6;">50+</span>
+                            <span style="font-size:10px; color:#94a3b8;">检测规则</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span style="font-size:18px; font-weight:800; color:#22c55e;">4</span>
+                            <span style="font-size:10px; color:#94a3b8;">验证 API</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span style="font-size:18px; font-weight:800; color:#f59e0b;">17</span>
+                            <span style="font-size:10px; color:#94a3b8;">会议模板</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span style="font-size:18px; font-weight:800; color:#8b5cf6;">AI</span>
+                            <span style="font-size:10px; color:#94a3b8;">智能修复</span>
+                        </div>
+                    </div>
+                    <p style="font-size:10px; color:#94a3b8; margin-top:10px;">支持 ACL / NeurIPS / EMNLP / ICLR / CVPR / AAAI 等顶会格式</p>
                 </div>
             </div>
 
@@ -361,7 +380,7 @@
                     <p style="color:#94a3b8; font-size:13px; margin:6px 0 0;">支持 Overleaf 导出的 ZIP 压缩包</p>
                 </div>
                 <form id="upload-form">
-                    <div id="drop-zone" style="border:2px dashed #e2e8f0; border-radius:12px; padding:28px; text-align:center; cursor:pointer; transition:all 0.2s;" onclick="document.getElementById('file-input').click()" onmouseover="this.style.borderColor='#3b82f6';this.style.background='#eff6ff'" onmouseout="this.style.borderColor='#e2e8f0';this.style.background=''">
+                    <div id="drop-zone" style="border:2px dashed #cbd5e1; border-radius:14px; padding:32px 28px; text-align:center; cursor:pointer; transition:all 0.25s ease; background:#fafbfc;" onclick="document.getElementById('file-input').click()" onmouseover="this.style.borderColor='#3b82f6';this.style.background='#eff6ff';this.style.transform='scale(1.01)'" onmouseout="this.style.borderColor='#cbd5e1';this.style.background='#fafbfc';this.style.transform=''">
                         <div style="font-size:28px; margin-bottom:8px;">📦</div>
                         <p style="font-size:14px; margin:0;"><span style="color:#3b82f6; font-weight:600;">点击上传</span> 或拖拽文件到此处</p>
                         <p style="font-size:12px; color:#94a3b8; margin:4px 0 0;">.zip 格式（含 .tex + .bib + figures）</p>
@@ -754,8 +773,8 @@ document.addEventListener('dragover', e => e.preventDefault());
 document.addEventListener('drop', e => e.preventDefault());
 
 // Drop zone specific handling
-dropZone.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); dropZone.style.borderColor='#3b82f6'; dropZone.style.background='#eff6ff'; });
-dropZone.addEventListener('dragleave', e => { e.preventDefault(); e.stopPropagation(); dropZone.style.borderColor='#e2e8f0'; dropZone.style.background=''; });
+dropZone.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); dropZone.style.borderColor='#3b82f6'; dropZone.style.background='#eff6ff'; dropZone.style.transform='scale(1.03)'; dropZone.style.boxShadow='0 0 0 4px rgba(59,130,246,0.1)'; });
+dropZone.addEventListener('dragleave', e => { e.preventDefault(); e.stopPropagation(); dropZone.style.borderColor='#cbd5e1'; dropZone.style.background='#fafbfc'; dropZone.style.transform=''; dropZone.style.boxShadow=''; });
 dropZone.addEventListener('drop', e => {
     e.preventDefault(); e.stopPropagation();
     dropZone.style.borderColor='#e2e8f0'; dropZone.style.background='';
@@ -906,7 +925,21 @@ function showOverview() {
     document.title = `${report.overall_score.toFixed(0)}/100 - ${report.filename} | IntegrityGuard`;
 
     document.getElementById('overview-filename').textContent = report.filename;
-    document.getElementById('overview-score').textContent = report.overall_score.toFixed(0);
+    // Animate score count-up
+    const scoreEl = document.getElementById('overview-score');
+    const targetScore = report.overall_score;
+    let current = 0;
+    const duration = 800;
+    const startTime = Date.now();
+    function animateScore() {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+        current = Math.round(targetScore * eased);
+        scoreEl.textContent = current;
+        if (progress < 1) requestAnimationFrame(animateScore);
+    }
+    animateScore();
 
     const gates = report.gate_results;
     const passCount = gates.filter(g=>g.passed).length;
