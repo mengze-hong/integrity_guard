@@ -149,7 +149,7 @@
 
         /* Issues */
         .issue-card {
-            padding:12px 14px; margin-bottom:8px; border-radius:8px;
+            padding:12px 14px; margin-bottom:8px; border-radius:10px;
             font-size:13px; cursor:pointer; border:1px solid;
             transition:all 0.15s ease; animation: slideUp 0.2s ease;
         }
@@ -217,6 +217,21 @@
         }
         .module-title { font-weight:600; font-size:13px; color:#0f172a; margin:0; }
         .module-desc { font-size:11px; color:#64748b; margin:5px 0 0; line-height:1.4; }
+
+        /* Toolbar buttons */
+        .toolbar-btn {
+            font-size:11px; padding:5px 12px; border-radius:7px; border:1px solid #e2e8f0;
+            background:#fff; color:#475569; cursor:pointer; font-weight:500;
+            transition:all 0.15s; white-space:nowrap;
+        }
+        .toolbar-btn:hover { background:#f1f5f9; border-color:#cbd5e1; color:#1e293b; }
+        .toolbar-btn-primary {
+            font-size:11px; padding:5px 14px; border-radius:7px; border:none;
+            background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; cursor:pointer;
+            font-weight:600; white-space:nowrap; transition:all 0.15s;
+            box-shadow:0 2px 6px rgba(59,130,246,0.25);
+        }
+        .toolbar-btn-primary:hover { transform:translateY(-1px); box-shadow:0 4px 10px rgba(59,130,246,0.35); }
         #screen-upload:not(.hidden), #screen-overview:not(.hidden), #screen-workspace:not(.hidden) { animation: fadeIn 0.25s ease; }
 
         /* Context menu */
@@ -495,14 +510,15 @@
                 <span id="ws-stats" class="text-xs px-2 py-0.5 rounded-full font-medium"></span>
                 <span class="w-2 h-2 rounded-full" id="save-dot"></span>
             </div>
-            <div class="flex items-center gap-2">
-                <button onclick="doBibClean()" class="bg-slate-600 text-white text-xs px-4 py-1.5 rounded-md font-medium hover:bg-slate-700 transition-colors">📋 整理 Bib</button>
-                <button onclick="doTidyUp()" class="bg-slate-600 text-white text-xs px-4 py-1.5 rounded-md font-medium hover:bg-slate-700 transition-colors">🗂️ 整理结构</button>
-                <button onclick="showAnalysis()" class="bg-indigo-600 text-white text-xs px-4 py-1.5 rounded-md font-medium hover:bg-indigo-700 transition-colors">📊 分析</button>
-                <button onclick="showChecklist()" class="bg-emerald-600 text-white text-xs px-4 py-1.5 rounded-md font-medium hover:bg-emerald-700 transition-colors">✅ 清单</button>
-                <button onclick="doRecheck()" id="recheck-btn" class="bg-blue-600 text-white text-xs px-4 py-1.5 rounded-md font-medium hover:bg-blue-700 transition-colors" title="重新运行质检 (Ctrl+Shift+R)">🔄 重新质检</button>
-                <button onclick="exportReport()" class="bg-slate-700 text-white text-xs px-4 py-1.5 rounded-md font-medium hover:bg-slate-800 transition-colors">📋 导出报告</button>
-                <button onclick="document.getElementById('shortcuts-modal').classList.remove('hidden')" class="text-slate-400 text-xs px-2 py-1.5 rounded-md hover:text-slate-700 hover:bg-slate-100 transition-colors" title="快捷键帮助 (?)">⌨️</button>
+            <div class="flex items-center gap-1.5">
+                <button onclick="doBibClean()" class="toolbar-btn">📋 整理 Bib</button>
+                <button onclick="doTidyUp()" class="toolbar-btn">🗂️ 整理结构</button>
+                <button onclick="showAnalysis()" class="toolbar-btn">📊 分析</button>
+                <button onclick="showChecklist()" class="toolbar-btn">✅ 清单</button>
+                <span style="width:1px; height:20px; background:#e2e8f0; margin:0 4px;"></span>
+                <button onclick="doRecheck()" id="recheck-btn" class="toolbar-btn-primary" title="重新运行质检 (Ctrl+Shift+R)">🔄 重新质检</button>
+                <button onclick="exportReport()" class="toolbar-btn">📄 导出</button>
+                <button onclick="document.getElementById('shortcuts-modal').classList.remove('hidden')" class="toolbar-btn" style="padding:4px 6px;" title="快捷键帮助 (?)">⌨️</button>
             </div>
         </div>
 
