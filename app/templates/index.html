@@ -999,9 +999,25 @@ function showOverview() {
 
         // Add reference verification detail for reference_authenticity gate
         if (g.gate_name === 'reference_authenticity' && g.metadata?.verified_entries) {
-            cardsHtml += `<details class="mt-2"><summary class="text-[11px] text-blue-600 cursor-pointer hover:underline">查看引文验证详情 (${g.metadata.verified_entries.length} 条)</summary>
+            const entries = g.metadata.verified_entries;
+            const passCount = entries.filter(e => e.status === 'pass' || e.status === 'verified_by_title_search').length;
+            const warnCount = entries.filter(e => e.status === 'minor_issues' || e.status === 'no_doi_but_url' || e.status === 'unknown').length;
+            const failCount = entries.filter(e => e.status === 'fake' || e.status === 'unsure' || !['pass','minor_issues','unknown','no_doi_but_url','verified_by_title_search'].includes(e.status)).length;
+            const total = entries.length;
+
+            // Mini stacked bar
+            cardsHtml += `<div class="mt-2" style="display:flex; height:6px; border-radius:3px; overflow:hidden; background:#e2e8f0;">
+                <div style="width:${passCount/total*100}%; background:#22c55e;"></div>
+                <div style="width:${warnCount/total*100}%; background:#f59e0b;"></div>
+                <div style="width:${failCount/total*100}%; background:#ef4444;"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-top:4px; font-size:10px; color:#64748b;">
+                <span>${passCount} 验证通过</span><span>${warnCount} 需注意</span><span>${failCount} 异常</span>
+            </div>`;
+
+            cardsHtml += `<details class="mt-2"><summary class="text-[11px] text-blue-600 cursor-pointer hover:underline">查看详情 (${total} 条)</summary>
             <div class="mt-2 max-h-48 overflow-y-auto text-[11px] space-y-1">`;
-            for (const entry of g.metadata.verified_entries) {
+            for (const entry of entries) {
                 const statusMap = {'pass':'<span style="color:#059669;font-weight:700;">✓</span>','minor_issues':'<span style="color:#d97706;font-weight:700;">~</span>','unknown':'<span style="color:#94a3b8;">?</span>','unsure':'<span style="color:#ea580c;font-weight:700;">!</span>','fake':'<span style="color:#dc2626;font-weight:700;">✗</span>','no_doi_but_url':'<span style="color:#d97706;">~</span>','verified_by_title_search':'<span style="color:#059669;">✓</span>'};
                 const icon = statusMap[entry.status] || '<span style="color:#dc2626;">✗</span>';
                 const link = entry.doi_link ? `<a href="${entry.doi_link}" target="_blank" class="text-blue-500 hover:underline ml-1">↗</a>` : '';
