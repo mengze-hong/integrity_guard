@@ -32,9 +32,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Integrity Assurance",
-    description="Academic paper pre-submission integrity check system",
-    version="4.0.0",
+    title="ScholarLint",
+    description="投稿通 — Academic paper pre-submission integrity checker",
+    version="5.0.0",
     lifespan=lifespan,
 )
 

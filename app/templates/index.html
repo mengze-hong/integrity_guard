@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
-    <title>Integrity Assurance - 论文质检</title>
+    <title>ScholarLint · 投稿通 — 论文质检</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/material-darker.css">
@@ -295,8 +295,8 @@
             <div style="width:28px; height:28px; background:linear-gradient(135deg,#3b82f6,#1d4ed8); border-radius:7px; display:flex; align-items:center; justify-content:center;">
                 <span style="font-size:14px; filter:brightness(10);">🛡</span>
             </div>
-            <span style="font-size:14px; font-weight:700; color:#0f172a; letter-spacing:-0.3px;">IntegrityGuard</span>
-            <span style="font-size:9px; padding:2px 5px; background:#eff6ff; color:#3b82f6; border-radius:4px; font-weight:600;">PRO</span>
+            <span style="font-size:14px; font-weight:700; color:#0f172a; letter-spacing:-0.3px;">ScholarLint</span>
+            <span style="font-size:9px; padding:2px 5px; background:#eff6ff; color:#3b82f6; border-radius:4px; font-weight:600;">投稿通</span>
         </div>
         <div id="nav-auth" style="display:flex; align-items:center; gap:12px;">
             <button onclick="showAuthModal('login')" id="nav-login-btn" style="font-size:12px; padding:6px 16px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; color:#334155; cursor:pointer; font-weight:500; transition:all 0.15s;" onmouseover="this.style.background='#f8fafc';this.style.borderColor='#cbd5e1'" onmouseout="this.style.background='#fff';this.style.borderColor='#e2e8f0'">登录</button>
@@ -312,8 +312,8 @@
                 <div style="display:flex; align-items:center; gap:14px; margin-bottom:28px;">
                     <div style="font-size:42px;">🛡️</div>
                     <div>
-                        <h1 style="font-size:28px; font-weight:800; margin:0; letter-spacing:-0.5px; color:#0f172a;">IntegrityGuard</h1>
-                        <p style="font-size:13px; color:#3b82f6; margin:4px 0 0; font-weight:500;">Academic Paper Pre-submission Checker</p>
+                        <h1 style="font-size:28px; font-weight:800; margin:0; letter-spacing:-0.5px; color:#0f172a;">ScholarLint</h1>
+                        <p style="font-size:13px; color:#3b82f6; margin:4px 0 0; font-weight:500;">投稿通 · Academic Paper Pre-submission Checker</p>
                     </div>
                 </div>
                 <p style="color:#475569; font-size:15px; line-height:1.7; margin-bottom:32px;">
@@ -894,7 +894,7 @@ async function waitForResult() {
                 if (progressPct) progressPct.textContent = '100%';
                 // Browser notification if tab is not focused
                 if (document.hidden && Notification.permission === 'granted') {
-                    new Notification('IntegrityGuard', {body: '质检完成！点击查看结果。', icon: '🛡️'});
+                    new Notification('ScholarLint', {body: '质检完成！点击查看结果。', icon: '🛡️'});
                 }
                 clearInterval(iv); resolve();
             }
@@ -922,7 +922,7 @@ function showOverview() {
     btn.textContent = '开始质检'; btn.disabled = true; btn.style.opacity = '0.4';
 
     // Update page title
-    document.title = `${report.overall_score.toFixed(0)}/100 - ${report.filename} | IntegrityGuard`;
+    document.title = `${report.overall_score.toFixed(0)}/100 - ${report.filename} | ScholarLint`;
 
     document.getElementById('overview-filename').textContent = report.filename;
     // Animate score count-up
@@ -1508,9 +1508,9 @@ function renderIssues(path) {
     const totalErrors = report.gate_results.reduce((s,g) => s + g.issues.filter(i=>i.severity==='error').length, 0);
     const undismissedErrors = totalErrors - (report.dismissed_issues?.filter(d => report.gate_results.find(g=>g.gate_name===d.gate_name)?.issues[d.issue_index]?.severity==='error').length || 0);
     if (undismissedErrors > 0) {
-        document.title = `(${undismissedErrors}) ${report.filename} | IntegrityGuard`;
+        document.title = `(${undismissedErrors}) ${report.filename} | ScholarLint`;
     } else {
-        document.title = `✅ ${report.filename} | IntegrityGuard`;
+        document.title = `✅ ${report.filename} | ScholarLint`;
     }
 }
 
@@ -1601,7 +1601,7 @@ function completeSubmission() {
     <div style="text-align:center; padding:40px; font-family:serif;">
         <div style="border:3px solid #10b981; border-radius:16px; padding:40px; max-width:600px; margin:0 auto;">
             <div style="font-size:48px; margin-bottom:16px;">🛡️</div>
-            <h1 style="font-size:24px; color:#0f172a; margin:0;">IntegrityGuard Verification Certificate</h1>
+            <h1 style="font-size:24px; color:#0f172a; margin:0;">ScholarLint Verification Certificate</h1>
             <p style="color:#64748b; margin:8px 0 24px;">学术论文完整性检查通过证明</p>
             <hr style="border:none; border-top:1px solid #e2e8f0; margin:20px 0;">
             <p style="font-size:14px; color:#334155;"><strong>文件:</strong> ${report.filename}</p>
@@ -1609,11 +1609,11 @@ function completeSubmission() {
             <p style="font-size:14px; color:#334155;"><strong>日期:</strong> ${new Date().toLocaleDateString('zh-CN')}</p>
             <p style="font-size:14px; color:#334155;"><strong>检查项:</strong> ${report.gate_results.length} 个模块全部通过</p>
             <p style="font-size:11px; color:#94a3b8; margin-top:24px;">Certificate ID: ${certId}</p>
-            <p style="font-size:11px; color:#94a3b8;">Verified by IntegrityGuard | integrityguard.ai</p>
+            <p style="font-size:11px; color:#94a3b8;">Verified by ScholarLint | integrityguard.ai</p>
         </div>
     </div>`;
     const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><title>IntegrityGuard Certificate</title></head><body>${certHtml}<scr`+`ipt>setTimeout(()=>window.print(),500)</scr`+`ipt></body></html>`);
+    win.document.write(`<!DOCTYPE html><html><head><title>ScholarLint Certificate</title></head><body>${certHtml}<scr`+`ipt>setTimeout(()=>window.print(),500)</scr`+`ipt></body></html>`);
     win.document.close();
     toast('🎉 检查通过！证书已生成。', 'success', 5000);
 }
