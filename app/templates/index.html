@@ -2364,6 +2364,47 @@ async function executeTidyUp(btn) {
 }
 
 // === AI Batch Fix ===
+function batchFixMarkdown() {
+    const fixes = window._batchFixes || [];
+    const summary = window._batchFixSummary || {};
+    const skipped = window._batchFixSkipped || [];
+    const lines = [
+        '# AI 批量建议修复',
+        '',
+        `- 可修复问题: ${summary.total_fixable ?? fixes.length}`,
+        `- 已生成建议: ${summary.generated ?? fixes.length}`,
+        `- 本次上限: ${summary.limit ?? 'N/A'}`,
+        '',
+    ];
+    const groups = fixes.reduce((acc, fix, i) => {
+        const gate = fix.gate_name || 'unknown';
+        (acc[gate] ||= []).push({...fix, _idx: i});
+        return acc;
+    }, {});
+    Object.entries(groups).forEach(([gate, items]) => {
+        const info = GATE_INFO[gate] || {name: gate, icon: '📋'};
+        lines.push(`## ${info.icon || ''} ${info.name || gate}`);
+        items.forEach(fix => {
+            lines.push(`- #${fix._idx + 1} ${fix.message}`);
+            lines.push(`  - 文件: ${fix.file || 'N/A'}:${fix.line || '?'}`);
+            lines.push(`  - 风险: ${fix.risk || 'medium'}`);
+        });
+        lines.push('');
+    });
+    if (skipped.length) {
+        lines.push('## 跳过项');
+        skipped.forEach(item => {
+            lines.push(`- [${item.reason}] ${item.gate_name || 'unknown'} #${item.issue_index ?? '?'} ${item.message || ''}`);
+        });
+    }
+    return lines.join('\n');
+}
+
+function copyBatchFixMarkdown() {
+    navigator.clipboard.writeText(batchFixMarkdown());
+    toast('已复制批量建议 Markdown', 'success', 1500);
+}
+
 async function doBatchFix() {
     if (!jobId) return;
     showAiLoading('🤖 AI 正在批量分析所有问题…');
@@ -2373,38 +2414,93 @@ async function doBatchFix() {
         const d = await r.json();
 
         if (d.status === 'ok' && d.fixes && d.fixes.length > 0) {
+            window._batchFixes = d.fixes;
+            window._batchFixSummary = d.summary || {};
+            window._batchFixSkipped = d.skipped || [];
+
             // Show batch fix modal with all suggestions
             const modal = document.createElement('div');
             modal.className = 'modal-bg';
             modal.onclick = e => { if(e.target===modal) modal.remove(); };
 
-            let fixesHtml = d.fixes.map((fix, i) => `
-                <div style="border:1px solid #e2e8f0; border-radius:10px; padding:14px; margin-bottom:10px;">
-                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-                        <span style="font-size:12px; font-weight:600; color:#1e293b;">${esc(fix.message).slice(0,60)}</span>
-                        <button onclick="applyBatchFix(${i})" style="font-size:11px; padding:4px 10px; border-radius:6px; border:none; background:#22c55e; color:#fff; cursor:pointer; font-weight:600;">应用</button>
-                    </div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:11px;">
-                        <div style="background:#fef2f2; padding:8px; border-radius:6px; font-family:var(--font-mono); white-space:pre-wrap; word-break:break-word; max-height:220px; overflow:auto;">${esc(fix.original)}</div>
-                        <div style="background:#f0fdf4; padding:8px; border-radius:6px; font-family:var(--font-mono); white-space:pre-wrap; word-break:break-word; max-height:220px; overflow:auto;">${esc(fix.fixed)}</div>
-                    </div>
+            const summary = d.summary || {};
+            const skipped = d.skipped || [];
+            const skippedCounts = Object.entries(summary.skipped || {})
+                .map(([reason, count]) => `${reason}: ${count}`)
+                .join(' · ');
+            const grouped = d.fixes.reduce((acc, fix, i) => {
+                const gate = fix.gate_name || 'unknown';
+                (acc[gate] ||= []).push({...fix, _idx: i});
+                return acc;
+            }, {});
+            const summaryHtml = `<div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin:12px 0;">
+                ${[
+                    ['可修复', summary.total_fixable ?? d.total_fixable ?? d.fixes.length],
+                    ['本次生成', summary.generated ?? d.fixes.length],
+                    ['生成上限', summary.limit ?? 'N/A'],
+                    ['跳过', skipped.length],
+                ].map(([label, value]) => `<div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px;">
+                    <p style="font-size:10px; color:#94a3b8; margin:0;">${label}</p>
+                    <p style="font-size:15px; font-weight:700; color:#1e293b; margin:2px 0 0;">${esc(String(value))}</p>
+                </div>`).join('')}
+            </div>`;
+            const skippedHtml = skipped.length ? `<details style="margin:0 0 12px;">
+                <summary style="font-size:11px; color:#64748b; cursor:pointer;">查看跳过项${skippedCounts ? `（${esc(skippedCounts)}）` : ''}</summary>
+                <div style="margin-top:8px; max-height:140px; overflow:auto; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc;">
+                    ${skipped.map(item => `<div style="padding:7px 10px; border-bottom:1px solid #e2e8f0; font-size:11px; color:#475569;">
+                        <b style="color:#334155;">${esc(item.reason || 'skipped')}</b>
+                        <span style="color:#94a3b8;"> · ${esc(item.gate_name || '')} #${esc(String(item.issue_index ?? '?'))} · ${esc(item.file || '')}:${esc(String(item.line || '?'))}</span><br>
+                        ${esc(item.message || '')}
+                    </div>`).join('')}
                 </div>
-            `).join('');
+            </details>` : '';
 
-            modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:24px; max-width:700px; width:90%; max-height:80vh; overflow-y:auto;">
+            let fixesHtml = Object.entries(grouped).map(([gate, fixes]) => {
+                const info = GATE_INFO[gate] || {name: gate, icon: '📋'};
+                return `<div style="border:1px solid #e2e8f0; border-radius:12px; margin-bottom:12px; overflow:hidden;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; background:#f8fafc; padding:10px 12px; border-bottom:1px solid #e2e8f0;">
+                        <div>
+                            <p style="font-size:12px; font-weight:700; color:#1e293b; margin:0;">${info.icon || '📋'} ${esc(info.name || gate)}</p>
+                            <p style="font-size:10px; color:#94a3b8; margin:2px 0 0;">${fixes.length} 条建议 · 需人工核实后采用</p>
+                        </div>
+                        <button onclick="applyBatchFixGroup(${jsArg(gate)});this.closest('.modal-bg').remove()" style="font-size:11px; padding:5px 10px; border-radius:6px; border:none; background:#0f172a; color:#fff; cursor:pointer; font-weight:600;">应用本组并重检</button>
+                    </div>
+                    <div style="padding:12px;">
+                        ${fixes.map(fix => {
+                            const prov = fix.provenance || {};
+                            const provText = [prov.source, prov.model, fix.file ? `${fix.file}:${fix.line || '?'}` : ''].filter(Boolean).join(' · ');
+                            return `<div style="border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin-bottom:10px;">
+                                <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:8px;">
+                                    <div style="min-width:0;">
+                                        <p style="font-size:12px; font-weight:600; color:#1e293b; margin:0;">#${fix._idx + 1} ${esc(fix.message).slice(0,90)}</p>
+                                        <p style="font-size:10px; color:#64748b; margin:3px 0 0;">${esc(fix.file || '')}:${esc(String(fix.line || '?'))} · 风险: ${esc(fix.risk || 'medium')}${provText ? ' · ' + esc(provText) : ''}</p>
+                                    </div>
+                                    ${fix.can_apply !== false ? `<button onclick="applyBatchFix(${fix._idx});this.closest('.modal-bg').remove()" style="font-size:11px; padding:4px 10px; border-radius:6px; border:none; background:#22c55e; color:#fff; cursor:pointer; font-weight:600; flex-shrink:0;">应用并重检</button>` : '<span style="font-size:10px; color:#94a3b8; flex-shrink:0;">不可自动应用</span>'}
+                                </div>
+                                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:11px;">
+                                    <div style="background:#fef2f2; padding:8px; border-radius:6px; font-family:var(--font-mono); white-space:pre-wrap; word-break:break-word; max-height:180px; overflow:auto;">${esc(fix.original)}</div>
+                                    <div style="background:#f0fdf4; padding:8px; border-radius:6px; font-family:var(--font-mono); white-space:pre-wrap; word-break:break-word; max-height:180px; overflow:auto;">${esc(fix.fixed)}</div>
+                                </div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>`;
+            }).join('');
+
+            modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:24px; max-width:860px; width:92%; max-height:84vh; overflow-y:auto;">
                 <h3 style="font-size:16px; font-weight:700; margin:0 0 4px;">🤖 AI 批量建议修复</h3>
                 <p style="font-size:12px; color:#64748b; margin:0 0 8px;">找到 ${d.fixes.length}/${d.total_fixable} 个可建议修改的问题</p>
+                ${summaryHtml}
+                ${skippedHtml}
                 <p style="font-size:11px; color:#b45309; background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:8px 10px; margin:0 0 16px;">⚠️ 以下为 AI 的修改<b>建议</b>，可能存在错误或遗漏，请逐条人工核实后再应用。应用后会自动重新质检。</p>
                 <div id="batch-fixes-list">${fixesHtml}</div>
                 <div style="display:flex; gap:8px; margin-top:16px; justify-content:flex-end;">
                     <button onclick="this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-size:13px;">关闭</button>
+                    <button onclick="copyBatchFixMarkdown()" style="padding:8px 16px; border-radius:8px; border:none; background:#64748b; color:#fff; cursor:pointer; font-size:13px;">复制 Markdown</button>
                     <button onclick="applyAllBatchFixes();this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:none; background:#22c55e; color:#fff; cursor:pointer; font-size:13px; font-weight:600;">✅ 全部应用并重新质检</button>
                 </div>
             </div>`;
             document.body.appendChild(modal);
-
-            // Store fixes globally for apply functions
-            window._batchFixes = d.fixes;
         } else {
             toast(d.message || '没有可自动修复的问题', 'success', 2000);
         }
@@ -2447,30 +2543,37 @@ async function applyOneFix(fix) {
     return true;
 }
 
-async function applyBatchFix(index) {
-    const fix = window._batchFixes?.[index];
-    if (!fix) return;
-    const ok = await applyOneFix(fix);
-    if (ok) {
-        toast(`✅ 已采用建议 #${index+1}，正在重新质检…`, 'success', 2000);
-        await doRecheck();  // re-verify after applying an AI suggestion
-    } else {
-        toast('无法定位原文（可能已修改，或在其它文件中）', 'warning', 3000);
+async function applyBatchFixIndexes(indexes, label) {
+    if (!window._batchFixes || !indexes.length) return;
+    let applied = 0;
+    for (const idx of indexes) {
+        const fix = window._batchFixes[idx];
+        if (fix && fix.can_apply !== false && await applyOneFix(fix)) applied++;
     }
+    if (applied > 0) {
+        toast(`✅ 已采用 ${label}：${applied}/${indexes.length} 条建议，正在重新质检…`, 'success', 2500);
+        await doRecheck();
+    } else {
+        toast('无法匹配原文（原文可能已被修改），未自动应用', 'warning', 3500);
+    }
+}
+
+async function applyBatchFix(index) {
+    await applyBatchFixIndexes([index], `建议 #${index+1}`);
+}
+
+async function applyBatchFixGroup(gateName) {
+    const indexes = (window._batchFixes || [])
+        .map((fix, i) => ({fix, i}))
+        .filter(({fix}) => (fix.gate_name || 'unknown') === gateName)
+        .map(({i}) => i);
+    const info = GATE_INFO[gateName] || {name: gateName};
+    await applyBatchFixIndexes(indexes, info.name || gateName);
 }
 
 async function applyAllBatchFixes() {
     if (!window._batchFixes) return;
-    let applied = 0;
-    for (const fix of window._batchFixes) {
-        if (await applyOneFix(fix)) applied++;
-    }
-    if (applied > 0) {
-        toast(`✅ 已采用 ${applied}/${window._batchFixes.length} 条建议，正在重新质检…`, 'success', 2500);
-        await doRecheck();  // re-verify after applying AI suggestions
-    } else {
-        toast('无法匹配原文（原文可能已被修改）', 'warning', 3000);
-    }
+    await applyBatchFixIndexes(window._batchFixes.map((_, i) => i), '全部');
 }
 
 async function doFormatNormalize() {
