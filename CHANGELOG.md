@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.32 (2026-05-29) — AI 助手前端入口补齐
+- 总览页操作区新增「🤖 模拟审稿」按钮，可直接调用 AI 审稿接口查看结构化反馈
+- 工作台工具栏新增「🤖 AI 助手」下拉菜单，统一收纳「模拟审稿 / 优化 Abstract / AI 批量建议」入口
+- 写作质量问题中若命中 abstract 相关提示，会出现「✨ 优化 Abstract」快捷按钮，减少来回切换
+- 新增 `runAiReview()` 与 `optimizeAbstract()` 前端交互闭环：支持结果弹窗、复制建议、Abstract 一键替换当前文件并自动保存
+
 ## v5.3.31 (2026-05-29) — 上传 ZIP 签名与宏文件防护
 - 上传接口在写入磁盘前校验 ZIP magic bytes，即使文件名是 `.zip`，内容不是有效 ZIP 也会拒绝
 - ZIP 解压危险扩展名列表扩展到 `.jar/.vbs/.js/.scr/.com` 与 Office macro 文件 `.docm/.xlsm/.pptm`
