@@ -1,7 +1,9 @@
-"""JSON-based job persistence layer.
+"""Job persistence layer (encrypted at rest).
 
-Stores FullReport objects as JSON files in data/jobs/{job_id}.json.
-Supports listing, loading, saving, and auto-cleanup of expired jobs.
+Stores FullReport objects in data/jobs/{job_id}.enc — AES-encrypted (Fernet)
+with the master key from the OS vault. Legacy plaintext {job_id}.json files
+are still read for backward compatibility and migrated to .enc on next save.
+If the encryption stack is unavailable, falls back to plaintext .json.
 """
 
 import shutil
@@ -10,6 +12,7 @@ from pathlib import Path
 
 from app.config import settings
 from app.models import FullReport
+from app import secrets_manager as sm
 
 JOBS_DIR = settings.data_dir / "jobs"
 JOB_RETENTION_DAYS = 7
@@ -20,59 +23,86 @@ def _ensure_dir():
     JOBS_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def _enc_path(job_id: str) -> Path:
+    return JOBS_DIR / f"{job_id}.enc"
+
+
+def _json_path(job_id: str) -> Path:
+    return JOBS_DIR / f"{job_id}.json"
+
+
 def save_report(job_id: str, report: FullReport) -> None:
-    """Persist a report to disk as JSON."""
+    """Persist a report encrypted at rest (plaintext fallback if no crypto)."""
     _ensure_dir()
-    path = JOBS_DIR / f"{job_id}.json"
-    path.write_text(report.model_dump_json(indent=2), encoding="utf-8")
+    payload = report.model_dump_json(indent=2).encode("utf-8")
+    if sm.is_available():
+        _enc_path(job_id).write_bytes(sm.encrypt_bytes(payload))
+        # Remove any legacy plaintext copy now that it's encrypted.
+        legacy = _json_path(job_id)
+        if legacy.exists():
+            legacy.unlink()
+    else:
+        _json_path(job_id).write_text(payload.decode("utf-8"), encoding="utf-8")
 
 
-def load_report(job_id: str) -> FullReport | None:
-    """Load a report from disk. Returns None if not found."""
-    path = JOBS_DIR / f"{job_id}.json"
-    if not path.exists():
-        return None
+def _read_report_file(path: Path) -> FullReport | None:
+    """Load+validate a report from a .enc (decrypt) or .json (plaintext) file."""
     try:
-        return FullReport.model_validate_json(path.read_text(encoding="utf-8"))
+        if path.suffix == ".enc":
+            raw = sm.decrypt_bytes(path.read_bytes()).decode("utf-8")
+        else:
+            raw = path.read_text(encoding="utf-8")
+        return FullReport.model_validate_json(raw)
     except Exception:
         return None
 
 
-def list_jobs(limit: int = 50) -> list[dict]:
-    """List recent jobs (id, filename, timestamp, score, passed, gate_count).
+def load_report(job_id: str) -> FullReport | None:
+    """Load a report from disk (.enc first, then legacy .json). None if missing."""
+    enc = _enc_path(job_id)
+    if enc.exists():
+        return _read_report_file(enc)
+    legacy = _json_path(job_id)
+    if legacy.exists():
+        return _read_report_file(legacy)
+    return None
 
-    Returns most recent first, up to `limit` entries.
-    """
+
+def _iter_report_files():
+    """Yield all report files (encrypted + legacy plaintext)."""
+    yield from JOBS_DIR.glob("*.enc")
+    yield from JOBS_DIR.glob("*.json")
+
+
+def list_jobs(limit: int = 50) -> list[dict]:
+    """List recent jobs (id, filename, timestamp, score, passed, gate_count)."""
     _ensure_dir()
     jobs = []
-    for f in JOBS_DIR.glob("*.json"):
-        try:
-            report = FullReport.model_validate_json(f.read_text(encoding="utf-8"))
-            jobs.append({
-                "job_id": report.job_id,
-                "filename": report.filename,
-                "timestamp": report.timestamp,
-                "score": report.overall_score,
-                "passed": report.overall_passed,
-                "gates_passed": sum(1 for g in report.gate_results if g.passed),
-                "gates_total": len(report.gate_results),
-            })
-        except Exception:
+    for f in _iter_report_files():
+        report = _read_report_file(f)
+        if not report:
             continue
+        jobs.append({
+            "job_id": report.job_id,
+            "filename": report.filename,
+            "timestamp": report.timestamp,
+            "score": report.overall_score,
+            "passed": report.overall_passed,
+            "gates_passed": sum(1 for g in report.gate_results if g.passed),
+            "gates_total": len(report.gate_results),
+        })
 
-    # Sort by timestamp descending
     jobs.sort(key=lambda x: x["timestamp"], reverse=True)
     return jobs[:limit]
 
 
 def delete_job(job_id: str) -> bool:
-    """Delete a job's JSON file and its uploaded files. Returns True if deleted."""
-    json_path = JOBS_DIR / f"{job_id}.json"
+    """Delete a job's report file(s) and its uploaded files. True if anything deleted."""
     deleted = False
-
-    if json_path.exists():
-        json_path.unlink()
-        deleted = True
+    for path in (_enc_path(job_id), _json_path(job_id)):
+        if path.exists():
+            path.unlink()
+            deleted = True
 
     # Also remove uploaded project directory
     project_dir = settings.upload_dir / job_id
@@ -89,17 +119,17 @@ def cleanup_expired() -> int:
     now = datetime.now(timezone.utc)
     removed = 0
 
-    for f in JOBS_DIR.glob("*.json"):
+    for f in _iter_report_files():
+        report = _read_report_file(f)
+        if not report:
+            continue
         try:
-            report = FullReport.model_validate_json(f.read_text(encoding="utf-8"))
             ts = datetime.fromisoformat(report.timestamp)
-            age_days = (now - ts).days
-            if age_days > JOB_RETENTION_DAYS:
-                job_id = f.stem
-                delete_job(job_id)
-                removed += 1
         except Exception:
             continue
+        if (now - ts).days > JOB_RETENTION_DAYS:
+            delete_job(report.job_id)
+            removed += 1
 
     return removed
 
@@ -107,4 +137,4 @@ def cleanup_expired() -> int:
 def get_all_job_ids() -> list[str]:
     """Get all persisted job IDs (for startup recovery)."""
     _ensure_dir()
-    return [f.stem for f in JOBS_DIR.glob("*.json")]
+    return [f.stem for f in _iter_report_files()]

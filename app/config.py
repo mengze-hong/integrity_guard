@@ -1,4 +1,10 @@
-"""Application configuration."""
+"""Application configuration.
+
+Secrets (LLM key, endpoint, JWT, admin key, payment keys) are resolved via the
+encrypted secret store (``app.secrets_manager``): environment variable first,
+then the AES-encrypted ``data/secrets.enc`` (master key in the OS vault). No
+secret is ever hardcoded here — config.py is tracked by git.
+"""
 
 import os
 from pathlib import Path
@@ -8,42 +14,18 @@ from pydantic import BaseModel
 try:
     from dotenv import load_dotenv
 
-    # Load secrets from .env (gitignored). Never hardcode keys in this file —
-    # config.py is tracked by git and would leak to GitHub.
+    # Legacy/local convenience only. The canonical store is encrypted; run
+    # `python -m app.secrets_setup` to migrate any .env secrets and remove it.
     load_dotenv()
 except ImportError:
     pass
 
-_DATA_DIR = Path("data")
+from app.secrets_manager import get_secret, get_or_create_secret
 
-
-def _load_or_create_secret(env_var: str, file_name: str, nbytes: int = 32) -> str:
-    """Return a stable secret.
-
-    Priority: explicit env var > persisted file under data/ > newly generated
-    (then persisted). Persisting avoids invalidating all issued JWTs / admin
-    keys on every restart while keeping secrets out of source control.
-    """
-    explicit = os.environ.get(env_var)
-    if explicit:
-        return explicit
-    secret_path = _DATA_DIR / file_name
-    try:
-        if secret_path.exists():
-            value = secret_path.read_text(encoding="utf-8").strip()
-            if value:
-                return value
-        secret = os.urandom(nbytes).hex()
-        _DATA_DIR.mkdir(parents=True, exist_ok=True)
-        secret_path.write_text(secret, encoding="utf-8")
-        try:
-            os.chmod(secret_path, 0o600)
-        except OSError:
-            pass
-        return secret
-    except OSError:
-        # Last resort: ephemeral secret (still functional within one process)
-        return os.urandom(nbytes).hex()
+# LLM usage caps (anti-abuse / cost control)
+LLM_RATE_PER_IP = int(os.environ.get("LLM_RATE_PER_IP", "30"))      # per IP per window
+LLM_RATE_WINDOW = int(os.environ.get("LLM_RATE_WINDOW", "3600"))    # seconds
+LLM_GLOBAL_HOURLY_CAP = int(os.environ.get("LLM_GLOBAL_HOURLY_CAP", "500"))
 
 
 class Settings(BaseModel):
@@ -59,12 +41,10 @@ class Settings(BaseModel):
     crossref_timeout: float = 10.0
     crossref_max_concurrent: int = 5
 
-    # LLM (internal LiteLLM) — key AND base_url are sensitive: MUST come from
-    # .env / environment. Never hardcode the company endpoint or key here
-    # (config.py is tracked by git and would leak to GitHub).
-    llm_api_key: str = os.environ.get("LLM_API_KEY", "")
-    llm_base_url: str = os.environ.get("LLM_BASE_URL", "")
-    llm_model: str = os.environ.get("LLM_MODEL", "gpt-5.2")
+    # LLM (internal LiteLLM) — key AND base_url are sensitive; from encrypted store.
+    llm_api_key: str = get_secret("LLM_API_KEY", "")
+    llm_base_url: str = get_secret("LLM_BASE_URL", "")
+    llm_model: str = get_secret("LLM_MODEL", "gpt-5.2")
 
     # Gate thresholds
     reference_confidence_threshold: float = 60.0  # below this = FAIL
@@ -74,8 +54,8 @@ class Settings(BaseModel):
     host: str = "0.0.0.0"
     port: int = 8000
 
-    # Auth & Billing
-    jwt_secret: str = _load_or_create_secret("JWT_SECRET", ".jwt_secret", 32)
+    # Auth & Billing — generated + persisted to the encrypted store if absent.
+    jwt_secret: str = get_or_create_secret("JWT_SECRET", 32)
     jwt_expire_days: int = 7
 
     # Credits pricing (1 credit = 1 full check)
@@ -87,12 +67,12 @@ class Settings(BaseModel):
 
     # Payment
     payment_sandbox: bool = os.environ.get("PAYMENT_SANDBOX", "true").lower() == "true"
-    alipay_app_id: str = os.environ.get("ALIPAY_APP_ID", "")
-    alipay_private_key: str = os.environ.get("ALIPAY_PRIVATE_KEY", "")
-    alipay_public_key: str = os.environ.get("ALIPAY_PUBLIC_KEY", "")
+    alipay_app_id: str = get_secret("ALIPAY_APP_ID", "")
+    alipay_private_key: str = get_secret("ALIPAY_PRIVATE_KEY", "")
+    alipay_public_key: str = get_secret("ALIPAY_PUBLIC_KEY", "")
 
     # Admin
-    admin_key: str = _load_or_create_secret("ADMIN_KEY", ".admin_key", 16)
+    admin_key: str = get_or_create_secret("ADMIN_KEY", 16)
 
 
 settings = Settings()

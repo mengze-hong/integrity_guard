@@ -7,7 +7,8 @@ from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, BackgroundTasks, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 
-from app.config import settings
+from app.config import settings, LLM_RATE_PER_IP, LLM_RATE_WINDOW, LLM_GLOBAL_HOURLY_CAP
+from app.secrets_manager import redact
 from app.models import FullReport, DismissedIssue, Severity
 from app.parsers.zip_parser import extract_zip, identify_project_structure
 from app.parsers.tex_parser import parse_all_tex_files
@@ -73,6 +74,37 @@ def _check_rate_limit(ip: str) -> bool:
         return False
     _rate_limit[ip].append(now)
     return True
+
+
+# ─── LLM usage caps (anti-abuse / cost control) ───────────────
+from collections import defaultdict
+_llm_calls_by_ip: dict[str, list[float]] = defaultdict(list)
+_llm_calls_global: list[float] = []
+
+
+def _llm_usage_guard(request: Request):
+    """Enforce per-IP rate limit + global hourly cap on LLM-backed endpoints.
+
+    Raises HTTP 429 when a limit is exceeded. Protects the internal LLM from
+    abuse (important when the app is exposed via a public tunnel).
+    """
+    now = time.time()
+    ip = request.client.host if request.client else "unknown"
+    global _llm_calls_global
+    _llm_calls_global[:] = [t for t in _llm_calls_global if now - t < 3600]
+    _llm_calls_by_ip[ip] = [t for t in _llm_calls_by_ip[ip] if now - t < LLM_RATE_WINDOW]
+
+    if len(_llm_calls_global) >= LLM_GLOBAL_HOURLY_CAP:
+        raise HTTPException(status_code=429, detail="AI 服务已达全局用量上限，请稍后再试")
+    if len(_llm_calls_by_ip[ip]) >= LLM_RATE_PER_IP:
+        raise HTTPException(status_code=429, detail="AI 调用过于频繁，请稍后再试")
+
+    _llm_calls_by_ip[ip].append(now)
+    _llm_calls_global.append(now)
+    # Bound memory: drop empty/stale IP buckets occasionally
+    if len(_llm_calls_by_ip) > 5000:
+        for k in [k for k, v in _llm_calls_by_ip.items() if not v]:
+            del _llm_calls_by_ip[k]
 
 
 # ─── Shared LLM call helper ───────────────────────────────────
@@ -675,6 +707,7 @@ async def format_normalize(job_id: str, request: Request):
 @router.post("/ai-fix/{job_id}")
 async def ai_fix_suggestion(job_id: str, request: Request):
     """Use LLM to suggest a fix for a specific issue."""
+    _llm_usage_guard(request)
     if job_id not in _job_dirs:
         _get_report(job_id)
     project_dir = _job_dirs.get(job_id)
@@ -743,12 +776,13 @@ async def ai_fix_suggestion(job_id: str, request: Request):
             else:
                 return {"status": "error", "detail": f"LLM API returned {resp.status_code}"}
     except Exception as e:
-        return {"status": "error", "detail": str(e)[:100]}
+        return {"status": "error", "detail": redact(str(e))[:100]}
 
 
 @router.post("/ai-batch-fix/{job_id}")
 async def ai_batch_fix(job_id: str, request: Request):
     """Batch AI fix: attempt to fix all auto-fixable issues at once."""
+    _llm_usage_guard(request)
     if job_id not in _job_dirs:
         _get_report(job_id)
     project_dir = _job_dirs.get(job_id)
@@ -839,6 +873,7 @@ async def ai_batch_fix(job_id: str, request: Request):
 @router.post("/ai-review/{job_id}")
 async def ai_reviewer_simulation(job_id: str, request: Request):
     """Simulate a peer reviewer reading the paper — identify weaknesses and questions."""
+    _llm_usage_guard(request)
     if job_id not in _job_dirs:
         _get_report(job_id)
     project_dir = _job_dirs.get(job_id)
@@ -881,12 +916,13 @@ async def ai_reviewer_simulation(job_id: str, request: Request):
             else:
                 return {"status": "error", "detail": f"LLM API returned {resp.status_code}"}
     except Exception as e:
-        return {"status": "error", "detail": str(e)[:100]}
+        return {"status": "error", "detail": redact(str(e))[:100]}
 
 
 @router.post("/ai-polish/{job_id}")
 async def ai_polish_text(job_id: str, request: Request):
     """Polish a selected paragraph to be more academic and fluent."""
+    _llm_usage_guard(request)
     if job_id not in _job_dirs:
         _get_report(job_id)
     project_dir = _job_dirs.get(job_id)
@@ -926,12 +962,13 @@ async def ai_polish_text(job_id: str, request: Request):
             else:
                 return {"status": "error", "detail": f"LLM returned {resp.status_code}"}
     except Exception as e:
-        return {"status": "error", "detail": str(e)[:100]}
+        return {"status": "error", "detail": redact(str(e))[:100]}
 
 
 @router.post("/ai-abstract/{job_id}")
 async def ai_optimize_abstract(job_id: str, request: Request):
     """Optimize the paper's abstract based on full content analysis."""
+    _llm_usage_guard(request)
     if job_id not in _job_dirs:
         _get_report(job_id)
     project_dir = _job_dirs.get(job_id)
@@ -984,7 +1021,7 @@ async def ai_optimize_abstract(job_id: str, request: Request):
             else:
                 return {"status": "error", "detail": f"LLM returned {resp.status_code}"}
     except Exception as e:
-        return {"status": "error", "detail": str(e)[:100]}
+        return {"status": "error", "detail": redact(str(e))[:100]}
 
 
 # ─── Reproducibility Checklist ───────────────────────────────
@@ -1011,6 +1048,7 @@ REPRODUCIBILITY_CHECKLIST = [
 @router.post("/venue-checklist/{job_id}")
 async def generate_venue_checklist(job_id: str, request: Request):
     """AI auto-fill the Reproducibility Checklist based on paper content."""
+    _llm_usage_guard(request)
     if job_id not in _job_dirs:
         _get_report(job_id)
     project_dir = _job_dirs.get(job_id)
@@ -1087,7 +1125,7 @@ Output as JSON array."""},
             else:
                 return {"status": "error", "detail": f"LLM returned {resp.status_code}"}
     except Exception as e:
-        return {"status": "error", "detail": str(e)[:100]}
+        return {"status": "error", "detail": redact(str(e))[:100]}
 
 
 # ─── History & Cleanup ────────────────────────────────────────
@@ -1289,7 +1327,7 @@ async def _run_checks(job_id: str, zip_path: Path, extract_dir: Path, filename: 
             job_id=job_id, filename=filename,
             timestamp=datetime.now(timezone.utc).isoformat(),
         )
-        logger.error(f" Job {job_id} failed: {e}")
+        logger.error(f" Job {job_id} failed: {redact(str(e))}")
     finally:
         if zip_path.exists():
             zip_path.unlink()
@@ -1355,4 +1393,4 @@ async def _run_checks_from_dir(
 
     except Exception as e:
         _job_status[job_id] = "failed"
-        logger.error(f" Recheck {job_id} failed: {e}")
+        logger.error(f" Recheck {job_id} failed: {redact(str(e))}")

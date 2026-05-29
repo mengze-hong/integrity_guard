@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="ScholarLint",
     description="投稿通 — Academic paper pre-submission integrity checker",
-    version="5.2.15",
+    version="5.3.0",
     lifespan=lifespan,
 )
 
@@ -51,11 +51,13 @@ app.include_router(payment_router, prefix="/api")
 # Global exception handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    """Catch unhandled exceptions and return a clean JSON error."""
-    logger.error(f"Unhandled exception: {exc}")
+    """Catch unhandled exceptions and return a clean JSON error (secrets redacted)."""
+    from app.secrets_manager import redact
+
+    logger.error(f"Unhandled exception: {redact(str(exc))}")
     return JSONResponse(
         status_code=500,
-        content={"detail": "服务器内部错误，请稍后重试。", "error": str(exc)[:200]},
+        content={"detail": "服务器内部错误，请稍后重试。", "error": redact(str(exc))[:200]},
     )
 
 

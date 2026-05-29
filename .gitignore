@@ -19,10 +19,12 @@ data/integrity.db
 data/jobs/
 uploads/
 
-# Secrets (auto-generated, must never be committed)
+# Secrets (auto-generated / encrypted, must never be committed)
 data/.jwt_secret
 data/.admin_key
+data/secrets.enc
 .env
+.env.*
 
 # IDE
 .vscode/

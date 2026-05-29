@@ -1,5 +1,28 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.0 (2026-05-29) — 正规加密：密钥/数据/模型用量全面加固
+全面保护 API key、数据与模型调用。
+
+### 密钥加密存储（at-rest）
+- 新增 `app/secrets_manager.py`：密钥以 **Fernet（AES-128-CBC + HMAC）** 加密存于 `data/secrets.enc`；**主密钥存于操作系统凭据库**（Windows 凭据管理器 / DPAPI，经 `keyring`），绑定当前账户，绝不明文落盘
+- 新增 `app/secrets_setup.py` 迁移工具：`python -m app.secrets_setup` 把 `.env` 与旧明文密钥迁入加密库并**删除明文**（`.env`、`data/.jwt_secret`、`data/.admin_key` 已删除）
+- `config.py` 改为从加密库解析（环境变量优先 > 加密库），LLM key / endpoint / JWT / admin / 支付密钥全部走加密库
+- `.gitignore` 增加 `data/secrets.enc`、`.env.*`
+
+### 日志/错误脱敏
+- 新增 `secrets_manager.redact()`：任何日志或 API 错误返回中出现的 key / endpoint 一律替换为 `***REDACTED***`
+- 已接入全局异常处理器、LLM 服务、6 个 AI 接口的错误返回、质检/重检失败日志
+
+### 模型用量上限（防滥用 / 控成本）
+- 新增 `_llm_usage_guard`：所有 6 个 AI 接口加 **按 IP 限流**（默认 30 次/小时）+ **全局每小时上限**（默认 500 次），超限返回 429；阈值可经环境变量覆盖（`LLM_RATE_PER_IP` / `LLM_RATE_WINDOW` / `LLM_GLOBAL_HOURLY_CAP`）
+
+### 数据静态加密
+- 质检报告改为加密存储 `data/jobs/{id}.enc`（Fernet），兼容读取旧 `.json` 并在下次保存时迁移；加密栈不可用时回退明文
+- 上传 zip 解压后即删除（原已实现）；解压出的工作文件因需实时编辑/质检仍为明文，7 天自动清理（已知限制）
+
+### 依赖
+- 新增 `cryptography`、`keyring`
+
 ## v5.2.15 (2026-05-29) — 修复 AI 单条修复"瞎替换"
 - **根因**：`applyAiFix` 按"问题行号 ±2 行"盲目替换，而后端给 AI 的上下文是 ±5 行，区域不匹配 → 替换错行、留下残行
 - **后端**：`/ai-fix` 现在同时返回它发给模型的**原始上下文** `original` 与 `file`；并强化提示词要求 AI 返回**完整**修复片段（保留未改动行），以便整体替换

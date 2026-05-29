@@ -10,6 +10,7 @@ from openai import AsyncOpenAI, BadRequestError
 
 from app.config import settings
 from app.logging_config import logger
+from app.secrets_manager import redact
 
 # AsyncOpenAI client for LiteLLM (OpenAI-compatible API)
 llm_client = AsyncOpenAI(
@@ -46,7 +47,7 @@ async def llm_check(
             kwargs.pop("temperature", None)
             response = await llm_client.chat.completions.create(**kwargs)
         else:
-            logger.error(f"LLM request failed: {exc}")
+            logger.error(f"LLM request failed: {redact(str(exc))}")
             raise
 
     choice = response.choices[0].message
