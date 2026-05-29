@@ -30,6 +30,8 @@ def ai_app(tmp_path: Path):
     routes._llm_calls_global.clear()
 
     job_id = "ai-route-job"
+    owner_session = "owner-session"
+    share_token = "share-token"
     project_dir = tmp_path / "paper"
     project_dir.mkdir()
     (project_dir / "main.tex").write_text(
@@ -43,6 +45,12 @@ def ai_app(tmp_path: Path):
         job_id=job_id,
         filename="paper.zip",
         project_dir=str(project_dir),
+        metadata={
+            "owner_type": "session",
+            "owner_id": owner_session,
+            "session_id": owner_session,
+            "share_token": share_token,
+        },
         gate_results=[
             CheckResult(
                 gate_name="reference_authenticity",
@@ -63,10 +71,13 @@ def ai_app(tmp_path: Path):
     routes._jobs[job_id] = report
     routes._job_status[job_id] = "completed"
     routes._job_dirs[job_id] = project_dir
+    routes._job_owners[job_id] = routes._extract_owner_metadata(report)
 
     app = FastAPI()
     app.include_router(ai_routes.router, prefix="/api")
-    yield TestClient(app), job_id
+    client = TestClient(app)
+    client.cookies.set(routes.SESSION_COOKIE_NAME, owner_session)
+    yield client, job_id
 
     routes._jobs.clear()
     routes._job_status.clear()
@@ -119,6 +130,22 @@ def test_ai_batch_fix_reference_issue_returns_dry_run_without_llm(ai_app, monkey
     assert payload["summary"]["total_fixable"] == 0
     assert payload["summary"]["skipped"]["reference_authenticity"] == 1
     assert payload["skipped"][0]["reason"] == "reference_authenticity"
+
+
+def test_ai_diagnosis_rejects_share_token_write_access_before_llm(ai_app, monkeypatch):
+    client, job_id = ai_app
+    share_token = routes._jobs[job_id].metadata["share_token"]
+
+    async def fail_if_called(*args, **kwargs):
+        raise AssertionError("share-token write access must be rejected before LLM calls")
+
+    monkeypatch.setattr(routes, "_llm_chat_post", fail_if_called)
+    client.cookies.clear()
+
+    response = client.post(f"/api/ai-diagnosis/{job_id}?share={share_token}")
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Access denied"
 
 
 @pytest.mark.parametrize("wrap_in_fence", [True, False])

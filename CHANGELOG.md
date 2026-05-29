@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.48 (2026-05-29) — AI Router Share-Token Permission Test
+- `tests/test_ai_routes.py` 的 AI fixture 现在带 session owner 与 share token metadata，成功路径不再依赖 legacy 无 owner 默认放行
+- 新增 share-token 只读权限测试，确认 `POST /api/ai-diagnosis/{job_id}?share=...` 返回 403
+- 测试通过 monkeypatch 阻断 `_llm_chat_post`，确保权限拒绝发生在真实 LLM 调用之前
+- 本地验证通过：AI router tests 7 项；全量 pytest 65 项
+
 ## v5.3.47 (2026-05-29) — AI Diagnosis API Tests
 - 扩展 `tests/test_ai_routes.py`，为 `POST /api/ai-diagnosis/{job_id}` 增加 API-level mock 测试
 - 覆盖模型返回普通 JSON 与 fenced JSON 的成功解析路径，并断言 provenance 包含 source、model、gates
