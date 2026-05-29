@@ -126,6 +126,7 @@
 - [x] 动画 transitions（fadeIn 页面切换 + slideUp issue 卡片）
 - [ ] Loading skeleton（加载时的骨架屏）
 - [x] 错误状态设计（网络错误 toast 提示、graceful fallback）
+- [x] AI loading card 显示后台处理耗时，长请求更可观察
 
 ---
 

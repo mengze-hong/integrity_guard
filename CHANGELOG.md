@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.40 (2026-05-29) — AI Loading 耗时显示
+- 右下角 AI loading card 增加后台处理耗时秒表，长时间 LLM 请求时用户能确认任务仍在进行
+- `hideAiLoading()` 会清理计时器，避免多次 AI 请求后残留 interval
+- 保持 loading card 非阻塞行为不变，用户等待 AI 时仍可继续浏览和编辑
+- 本地验证通过：前端 inline JavaScript 语法检查、全量 pytest 58 项
+
 ## v5.3.39 (2026-05-29) — Toast 去重与队列上限
 - 前端 toast 增加 1.5 秒重复消息去重，避免网络错误、AI 请求失败或连续点击时刷屏
 - 同屏最多保留 4 条 toast，新消息出现时会移除最旧提示，保持界面可读
