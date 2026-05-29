@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.45 (2026-05-29) — AI Fix 路由完成迁移
+- `POST /api/ai-fix/{job_id}` 与 `POST /api/ai-batch-fix/{job_id}` 已迁入 `app/api/ai_routes.py`
+- 当前所有 `/api/ai-*` 路径集中到 AI router，旧 `routes.py` 仅保留 batch candidate helper 等迁移期共享逻辑
+- 保留 reference-authenticity guardrail、provenance、dry-run summary、skipped reasons 与原有响应字段
+- 本地验证通过：全量 pytest 58 项；lints 无新增问题
+
 ## v5.3.44 (2026-05-29) — 更多 AI 端点迁移
 - `POST /api/ai-review/{job_id}`、`/api/ai-polish/{job_id}`、`/api/ai-abstract/{job_id}` 已迁入 `app/api/ai_routes.py`
 - 新增轻量 helper 复用主 `.tex` 提取与 project directory 查找逻辑，减少 AI 路由重复代码
