@@ -138,6 +138,7 @@
 - [ ] 前端拆分：index.html → Vue/React SPA（组件化、状态管理）
 - [ ] CSS 提取：inline styles → CSS modules / Tailwind classes
 - [ ] API 类型安全：前后端共享 TypeScript types
+- [x] AI diagnosis route 迁入 `app/api/ai_routes.py`，保持 `/api/ai-diagnosis/{job_id}` 兼容
 - [x] 测试覆盖：7 个单元测试（citations, structure, writing, data gates）
 - [x] Error handling：全局异常处理中间件（返回 JSON 错误）
 

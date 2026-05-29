@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.43 (2026-05-29) — AI 路由拆分起步
+- 新增 `app/api/ai_routes.py`，开始把 AI 专属 API 从旧的全量 `routes.py` 拆出
+- `POST /api/ai-diagnosis/{job_id}` 已迁入新路由模块，外部 API 路径保持兼容
+- `app/main.py` 同时挂载 legacy API router 与 AI router，为后续逐步迁移保留小步提交空间
+- 本地验证通过：全量 pytest 58 项
+
 ## v5.3.42 (2026-05-29) — Issue 详情折叠与 Evidence 搜索
 - Issue 列表搜索现在会同时匹配 `evidence`，便于定位由 gate 提供的证据文本
 - 长证据/建议默认折叠为“展开证据/建议”，展开区域限制高度并可滚动，避免撑爆右侧问题栏

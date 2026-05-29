@@ -10,6 +10,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.config import settings
 from app.api.routes import router as api_router
+from app.api.ai_routes import router as ai_router
 from app.api.auth_routes import router as auth_router
 from app.api.payment_routes import router as payment_router
 from app import storage
@@ -41,6 +42,7 @@ templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
 # Include API routes
 app.include_router(api_router, prefix="/api")
+app.include_router(ai_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")
 app.include_router(payment_router, prefix="/api")
 
