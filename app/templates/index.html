@@ -1558,6 +1558,9 @@ function renderIssues(path) {
                 }
                 if (issue.severity==='error' && !canAiSuggestFix(gate.gate_name, issue.message)) {
                     html += `<span class="mt-2 mr-1 inline-block text-[11px] bg-slate-50 border border-slate-200 text-slate-500 px-2.5 py-1 rounded font-medium" title="文献真实性问题不能由 AI 编造修复，请删除或替换为真实可验证来源">需人工核实文献</span>`;
+                    if (gate.gate_name === 'reference_authenticity') {
+                        html += `<button onclick="event.stopPropagation();searchReferenceCandidates('${gate.gate_name}',${idx})" class="mt-2 mr-1 text-[11px] bg-indigo-50 border border-indigo-200 text-indigo-700 px-2.5 py-1 rounded font-medium hover:bg-indigo-100 transition-colors" title="只从 Crossref / Semantic Scholar / OpenAlex 搜索真实候选，不由 AI 编造">查找真实候选</button>`;
+                    }
                 }
                 if (issue.severity==='error' && canAiSuggestFix(gate.gate_name, issue.message)) {
                     html += `<button onclick="event.stopPropagation();aiFixIssue('${esc(issue.message)}','${issue.file||''}',${issue.line||0},'${gate.gate_name}')" class="mt-2 mr-1 text-[11px] bg-blue-50 border border-blue-200 text-blue-700 px-2.5 py-1 rounded font-medium hover:bg-blue-100 transition-colors" title="AI 给出修改建议，需你人工核实后采用">AI 建议修复</button>`;
@@ -1858,6 +1861,62 @@ async function fetchOfficialBib(doi) {
     } else {
         toast('未找到官方 Bib 条目', 'warning');
     }
+}
+
+async function searchReferenceCandidates(gateName, issueIndex) {
+    const gate = report?.gate_results?.find(g => g.gate_name === gateName);
+    const issue = gate?.issues?.[issueIndex];
+    if (!issue) return toast('未找到对应问题', 'error');
+
+    showAiLoading('🔍 正在检索真实文献候选…');
+    try {
+        const r = await fetch(`/api/reference-candidates/${jobId}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                message: issue.message || '',
+                evidence: issue.evidence || '',
+                suggestion: issue.suggestion || '',
+            }),
+        });
+        const d = await r.json();
+        if (d.status !== 'ok' || !d.candidates?.length) {
+            toast(d.detail || '未找到可信候选，请手动在官方数据库检索', 'warning', 4000);
+            return;
+        }
+        const rows = d.candidates.map(c => `<div style="border:1px solid #e2e8f0; border-radius:10px; padding:10px; margin-bottom:8px;">
+            <div style="display:flex; justify-content:space-between; gap:8px;">
+                <p style="font-size:13px; font-weight:700; color:#0f172a; margin:0;">${esc(c.title || '(untitled)')}</p>
+                <span style="font-size:10px; color:#475569; background:#f1f5f9; border-radius:999px; padding:2px 7px; height:fit-content;">${esc(c.source)}</span>
+            </div>
+            <p style="font-size:11px; color:#64748b; margin:5px 0 0;">${esc((c.authors || []).join(', '))}${c.year ? ' · ' + esc(String(c.year)) : ''}</p>
+            ${c.doi ? `<p style="font-size:11px; color:#2563eb; margin:5px 0 0;">DOI: ${esc(c.doi)}</p>` : ''}
+            ${c.url ? `<a href="${esc(c.url)}" target="_blank" rel="noopener" style="font-size:11px; color:#2563eb;">打开来源</a>` : ''}
+            <div style="margin-top:8px; display:flex; gap:6px;">
+                ${c.doi ? `<button onclick="fetchOfficialBib('${esc(c.doi)}')" style="font-size:11px; padding:4px 8px; border-radius:6px; border:1px solid #bfdbfe; background:#eff6ff; color:#1d4ed8;">获取官方 Bib</button>` : ''}
+                <button data-candidate="${esc(encodeURIComponent(JSON.stringify(c)))}" onclick="copyCandidateInfo(this)" style="font-size:11px; padding:4px 8px; border-radius:6px; border:1px solid #e2e8f0; background:#fff; color:#475569;">复制候选 JSON</button>
+            </div>
+        </div>`).join('');
+        const modal = document.createElement('div');
+        modal.className = 'modal-bg';
+        modal.onclick = e => { if(e.target===modal) modal.remove(); };
+        modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:22px; max-width:760px; width:90%; max-height:80vh; overflow-y:auto;">
+            <h3 style="font-size:16px; font-weight:700; margin:0 0 6px;">真实文献候选</h3>
+            <p style="font-size:12px; color:#64748b; margin:0 0 12px;">只展示 Crossref / Semantic Scholar / OpenAlex 返回的候选；请人工核对作者、标题、年份、DOI 后再替换。</p>
+            ${rows}
+            <button onclick="this.closest('.modal-bg').remove()" style="margin-top:8px; width:100%; padding:9px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:13px; color:#64748b;">关闭</button>
+        </div>`;
+        document.body.appendChild(modal);
+    } catch(e) {
+        toast('候选检索失败: ' + e.message, 'error');
+    } finally {
+        hideAiLoading();
+    }
+}
+
+function copyCandidateInfo(btn) {
+    const raw = decodeURIComponent(btn.dataset.candidate || '');
+    navigator.clipboard.writeText(raw).then(() => toast('候选信息已复制', 'success', 1000));
 }
 
 function showBibCompareModal(oldBib, newBib, source, replaceInfo) {

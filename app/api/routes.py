@@ -344,6 +344,125 @@ def _detect_lang(*texts: str) -> str:
     return "en"
 
 
+def _ai_fix_provenance(gate_name: str, file_path: str, line_num, context: str) -> dict:
+    """Return audit metadata for an AI suggestion."""
+    return {
+        "source": "llm",
+        "model": settings.llm_model,
+        "gate": gate_name,
+        "file": file_path or None,
+        "line": line_num,
+        "context_chars": len(context or ""),
+    }
+
+
+def _not_fixable_reference_payload(issue_message: str, gate_name: str = "") -> dict:
+    """Standard response for reference issues that must not be LLM-fixed."""
+    return {
+        "status": "not_fixable",
+        "not_fixable": True,
+        "risk": "high",
+        "requires_manual_review": True,
+        "provenance": {
+            "source": "rule",
+            "gate": gate_name or "reference_authenticity",
+            "reason": "reference_authenticity_guardrail",
+        },
+        "detail": (
+            "文献真实性/缺少可信来源的问题不提供 AI 建议修复。"
+            "请删除该引用，或替换为可在 Crossref / Semantic Scholar / OpenAlex "
+            "等权威来源核实的真实文献；不要使用 AI 编造 BibTeX。"
+        ),
+        "candidate_search_available": True,
+        "issue": issue_message,
+    }
+
+
+def _safe_project_file(
+    project_dir: Path,
+    file_path: str,
+    *,
+    allowed_suffixes: tuple[str, ...] | None = None,
+) -> Path:
+    """Resolve a project-relative path and guarantee it stays in project_dir."""
+    target = (project_dir / file_path).resolve()
+    try:
+        target.relative_to(project_dir.resolve())
+    except ValueError:
+        raise HTTPException(status_code=403, detail="Access denied")
+    if allowed_suffixes and target.suffix.lower() not in allowed_suffixes:
+        raise HTTPException(status_code=403, detail="Unsupported file type")
+    return target
+
+
+def _extract_reference_title(*texts: str) -> str:
+    """Best-effort extraction of a reference title from issue/evidence text."""
+    import re
+
+    blob = "\n".join(t for t in texts if t)
+    patterns = [
+        r"标题[:：]\s*(.+)",
+        r"title[:：]\s*(.+)",
+        r"\\btitle\\s*=\\s*[{\"]([^}\"]+)",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, blob, flags=re.IGNORECASE)
+        if match:
+            return match.group(1).strip().strip("{}\"'.,;")[:300]
+    return ""
+
+
+def _candidate_from_crossref(item: dict) -> dict:
+    title = (item.get("title") or [""])[0]
+    authors = [
+        " ".join(p for p in [a.get("given", ""), a.get("family", "")] if p).strip()
+        for a in item.get("author", [])[:5]
+    ]
+    year_parts = (item.get("issued") or {}).get("date-parts") or []
+    year = year_parts[0][0] if year_parts and year_parts[0] else None
+    doi = item.get("DOI")
+    return {
+        "source": "crossref",
+        "title": title,
+        "authors": [a for a in authors if a],
+        "year": year,
+        "doi": doi,
+        "url": f"https://doi.org/{doi}" if doi else item.get("URL"),
+        "score": item.get("score"),
+    }
+
+
+def _candidate_from_s2(item: dict) -> dict:
+    return {
+        "source": "semantic_scholar",
+        "title": item.get("title"),
+        "authors": [a.get("name") for a in item.get("authors", [])[:5] if a.get("name")],
+        "year": item.get("year"),
+        "doi": item.get("externalIds", {}).get("DOI"),
+        "url": item.get("url"),
+        "score": None,
+    }
+
+
+def _candidate_from_openalex(item: dict) -> dict:
+    doi = item.get("doi")
+    if doi and doi.startswith("https://doi.org/"):
+        doi = doi.removeprefix("https://doi.org/")
+    return {
+        "source": "openalex",
+        "title": item.get("display_name"),
+        "authors": [
+            a.get("author", {}).get("display_name")
+            for a in item.get("authorships", [])[:5]
+            if a.get("author", {}).get("display_name")
+        ],
+        "year": item.get("publication_year"),
+        "doi": doi,
+        "url": item.get("id"),
+        "score": item.get("relevance_score"),
+    }
+
+
 # ─── Upload & Check ───────────────────────────────────────────
 
 @router.post("/upload")
@@ -464,7 +583,7 @@ async def read_file(job_id: str, file_path: str, request: Request, response: Res
     if not project_dir:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    target = project_dir / file_path
+    target = _safe_project_file(project_dir, file_path)
     if not target.exists() or not target.is_file():
         raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
 
@@ -494,11 +613,7 @@ async def save_file(job_id: str, file_path: str, request: Request, response: Res
     if not any(file_path.lower().endswith(ext) for ext in EDITABLE_EXTENSIONS):
         raise HTTPException(status_code=403, detail="只能编辑文本源文件（.tex/.bib/.cls/.sty 等）")
 
-    target = project_dir / file_path
-    try:
-        target.resolve().relative_to(project_dir.resolve())
-    except ValueError:
-        raise HTTPException(status_code=403, detail="Access denied")
+    target = _safe_project_file(project_dir, file_path, allowed_suffixes=EDITABLE_EXTENSIONS)
 
     body = await request.body()
     content = body.decode("utf-8")
@@ -802,6 +917,94 @@ async def fetch_official_bib(doi: str):
     return {"status": "not_found", "doi": doi}
 
 
+@router.post("/reference-candidates/{job_id}")
+async def search_reference_candidates(job_id: str, request: Request, response: Response):
+    """Search authoritative sources for real candidate references.
+
+    This endpoint intentionally does not call the LLM and never fabricates
+    bibliography data. It only returns candidates retrieved from public scholarly
+    indexes so the author can manually verify and replace a suspect reference.
+    """
+    await _require_job_access(job_id, request, response, allow_share=False)
+    body = await request.json()
+    title = (body.get("title") or "").strip()
+    if not title:
+        title = _extract_reference_title(
+            body.get("message", ""),
+            body.get("evidence", ""),
+            body.get("bibtex", ""),
+        )
+    if not title or len(title) < 8:
+        return {
+            "status": "not_found",
+            "detail": "未能从问题中提取足够明确的标题，请手动输入标题后再搜索。",
+            "candidates": [],
+        }
+
+    import httpx
+
+    candidates = []
+    async with httpx.AsyncClient(timeout=12.0) as client:
+        try:
+            resp = await client.get(
+                "https://api.crossref.org/works",
+                params={"query.title": title, "rows": 3},
+                headers={"User-Agent": f"ScholarLint/5.3 ({settings.crossref_email})"},
+            )
+            if resp.status_code == 200:
+                items = resp.json().get("message", {}).get("items", [])
+                candidates.extend(_candidate_from_crossref(item) for item in items)
+        except Exception:
+            pass
+
+        try:
+            resp = await client.get(
+                "https://api.semanticscholar.org/graph/v1/paper/search",
+                params={
+                    "query": title,
+                    "limit": 3,
+                    "fields": "title,authors,year,url,externalIds",
+                },
+            )
+            if resp.status_code == 200:
+                candidates.extend(_candidate_from_s2(item) for item in resp.json().get("data", []))
+        except Exception:
+            pass
+
+        try:
+            resp = await client.get(
+                "https://api.openalex.org/works",
+                params={"search": title, "per-page": 3},
+            )
+            if resp.status_code == 200:
+                candidates.extend(_candidate_from_openalex(item) for item in resp.json().get("results", []))
+        except Exception:
+            pass
+
+    # Deduplicate by DOI/title while preserving source evidence.
+    seen = set()
+    deduped = []
+    for candidate in candidates:
+        if not candidate.get("title"):
+            continue
+        key = (candidate.get("doi") or candidate.get("title", "")).lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(candidate)
+
+    return {
+        "status": "ok" if deduped else "not_found",
+        "query": title,
+        "candidates": deduped[:8],
+        "provenance": {
+            "source": "authoritative_search",
+            "sources": ["crossref", "semantic_scholar", "openalex"],
+            "llm_used": False,
+        },
+    }
+
+
 # ─── Project Tidy Up ─────────────────────────────────────────
 
 @router.get("/tidyup/{job_id}")
@@ -877,10 +1080,7 @@ async def format_normalize(job_id: str, request: Request, response: Response):
     targets = []
 
     if file_path:
-        target = (project_dir / file_path).resolve()
-        # Path traversal check: must stay within project_dir
-        if not str(target).startswith(str(project_dir.resolve())):
-            raise HTTPException(status_code=400, detail="Invalid file path")
+        target = _safe_project_file(project_dir, file_path, allowed_suffixes=(".tex",))
         if target.exists() and target.suffix == ".tex":
             targets.append(target)
     else:
@@ -927,18 +1127,11 @@ async def ai_fix_suggestion(job_id: str, request: Request, response: Response):
     # reference — it would just hallucinate another fake citation. Do not
     # generate any AI suggestion for these issues.
     if _is_reference_authenticity_issue(gate_name, issue_message):
-        return {
-            "status": "not_fixable",
-            "detail": (
-                "文献真实性/缺少可信来源的问题不提供 AI 建议修复。"
-                "请删除该引用，或替换为可在 Crossref / Semantic Scholar / OpenAlex "
-                "等权威来源核实的真实文献；不要使用 AI 编造 BibTeX。"
-            ),
-        }
+        return _not_fixable_reference_payload(issue_message, gate_name)
 
     # Get file context if available
     if file_path and not context:
-        target = project_dir / file_path
+        target = _safe_project_file(project_dir, file_path, allowed_suffixes=(".tex", ".bib"))
         if target.exists():
             lines = target.read_text(encoding="utf-8", errors="replace").split("\n")
             if line_num and line_num > 0:
@@ -990,7 +1183,15 @@ async def ai_fix_suggestion(job_id: str, request: Request, response: Response):
             if resp.status_code == 200:
                 data = resp.json()
                 suggestion = _strip_code_fence(data["choices"][0]["message"]["content"])
-                return {"status": "ok", "suggestion": suggestion, "original": context, "file": file_path}
+                return {
+                    "status": "ok",
+                    "suggestion": suggestion,
+                    "original": context,
+                    "file": file_path,
+                    "risk": "medium",
+                    "requires_manual_review": True,
+                    "provenance": _ai_fix_provenance(gate_name, file_path, line_num, context),
+                }
             else:
                 return {"status": "error", "detail": f"LLM API returned {resp.status_code}"}
     except Exception as e:
@@ -1044,7 +1245,7 @@ async def ai_batch_fix(job_id: str, request: Request, response: Response):
     fixes = []
     async with httpx.AsyncClient(timeout=30.0) as client:
         for item in fixable[:5]:  # Limit to 5 at a time to avoid timeout
-            target = project_dir / item["file"]
+            target = _safe_project_file(project_dir, item["file"], allowed_suffixes=(".tex", ".bib"))
             if not target.exists():
                 continue
             lines = target.read_text(encoding="utf-8", errors="replace").split("\n")
@@ -1092,6 +1293,9 @@ async def ai_batch_fix(job_id: str, request: Request, response: Response):
                         "message": item["message"],
                         "original": context,
                         "fixed": fix_text,
+                        "risk": "medium",
+                        "requires_manual_review": True,
+                        "provenance": _ai_fix_provenance("", item["file"], item["line"], context),
                     })
             except Exception:
                 continue
