@@ -144,6 +144,7 @@
 - [x] 测试覆盖：7 个单元测试（citations, structure, writing, data gates）
 - [x] Error handling：全局异常处理中间件（返回 JSON 错误）
 - [x] AI router API mock 测试覆盖 reference authenticity 单条/批量修复 guardrail
+- [x] AI diagnosis API mock 测试覆盖成功 JSON、LLM fallback、missing job 404 与 payload 脱敏
 
 ### 部署 & 运维
 - [x] Docker 化（Dockerfile + docker-compose.yml + requirements.txt）

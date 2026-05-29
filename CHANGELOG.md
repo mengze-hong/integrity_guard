@@ -1,5 +1,12 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.47 (2026-05-29) — AI Diagnosis API Tests
+- 扩展 `tests/test_ai_routes.py`，为 `POST /api/ai-diagnosis/{job_id}` 增加 API-level mock 测试
+- 覆盖模型返回普通 JSON 与 fenced JSON 的成功解析路径，并断言 provenance 包含 source、model、gates
+- 覆盖 LLM 非 200 fallback 与 missing job 404，确保失败路径不真实调用 LLM
+- 成功路径 mock 会验证 prompt 包含 gate、issue、文件与行号，同时不泄露 `project_dir` 或临时路径
+- 本地验证通过：AI router tests 6 项；全量 pytest 64 项
+
 ## v5.3.46 (2026-05-29) — AI Router Guardrail API Tests
 - 新增 `tests/test_ai_routes.py`，用 FastAPI TestClient 直接覆盖新 `ai_routes.py`
 - 验证 `POST /api/ai-fix/{job_id}` 遇到 reference authenticity 问题时返回 `not_fixable`，且不会调用 LLM
