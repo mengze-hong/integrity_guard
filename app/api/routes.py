@@ -147,6 +147,24 @@ def _strip_code_fence(text: str) -> str:
     return t
 
 
+_REF_ISSUE_KEYWORDS = (
+    "DOI 无法解析", "无法解析", "fabricat", "伪造", "retract", "撤稿",
+    "无法验证", "未找到该文献", "不存在的文献", "虚构",
+)
+
+
+def _is_reference_authenticity_issue(gate_name: str = "", message: str = "") -> bool:
+    """True if an issue concerns citation/reference authenticity.
+
+    Such issues must NOT be auto-"fixed" by the LLM, because fabricating a
+    replacement reference is itself an integrity violation.
+    """
+    if gate_name == "reference_authenticity":
+        return True
+    msg = message or ""
+    return any(k in msg for k in _REF_ISSUE_KEYWORDS)
+
+
 def _detect_lang(*texts: str) -> str:
     """Roughly detect whether the given text is mainly Chinese or English.
 
@@ -719,9 +737,27 @@ async def ai_fix_suggestion(job_id: str, request: Request):
     file_path = body.get("file", "")
     line_num = body.get("line")
     context = body.get("context", "")  # surrounding code
+    gate_name = body.get("gate", "")
 
     if not issue_message:
         raise HTTPException(status_code=400, detail="Missing issue message")
+
+    # Integrity guardrail: never let the LLM "fix" a fabricated/unverifiable
+    # reference — it would just hallucinate another fake citation. Return
+    # human-actionable advice instead of a generated replacement.
+    if _is_reference_authenticity_issue(gate_name, issue_message):
+        return {
+            "status": "ok",
+            "advice": True,
+            "suggestion": (
+                "该引文可能是伪造或无法验证的，AI 不会自动编造替换文献"
+                "（那只会生成另一个看似真实的假引用）。请：\n"
+                "1) 删除这条引用，或\n"
+                "2) 用真实、可在 Crossref / Semantic Scholar / OpenAlex 等数据库中查到的文献替换，"
+                "并核对作者、标题、年份、DOI 是否一致。\n"
+                "提示：可用问题旁的『📥 获取官方 Bib』按钮拉取真实的 BibTeX 条目。"
+            ),
+        }
 
     # Get file context if available
     if file_path and not context:
@@ -742,6 +778,8 @@ async def ai_fix_suggestion(job_id: str, request: Request):
             "你是一个 LaTeX 学术论文修复助手。这篇论文是中文写的。"
             "请返回修复后的【完整】代码片段：保留所有未改动的行，仅修正问题处，"
             "使其能够整体替换原始片段。只输出代码本身，不要解释、不要省略任何行。"
+            "【重要】绝不要编造任何文献信息（作者、标题、期刊/会议、年份、DOI、页码）；"
+            "若无法确定真实值，保持原样或留 TODO 占位让作者填写，切勿生成虚构内容。"
         )
         user_prompt = f"问题: {issue_message}\n\n原始片段:\n```latex\n{context}\n```\n\n请返回修复后的完整片段:"
     else:
@@ -750,7 +788,10 @@ async def ai_fix_suggestion(job_id: str, request: Request):
             "so your fix MUST be in English — never insert Chinese text. "
             "Return the COMPLETE corrected version of the snippet: keep every unchanged line "
             "intact and only fix the issue, so your output can replace the original snippet "
-            "verbatim. Output only the code, no explanation, do not omit any line."
+            "verbatim. Output only the code, no explanation, do not omit any line. "
+            "IMPORTANT: NEVER fabricate bibliographic data (authors, titles, venues, years, "
+            "DOIs, page numbers); if a real value is unknown, leave it unchanged or insert a "
+            "TODO placeholder for the author — never invent citation content."
         )
         user_prompt = (
             f"Issue: {issue_message}\n\nOriginal snippet:\n```latex\n{context}\n```\n\n"
@@ -796,6 +837,10 @@ async def ai_batch_fix(job_id: str, request: Request):
     # Collect fixable issues (errors with file+line info)
     fixable = []
     for gate in report.gate_results:
+        # Integrity guardrail: never auto-fix reference authenticity issues —
+        # the LLM would fabricate a replacement (another fake citation).
+        if gate.gate_name == "reference_authenticity":
+            continue
         for idx, issue in enumerate(gate.issues):
             if issue.severity != Severity.ERROR:
                 continue
@@ -832,13 +877,17 @@ async def ai_batch_fix(job_id: str, request: Request):
                 sys_prompt = (
                     "你是 LaTeX 学术论文修复助手。这篇论文是中文写的，请用中文给出修复后的"
                     "代码片段。只输出可直接粘贴的代码，不要解释。"
+                    "【重要】绝不要编造任何文献信息（作者、标题、期刊/会议、年份、DOI、页码）；"
+                    "无法确定时保持原样或留占位，切勿生成虚构引用。"
                 )
                 user_prompt = f"问题: {item['message']}\n建议: {item['suggestion']}\n\n代码:\n```latex\n{context}\n```\n\n修复后:"
             else:
                 sys_prompt = (
                     "You are a LaTeX academic writing assistant. The paper is written in ENGLISH, "
                     "so your fix MUST be in English — never insert Chinese text. "
-                    "Return only the corrected LaTeX snippet, no explanation."
+                    "Return only the corrected LaTeX snippet, no explanation. "
+                    "IMPORTANT: NEVER fabricate bibliographic data (authors, titles, venues, "
+                    "years, DOIs, pages); if unknown, leave unchanged or use a TODO placeholder."
                 )
                 user_prompt = (
                     f"Issue: {item['message']}\nHint: {item['suggestion']}\n\n"
