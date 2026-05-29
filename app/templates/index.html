@@ -481,6 +481,7 @@
             <!-- Score -->
             <div class="text-center mb-8">
                 <span class="text-5xl font-black" id="overview-score">0</span><span class="text-xl text-slate-400">/100</span>
+                <span id="overview-grade" style="display:inline-block; margin-left:12px; padding:4px 12px; border-radius:8px; font-size:16px; font-weight:800; vertical-align:middle;"></span>
                 <p class="text-sm mt-2" id="overview-status-text"></p>
             </div>
 
@@ -696,16 +697,17 @@
 
 <!-- Context Menu -->
 <div id="context-menu" style="display:none; position:fixed; z-index:150; background:#fff; border:1px solid #e2e8f0; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.12); padding:4px 0; min-width:180px;">
-    <div class="ctx-item" onclick="jumpToNextIssue(); hideContextMenu()">⬇️ 跳转到下一个问题 <span style="color:#94a3b8; float:right;">F8</span></div>
-    <div class="ctx-item" onclick="doRecheck(); hideContextMenu()">🔄 重新质检 <span style="color:#94a3b8; float:right;">⌘⇧R</span></div>
-    <div class="ctx-item" onclick="autoSave(); toast('已保存','success',1500); hideContextMenu()">💾 保存 <span style="color:#94a3b8; float:right;">⌘S</span></div>
+    <div class="ctx-item" onclick="jumpToNextIssue(); hideContextMenu()">下一个问题 <span style="color:#94a3b8; float:right;">F8</span></div>
+    <div class="ctx-item" onclick="doRecheck(); hideContextMenu()">重新质检 <span style="color:#94a3b8; float:right;">⌘⇧R</span></div>
+    <div class="ctx-item" onclick="autoSave(); toast('已保存','success',1500); hideContextMenu()">保存 <span style="color:#94a3b8; float:right;">⌘S</span></div>
     <div style="height:1px; background:#e2e8f0; margin:4px 0;"></div>
-    <div class="ctx-item" id="ctx-polish" style="display:none;" onclick="doPolishSelection(); hideContextMenu()">✨ 润色选中文本</div>
-    <div class="ctx-item" id="ctx-concise" style="display:none;" onclick="doPolishSelection('concise'); hideContextMenu()">✂️ 精简选中文本</div>
+    <div class="ctx-item" id="ctx-polish" style="display:none;" onclick="doPolishSelection(); hideContextMenu()">润色选中文本</div>
+    <div class="ctx-item" id="ctx-concise" style="display:none;" onclick="doPolishSelection('concise'); hideContextMenu()">精简选中文本</div>
     <div style="height:1px; background:#e2e8f0; margin:4px 0;" id="ctx-divider-ai" style="display:none;"></div>
-    <div class="ctx-item" onclick="doBibClean(); hideContextMenu()">📋 整理 Bib</div>
-    <div class="ctx-item" onclick="doFormatNormalize(); hideContextMenu()">🔧 格式规范化</div>
-    <div class="ctx-item" onclick="exportReport(); hideContextMenu()">📄 导出报告</div>
+    <div class="ctx-item" onclick="doBibClean(); hideContextMenu()">整理 Bib</div>
+    <div class="ctx-item" onclick="doFormatNormalize(); hideContextMenu()">格式规范化</div>
+    <div class="ctx-item" onclick="doAiReview(); hideContextMenu()">模拟审稿反馈</div>
+    <div class="ctx-item" onclick="exportReport(); hideContextMenu()">导出报告</div>
 </div>
 
 <!-- Dismiss Modal -->
@@ -941,6 +943,14 @@ function showOverview() {
         if (progress < 1) requestAnimationFrame(animateScore);
     }
     animateScore();
+
+    // Show letter grade
+    const score = report.overall_score;
+    const gradeEl = document.getElementById('overview-grade');
+    const grade = score >= 90 ? 'A' : score >= 75 ? 'B' : score >= 60 ? 'C' : 'D';
+    const gradeColors = {A:'background:#dcfce7;color:#166534;',B:'background:#eff6ff;color:#1e40af;',C:'background:#fef3c7;color:#92400e;',D:'background:#fef2f2;color:#991b1b;'};
+    gradeEl.textContent = grade;
+    gradeEl.style.cssText = `display:inline-block; margin-left:12px; padding:4px 12px; border-radius:8px; font-size:16px; font-weight:800; vertical-align:middle; ${gradeColors[grade]}`;
 
     const gates = report.gate_results;
     const passCount = gates.filter(g=>g.passed).length;
@@ -2432,7 +2442,7 @@ async function loadHistory() {
             return `<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px; margin-bottom:6px; background:#f8fafc; border-radius:8px; border:1px solid #f1f5f9; cursor:pointer; transition:all 0.15s;" onmouseover="this.style.background='#eff6ff';this.style.borderColor='#bfdbfe'" onmouseout="this.style.background='#f8fafc';this.style.borderColor='#f1f5f9'" onclick="resumeJob('${j.job_id}')">
                 <div style="flex:1; min-width:0;">
                     <p style="font-size:13px; font-weight:500; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#334155;">${esc(j.filename)}</p>
-                    <p style="font-size:11px; color:#94a3b8; margin:2px 0 0;">${timeStr} · ${j.gates_passed}/${j.gates_total} 关</p>
+                    <p style="font-size:11px; color:#94a3b8; margin:2px 0 0;">${timeStr} · <span style="color:${j.gates_passed===j.gates_total?'#059669':'#64748b'}">${j.gates_passed}/${j.gates_total} 通过</span></p>
                 </div>
                 <div style="display:flex; align-items:center; gap:8px; flex-shrink:0; margin-left:12px;">
                     <span style="font-size:14px; font-weight:700; color:${scoreColor};">${j.score.toFixed(0)}</span>
