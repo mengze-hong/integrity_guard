@@ -1,5 +1,10 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.61 (2026-05-30) — Do Not Do Docs
+- 新增 `docs/DO_NOT_DO.md`，集中列出研究真实性、AI 修复验证、仓库卫生、敏感文件/密钥与公网暴露禁止事项
+- `docs/README.md` 增加 Do Not Do 入口，`docs/RELEASE_CHECKLIST.md` 增加发布前 guardrail 复核步骤
+- `TODO.md` 同步记录禁止事项文档已补齐
+
 ## v5.3.60 (2026-05-30) — Testing Guide Docs
 - 新增 `docs/TESTING_GUIDE.md`，按全量提交前、前端 JS、AI routes/integrity、upload/file security、parser/gates、auth/payment、export/brand、minimal E2E、dependency audit/coverage 分类整理当前测试命令
 - `docs/README.md` 增加 Testing Guide 入口，`docs/RELEASE_CHECKLIST.md` 改为引用统一测试指南，减少发布检查命令重复
