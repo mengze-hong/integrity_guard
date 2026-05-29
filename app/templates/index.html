@@ -2200,8 +2200,8 @@ async function doBatchFix() {
                         <button onclick="applyBatchFix(${i})" style="font-size:11px; padding:4px 10px; border-radius:6px; border:none; background:#22c55e; color:#fff; cursor:pointer; font-weight:600;">应用</button>
                     </div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:11px;">
-                        <div style="background:#fef2f2; padding:8px; border-radius:6px; font-family:var(--font-mono); white-space:pre-wrap; max-height:80px; overflow:hidden;">${esc(fix.original)}</div>
-                        <div style="background:#f0fdf4; padding:8px; border-radius:6px; font-family:var(--font-mono); white-space:pre-wrap; max-height:80px; overflow:hidden;">${esc(fix.fixed)}</div>
+                        <div style="background:#fef2f2; padding:8px; border-radius:6px; font-family:var(--font-mono); white-space:pre-wrap; word-break:break-word; max-height:220px; overflow:auto;">${esc(fix.original)}</div>
+                        <div style="background:#f0fdf4; padding:8px; border-radius:6px; font-family:var(--font-mono); white-space:pre-wrap; word-break:break-word; max-height:220px; overflow:auto;">${esc(fix.fixed)}</div>
                     </div>
                 </div>
             `).join('');

@@ -1,5 +1,8 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.1 (2026-05-29) — AI 批量修复内容可滚动
+- **修复批量修复弹窗内容看不全**：每条"原文/修复"框原为 `max-height:80px; overflow:hidden`（被裁剪），改为 `max-height:220px; overflow:auto`（可滚动），并加 `word-break:break-word` 让 DOI 等长串自动换行，可查看完整内容
+
 ## v5.3.0 (2026-05-29) — 正规加密：密钥/数据/模型用量全面加固
 全面保护 API key、数据与模型调用。
 
