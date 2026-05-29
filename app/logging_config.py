@@ -4,7 +4,7 @@ import logging
 import sys
 
 # Create application logger
-logger = logging.getLogger("integrityguard")
+logger = logging.getLogger("scholarlint")
 logger.setLevel(logging.INFO)
 
 # Console handler with structured format

@@ -615,7 +615,7 @@ async def export_report(job_id: str, request: Request, response: Response):
         raise HTTPException(status_code=404, detail="Report not found")
 
     lines = []
-    lines.append("# IntegrityGuard — 论文完整性检查报告")
+    lines.append("# ScholarLint · 投稿通 — 论文完整性检查报告")
     lines.append("")
     lines.append("| 项目 | 详情 |")
     lines.append("|------|------|")
@@ -829,7 +829,7 @@ async def fetch_official_bib(doi: str):
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(
                 f"https://api.crossref.org/works/{doi}/transform/application/x-bibtex",
-                headers={"User-Agent": "IntegrityAssurance/0.1"},
+                headers={"User-Agent": f"ScholarLint/5.3 (mailto:{settings.crossref_email})"},
             )
             if resp.status_code == 200 and "@" in resp.text:
                     cleaned = clean_bib_text(resp.text.strip())
@@ -867,12 +867,13 @@ async def search_reference_candidates(job_id: str, request: Request, response: R
     import httpx
 
     candidates = []
+    scholarly_headers = {"User-Agent": "ScholarLint/5.3 (mailto:integrity@check.org)"}
     async with httpx.AsyncClient(timeout=12.0) as client:
         try:
             resp = await client.get(
                 "https://api.crossref.org/works",
                 params={"query.title": title, "rows": 3},
-                headers={"User-Agent": f"ScholarLint/5.3 ({settings.crossref_email})"},
+                headers={"User-Agent": f"ScholarLint/5.3 (mailto:{settings.crossref_email})"},
             )
             if resp.status_code == 200:
                 items = resp.json().get("message", {}).get("items", [])
@@ -888,6 +889,7 @@ async def search_reference_candidates(job_id: str, request: Request, response: R
                     "limit": 3,
                     "fields": "title,authors,year,url,externalIds",
                 },
+                headers=scholarly_headers,
             )
             if resp.status_code == 200:
                 candidates.extend(_candidate_from_s2(item) for item in resp.json().get("data", []))
@@ -898,6 +900,7 @@ async def search_reference_candidates(job_id: str, request: Request, response: R
             resp = await client.get(
                 "https://api.openalex.org/works",
                 params={"search": title, "per-page": 3},
+                headers=scholarly_headers,
             )
             if resp.status_code == 200:
                 candidates.extend(_candidate_from_openalex(item) for item in resp.json().get("results", []))

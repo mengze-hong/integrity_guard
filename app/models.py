@@ -1,4 +1,4 @@
-"""Core data models for the integrity assurance system."""
+"""Core data models for the ScholarLint quality gate system."""
 
 from __future__ import annotations
 

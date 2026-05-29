@@ -1,5 +1,9 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.56 (2026-05-30) — Frontend Brand Unification
+- 导出 Markdown 报告标题、证书页脚与独立报告页标题统一使用 `ScholarLint · 投稿通` 对外品牌
+- Crossref、Semantic Scholar/OpenAlex 相关对外 HTTP User-Agent 去除旧 `IntegrityAssurance/0.1` 标识，改用 `ScholarLint/5.3` 风格
+
 ## v5.3.55 (2026-05-30) — Brand Logo Static Asset
 - 新增正式静态品牌资产 `app/static/brand/logo.png`，用于页面内稳定引用，根目录临时 `logo.png` 保持未纳入提交
 - 全局 navbar 改用 34px 品牌 logo，并保留原渐变盾牌作为图片加载失败 fallback，点击回首页行为不变

@@ -68,7 +68,7 @@ class ReferenceAuthenticityGate(BaseGate):
     DATACITE_BASE = "https://api.datacite.org"
     S2_BASE = "https://api.semanticscholar.org/graph/v1"
     OPENALEX_BASE = "https://api.openalex.org"
-    HEADERS = {"User-Agent": "IntegrityAssurance/0.1 (mailto:integrity@check.org)"}
+    HEADERS = {"User-Agent": "ScholarLint/5.3 (mailto:integrity@check.org)"}
     MAX_CONCURRENT = 5
     TIMEOUT = 15.0
 
@@ -187,6 +187,7 @@ class ReferenceAuthenticityGate(BaseGate):
                 resp = await client.get(
                     f"{self.S2_BASE}/paper/DOI:{doi}",
                     params={"fields": "title,authors,year,venue,externalIds"},
+                    headers=self.HEADERS,
                     timeout=self.TIMEOUT,
                 )
                 if resp.status_code == 200:
@@ -677,6 +678,7 @@ class ReferenceAuthenticityGate(BaseGate):
                 resp = await client.get(
                     f"{self.S2_BASE}/paper/search",
                     params={"query": title, "limit": 3, "fields": "title,externalIds"},
+                    headers=self.HEADERS,
                     timeout=self.TIMEOUT,
                 )
                 if resp.status_code == 200:
@@ -698,7 +700,7 @@ class ReferenceAuthenticityGate(BaseGate):
                 resp = await client.get(
                     f"{self.OPENALEX_BASE}/works",
                     params={"filter": f"title.search:{title}", "per_page": 3},
-                    headers={"User-Agent": self.HEADERS["User-Agent"]},
+                    headers=self.HEADERS,
                     timeout=self.TIMEOUT,
                 )
                 if resp.status_code == 200:

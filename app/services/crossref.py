@@ -14,7 +14,7 @@ class CrossrefService:
     def __init__(self):
         self.base_url = settings.crossref_base_url
         self.headers = {
-            "User-Agent": f"IntegrityAssurance/0.1 (mailto:{settings.crossref_email})",
+            "User-Agent": f"ScholarLint/5.3 (mailto:{settings.crossref_email})",
         }
         self._semaphore = asyncio.Semaphore(settings.crossref_max_concurrent)
 
