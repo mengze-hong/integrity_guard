@@ -1,5 +1,12 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.36 (2026-05-29) — AI 论文诊断报告前端
+- Overview 操作区新增「诊断报告」入口，工作台「AI 助手」下拉菜单新增「论文诊断报告」
+- 新增诊断报告弹窗，展示核心摘要、先改哪三处、预计修改时间、快速收益、风险提示和下一步行动
+- 诊断报告支持复制 Markdown，便于发送给导师或合作者；也可一键进入工作台处理问题
+- 弹窗明确标注 AI 诊断仅供参考，并提醒人工核实科学结论、数字和引用
+- 本地验证通过：前端 inline JavaScript 语法检查、全量 pytest 58 项
+
 ## v5.3.35 (2026-05-29) — AI 论文诊断报告接口
 - 新增 `/api/ai-diagnosis/{job_id}`，基于 gate 摘要、top issues 和安全 metadata 生成结构化论文诊断
 - 新增 `app/services/ai_reports.py`，集中处理诊断输入构建、JSON 解析和确定性 fallback，避免继续膨胀 routes 单体

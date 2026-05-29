@@ -506,6 +506,9 @@
                 <button onclick="runAiReview()" class="bg-violet-50 text-violet-700 px-5 py-3 rounded-xl font-semibold text-sm hover:bg-violet-100 border border-violet-200 transition-all">
                     🤖 模拟审稿
                 </button>
+                <button onclick="runAiDiagnosis()" class="bg-slate-50 text-slate-700 px-5 py-3 rounded-xl font-semibold text-sm hover:bg-slate-100 border border-slate-200 transition-all">
+                    📋 诊断报告
+                </button>
             </div>
 
             <p style="margin-top:28px; padding-top:16px; border-top:1px solid #e2e8f0; color:#94a3b8; font-size:11px; line-height:1.7; text-align:center;">
@@ -540,6 +543,7 @@
                         <button onclick="this.closest('details').open=false;runAiReview()" class="toolbar-btn" style="width:100%; text-align:left; margin:0;">🤖 模拟审稿</button>
                         <button onclick="this.closest('details').open=false;optimizeAbstract()" class="toolbar-btn" style="width:100%; text-align:left; margin-top:4px;">✨ 优化 Abstract</button>
                         <button onclick="this.closest('details').open=false;doBatchFix()" class="toolbar-btn" style="width:100%; text-align:left; margin-top:4px;">🛠 AI 批量建议</button>
+                        <button onclick="this.closest('details').open=false;runAiDiagnosis()" class="toolbar-btn" style="width:100%; text-align:left; margin-top:4px;">📋 论文诊断报告</button>
                     </div>
                 </details>
                 <span style="width:1px; height:20px; background:#e2e8f0; margin:0 4px;"></span>
@@ -2622,6 +2626,119 @@ async function doBibClean() {
         // Reload current file if it's a .bib
         if (currentFile?.endsWith('.bib')) openFile(currentFile);
         loadFileTree();
+    }
+}
+
+// === AI Diagnosis Report ===
+function diagnosisToMarkdown(diagnosis, provenance, fallback) {
+    const lines = [
+        '# AI 论文诊断报告',
+        '',
+        fallback ? '> 这是 fallback 诊断：LLM 不可用或输出格式异常，结果基于规则摘要生成。' : '> 这是 AI 辅助诊断，请人工核实后采用。',
+        '',
+        `## 核心摘要\n${diagnosis.summary || ''}`,
+        '',
+        '## 优先修改',
+    ];
+    (diagnosis.top_priorities || []).forEach((item, i) => {
+        lines.push(`${i + 1}. ${item.title || item}`);
+        if (item.reason) lines.push(`   - 原因: ${item.reason}`);
+        if (item.action) lines.push(`   - 行动: ${item.action}`);
+        if (item.target) lines.push(`   - 位置: ${item.target}`);
+    });
+    lines.push('', '## 快速收益');
+    (diagnosis.quick_wins || []).forEach(item => lines.push(`- ${typeof item === 'string' ? item : JSON.stringify(item)}`));
+    lines.push('', `## 预计时间\n${diagnosis.estimated_time || 'N/A'}`);
+    lines.push('', '## 风险提示');
+    (diagnosis.risk_notes || []).forEach(item => lines.push(`- ${typeof item === 'string' ? item : JSON.stringify(item)}`));
+    lines.push('', '## 下一步');
+    (diagnosis.next_actions || []).forEach(item => lines.push(`- ${typeof item === 'string' ? item : JSON.stringify(item)}`));
+    if (provenance) {
+        lines.push('', '## Provenance');
+        lines.push(`- Gates: ${(provenance.gates || []).join(', ')}`);
+        lines.push(`- Issues: ${provenance.issue_count ?? 'N/A'}`);
+        lines.push(`- Model: ${provenance.model || 'N/A'}`);
+    }
+    return lines.join('\n');
+}
+
+function renderDiagnosisList(items, {ordered=false} = {}) {
+    if (!items || !items.length) return '<p style="font-size:12px; color:#94a3b8; margin:0;">暂无</p>';
+    const tag = ordered ? 'ol' : 'ul';
+    const body = items.map(item => {
+        if (typeof item === 'string') return `<li style="margin-bottom:6px;">${esc(item)}</li>`;
+        return `<li style="margin-bottom:10px;">
+            <p style="font-size:13px; font-weight:700; color:#1e293b; margin:0;">${esc(item.title || item.action || '建议')}</p>
+            ${item.reason ? `<p style="font-size:12px; color:#64748b; margin:3px 0 0;">原因：${esc(item.reason)}</p>` : ''}
+            ${item.action ? `<p style="font-size:12px; color:#334155; margin:3px 0 0;">行动：${esc(item.action)}</p>` : ''}
+            ${item.target ? `<p style="font-size:11px; color:#94a3b8; margin:3px 0 0;">位置：${esc(item.target)}</p>` : ''}
+        </li>`;
+    }).join('');
+    return `<${tag} style="margin:0; padding-left:18px; color:#334155;">${body}</${tag}>`;
+}
+
+async function runAiDiagnosis() {
+    if (!jobId) return;
+    showAiLoading('📋 AI 正在生成论文诊断报告…');
+    try {
+        const r = await fetch(`/api/ai-diagnosis/${jobId}`, { method: 'POST' });
+        const d = await r.json();
+        if (d.status === 'ok' && d.diagnosis) {
+            const diagnosis = d.diagnosis;
+            window._lastDiagnosisMarkdown = diagnosisToMarkdown(diagnosis, d.provenance, d.fallback);
+            const modal = document.createElement('div');
+            modal.className = 'modal-bg';
+            modal.onclick = e => { if (e.target === modal) modal.remove(); };
+            modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:24px; max-width:780px; width:92%; max-height:84vh; overflow-y:auto;">
+                <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:12px;">
+                    <div>
+                        <h3 style="font-size:17px; font-weight:800; margin:0 0 4px; color:#0f172a;">📋 AI 论文诊断报告</h3>
+                        <p style="font-size:12px; color:#64748b; margin:0;">面向投稿前修改优先级的摘要，需作者人工核实。</p>
+                    </div>
+                    ${d.fallback ? '<span style="font-size:10px; color:#92400e; background:#fffbeb; border:1px solid #fde68a; border-radius:999px; padding:3px 8px; white-space:nowrap;">Fallback</span>' : '<span style="font-size:10px; color:#166534; background:#dcfce7; border:1px solid #bbf7d0; border-radius:999px; padding:3px 8px; white-space:nowrap;">AI Generated</span>'}
+                </div>
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; margin-bottom:14px;">
+                    <p style="font-size:13px; line-height:1.7; color:#1e293b; margin:0;">${esc(diagnosis.summary || '')}</p>
+                </div>
+                <div style="display:grid; grid-template-columns:1.2fr 0.8fr; gap:14px;">
+                    <section style="border:1px solid #e2e8f0; border-radius:10px; padding:14px;">
+                        <h4 style="font-size:13px; font-weight:800; margin:0 0 10px; color:#0f172a;">先改哪三处</h4>
+                        ${renderDiagnosisList((diagnosis.top_priorities || []).slice(0, 3), {ordered:true})}
+                    </section>
+                    <section style="border:1px solid #e2e8f0; border-radius:10px; padding:14px;">
+                        <h4 style="font-size:13px; font-weight:800; margin:0 0 10px; color:#0f172a;">预计修改时间</h4>
+                        <p style="font-size:13px; color:#334155; line-height:1.6; margin:0;">${esc(diagnosis.estimated_time || 'N/A')}</p>
+                    </section>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px;">
+                    <section style="border:1px solid #e2e8f0; border-radius:10px; padding:14px;">
+                        <h4 style="font-size:13px; font-weight:800; margin:0 0 10px; color:#0f172a;">快速收益</h4>
+                        ${renderDiagnosisList(diagnosis.quick_wins || [])}
+                    </section>
+                    <section style="border:1px solid #e2e8f0; border-radius:10px; padding:14px;">
+                        <h4 style="font-size:13px; font-weight:800; margin:0 0 10px; color:#0f172a;">风险提示</h4>
+                        ${renderDiagnosisList(diagnosis.risk_notes || [])}
+                    </section>
+                </div>
+                <section style="border:1px solid #e2e8f0; border-radius:10px; padding:14px; margin-top:14px;">
+                    <h4 style="font-size:13px; font-weight:800; margin:0 0 10px; color:#0f172a;">下一步行动</h4>
+                    ${renderDiagnosisList(diagnosis.next_actions || [])}
+                </section>
+                <p style="font-size:11px; color:#b45309; background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:8px 10px; margin:14px 0 0;">⚠️ 诊断报告只基于质检摘要与 AI 建议生成，不代表真实审稿结论。请人工核实所有科学结论、数字和引用。</p>
+                <div style="display:flex; gap:8px; margin-top:16px; justify-content:flex-end;">
+                    <button onclick="this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-size:13px;">关闭</button>
+                    <button onclick="navigator.clipboard.writeText(window._lastDiagnosisMarkdown || '');toast('已复制诊断报告 Markdown','success',1500)" style="padding:8px 16px; border-radius:8px; border:none; background:#334155; color:#fff; cursor:pointer; font-size:13px;">复制 Markdown</button>
+                    <button onclick="enterWorkspace();this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:none; background:#2563eb; color:#fff; cursor:pointer; font-size:13px; font-weight:600;">进入工作台处理</button>
+                </div>
+            </div>`;
+            document.body.appendChild(modal);
+        } else {
+            toast('诊断报告生成失败: ' + (d.detail || '未知错误'), 'error');
+        }
+    } catch (e) {
+        toast('诊断报告请求失败: ' + e.message, 'error');
+    } finally {
+        hideAiLoading();
     }
 }
 
