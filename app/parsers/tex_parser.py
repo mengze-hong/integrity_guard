@@ -7,12 +7,19 @@ from app.models import TexFile
 
 
 # Regex patterns for LaTeX commands
-_CITE_PATTERN = re.compile(r"\\cite[tp]?\*?\{([^}]+)\}")  # \cite, \citep, \citet
-_LABEL_PATTERN = re.compile(r"\\label\{([^}]+)\}")
-_REF_PATTERN = re.compile(r"\\(?:ref|eqref|cref|Cref|autoref)\{([^}]+)\}")
-_INPUT_PATTERN = re.compile(r"\\input\{([^}]+)\}")
-_INCLUDE_PATTERN = re.compile(r"\\include\{([^}]+)\}")
-_GRAPHICS_PATTERN = re.compile(r"\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}")
+_CITE_PATTERN = re.compile(
+    r"\\(?:cite|citep|citet|citealt|citealp|citeauthor|citeyear|parencite|"
+    r"textcite|autocite|footcite|nocite)\*?(?:\s*\[[^\]]*\]){0,2}\s*\{([^}]+)\}"
+)
+_LABEL_PATTERN = re.compile(r"\\label\s*\{([^}]+)\}")
+_REF_PATTERN = re.compile(
+    r"\\(?:ref|eqref|cref|Cref|autoref|subref|vref|Vref)\*?"
+    r"(?:\s*\[[^\]]*\])?\s*\{([^}]+)\}"
+)
+_REF_RANGE_PATTERN = re.compile(r"\\(?:crefrange|Crefrange)\s*\{([^}]+)\}\s*\{([^}]+)\}")
+_INPUT_PATTERN = re.compile(r"\\input\s*\{([^}]+)\}")
+_INCLUDE_PATTERN = re.compile(r"\\include\s*\{([^}]+)\}")
+_GRAPHICS_PATTERN = re.compile(r"\\includegraphics(?:\s*\[[^\]]*\])?\s*\{([^}]+)\}")
 _SECTION_PATTERN = re.compile(
     r"\\(?:section|subsection|subsubsection)\*?\{([^}]+)\}"
 )
@@ -43,14 +50,18 @@ def parse_tex_file(file_path: Path) -> TexFile:
     # Extract citation keys (split comma-separated keys)
     citations = []
     for match in _CITE_PATTERN.finditer(text):
-        keys = [k.strip() for k in match.group(1).split(",")]
+        keys = [k.strip() for k in match.group(1).split(",") if k.strip()]
         citations.extend(keys)
 
     # Extract labels
     labels = [m.group(1) for m in _LABEL_PATTERN.finditer(text)]
 
     # Extract refs
-    refs = [m.group(1) for m in _REF_PATTERN.finditer(text)]
+    refs = []
+    for match in _REF_PATTERN.finditer(text):
+        refs.extend(k.strip() for k in match.group(1).split(",") if k.strip())
+    for match in _REF_RANGE_PATTERN.finditer(text):
+        refs.extend([match.group(1).strip(), match.group(2).strip()])
 
     # Extract inputs/includes
     inputs = [m.group(1) for m in _INPUT_PATTERN.finditer(text)]

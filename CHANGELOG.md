@@ -1,10 +1,18 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.15 (2026-05-29) — LaTeX/BibTeX 解析准确性增强
+- LaTeX citation parser 支持更多 natbib/biblatex 命令与 optional args，包括 `citealt/citealp/citeauthor/citeyear/parencite/textcite/autocite/footcite/nocite`
+- reference parser 支持 `subref/vref/Vref/crefrange/Crefrange` 和 comma-separated cleveref 引用，减少真实论文中的漏检
+- BibTeX DOI 解析统一规范化 URL、`doi:` 前缀、LaTeX 转义下划线和尾部标点，减少 DOI 误判
+- 结构检查支持 biblatex `\addbibresource{}` 和 `\graphicspath{{...}}`，并能匹配省略扩展名的图片路径
+- 新增 parser/gate 回归测试，覆盖扩展 citation/ref、DOI 规范化、graphicspath 和 addbibresource
+
 ## v5.3.14 (2026-05-29) — AI 建议可信度与真实文献候选
 - AI 单条/批量建议返回 `risk`、`requires_manual_review` 和 `provenance` 审计信息，标明模型、gate、文件、行号和上下文长度
 - 文献真实性问题统一返回 `not_fixable` 高风险响应，并声明可走候选搜索，不调用 LLM 生成替换文献
 - 新增 `/api/reference-candidates/{job_id}`，只从 Crossref / Semantic Scholar / OpenAlex 检索真实候选，返回来源、标题、作者、年份、DOI/URL；该接口不使用 LLM
 - 前端文献真实性问题显示「查找真实候选」按钮，候选弹窗提示必须人工核对后再替换，并可继续获取官方 Bib
+- AI 建议修复弹窗改为原文/建议双栏 diff 预览，显示风险与 provenance；无法精确匹配原文时不再把建议插入光标位置，避免误写文件
 - 新增 AI integrity guardrail 测试，覆盖 not-fixable payload、标题提取和 Crossref 候选元数据转换
 
 ## v5.3.13 (2026-05-29) — Auth 与支付安全补强

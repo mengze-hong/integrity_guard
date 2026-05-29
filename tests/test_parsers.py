@@ -25,6 +25,26 @@ def test_parse_tex_citations():
     assert "nonexistent_key" in tex.citations
 
 
+def test_parse_tex_extended_citation_commands(tmp_path):
+    """Natbib/biblatex citation commands with optional args should be parsed."""
+    tex_path = tmp_path / "main.tex"
+    tex_path.write_text(
+        r"""
+\documentclass{article}
+\begin{document}
+\citep[see][p. 3]{smith2020,doe2021}
+\textcite{miller2022}
+\autocite{nguyen2023}
+\nocite{dataset2024}
+\end{document}
+""",
+        encoding="utf-8",
+    )
+
+    tex = parse_tex_file(tex_path)
+    assert tex.citations == ["smith2020", "doe2021", "miller2022", "nguyen2023", "dataset2024"]
+
+
 def test_parse_tex_labels_and_refs():
     """Test label and ref extraction."""
     tex = parse_tex_file(FIXTURES / "sample_main.tex")
@@ -34,6 +54,25 @@ def test_parse_tex_labels_and_refs():
     assert "fig:architecture" in tex.refs
     assert "tab:results" in tex.refs
     assert "fig:missing" in tex.refs
+
+
+def test_parse_tex_extended_refs(tmp_path):
+    """cleveref/autoref variants and ranges should be parsed."""
+    tex_path = tmp_path / "main.tex"
+    tex_path.write_text(
+        r"""
+\documentclass{article}
+\begin{document}
+\Cref{fig:a,tab:b}
+\crefrange{eq:start}{eq:end}
+\subref{fig:sub}
+\end{document}
+""",
+        encoding="utf-8",
+    )
+
+    tex = parse_tex_file(tex_path)
+    assert tex.refs == ["fig:a", "tab:b", "fig:sub", "eq:start", "eq:end"]
 
 
 def test_parse_tex_inputs_and_graphics():
@@ -76,6 +115,32 @@ def test_parse_bib_doi_detection():
     # real entries have DOIs
     assert entry_map["real_entry_attention"].doi is not None
     assert entry_map["real_entry_bert"].doi is not None
+
+
+def test_parse_bib_normalizes_doi_urls(tmp_path):
+    """DOIs stored as URLs or doi: prefixes should be normalized."""
+    bib_path = tmp_path / "refs.bib"
+    bib_path.write_text(
+        r"""
+@article{url_doi,
+  title={A Paper},
+  author={Doe, Jane},
+  year={2024},
+  doi={https://doi.org/10.1234/ABC\_123.}
+}
+@article{prefix_doi,
+  title={Another Paper},
+  author={Doe, John},
+  year={2024},
+  doi={doi:10.5555/test;}
+}
+""",
+        encoding="utf-8",
+    )
+
+    entries = {e.key: e for e in parse_bib_file(bib_path)}
+    assert entries["url_doi"].doi == "10.1234/ABC_123"
+    assert entries["prefix_doi"].doi == "10.5555/test"
 
 
 def test_parse_bib_authors():

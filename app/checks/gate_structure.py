@@ -20,6 +20,17 @@ from app.checks.base import BaseGate
 from app.models import CheckResult, Issue, ParsedPaper, Severity, TexFile
 
 _BIBLIOGRAPHY_PATTERN = re.compile(r"\\bibliography\{([^}]+)\}")
+_ADDBIBRESOURCE_PATTERN = re.compile(r"\\addbibresource(?:\[[^\]]*\])?\{([^}]+)\}")
+_GRAPHICSPATH_PATTERN = re.compile(r"\\graphicspath\s*\{((?:\{[^{}]+\}\s*)+)\}", re.DOTALL)
+
+
+def _graphicspath_dirs(raw_text: str, base_dir: Path) -> list[Path]:
+    """Extract \\graphicspath directories relative to the current tex file."""
+    dirs: list[Path] = []
+    for match in _GRAPHICSPATH_PATTERN.finditer(raw_text):
+        for item in re.findall(r"\{([^{}]+)\}", match.group(1)):
+            dirs.append(base_dir / item)
+    return dirs
 
 
 class StructureGate(BaseGate):
@@ -96,14 +107,18 @@ class StructureGate(BaseGate):
 
         # Check 5: All \includegraphics{} files exist
         for tex_file in paper.tex_files:
+            graphic_dirs = _graphicspath_dirs(tex_file.raw_text, tex_file.path.parent)
             for graphic in tex_file.graphics:
                 # Try with and without common extensions
-                candidates = [paper.project_dir / graphic]
+                candidates = [paper.project_dir / graphic, tex_file.path.parent / graphic]
+                for graphic_dir in graphic_dirs:
+                    candidates.append(graphic_dir / graphic)
                 if not Path(graphic).suffix:
                     for ext in [".png", ".pdf", ".jpg", ".jpeg", ".eps"]:
                         candidates.append(paper.project_dir / f"{graphic}{ext}")
-                # Also try relative to tex file
-                candidates.append(tex_file.path.parent / graphic)
+                        candidates.append(tex_file.path.parent / f"{graphic}{ext}")
+                        for graphic_dir in graphic_dirs:
+                            candidates.append(graphic_dir / f"{graphic}{ext}")
 
                 if not any(c.exists() for c in candidates):
                     issues.append(
@@ -116,25 +131,29 @@ class StructureGate(BaseGate):
                     )
                     score -= 5
 
-        # Check 5.5: \bibliography{} points to existing .bib file
+        # Check 5.5: \bibliography{} / \addbibresource{} points to existing .bib file
         for tex_file in paper.tex_files:
+            bib_refs = []
             for bib_match in _BIBLIOGRAPHY_PATTERN.finditer(tex_file.raw_text):
-                bib_refs = [b.strip() for b in bib_match.group(1).split(",")]
-                for bib_ref in bib_refs:
-                    bib_name = bib_ref if bib_ref.endswith(".bib") else f"{bib_ref}.bib"
-                    candidates = [
-                        tex_file.path.parent / bib_name,
-                        paper.project_dir / bib_name,
-                    ]
-                    if not any(c.exists() for c in candidates):
-                        issues.append(Issue(
-                            severity=Severity.ERROR,
-                            message=f"\\bibliography{{{bib_ref}}} 指向不存在的文件: {bib_name}",
-                            location=str(tex_file.path.name),
-                            file=tex_file.path.name,
-                            suggestion=f"请确保 '{bib_name}' 包含在上传的 zip 中，或修正 \\bibliography 中的文件名。",
-                        ))
-                        score -= 15
+                bib_refs.extend((b.strip(), "\\bibliography") for b in bib_match.group(1).split(",") if b.strip())
+            for bib_match in _ADDBIBRESOURCE_PATTERN.finditer(tex_file.raw_text):
+                bib_refs.append((bib_match.group(1).strip(), "\\addbibresource"))
+
+            for bib_ref, command in bib_refs:
+                bib_name = bib_ref if bib_ref.endswith(".bib") else f"{bib_ref}.bib"
+                candidates = [
+                    tex_file.path.parent / bib_name,
+                    paper.project_dir / bib_name,
+                ]
+                if not any(c.exists() for c in candidates):
+                    issues.append(Issue(
+                        severity=Severity.ERROR,
+                        message=f"{command}{{{bib_ref}}} 指向不存在的文件: {bib_name}",
+                        location=str(tex_file.path.name),
+                        file=tex_file.path.name,
+                        suggestion=f"请确保 '{bib_name}' 包含在上传的 zip 中，或修正 {command} 中的文件名。",
+                    ))
+                    score -= 15
 
         # Check 6: Duplicate \label definitions
         all_labels: dict[str, list[str]] = {}  # label → [files where defined]

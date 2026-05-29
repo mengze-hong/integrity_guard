@@ -85,6 +85,43 @@ async def test_structure_gate_warns_missing_graphics():
 
 
 @pytest.mark.asyncio
+async def test_structure_gate_supports_graphicspath_and_addbibresource(tmp_path):
+    """Structure gate should understand common graphicspath and biblatex syntax."""
+    figures = tmp_path / "figures"
+    figures.mkdir()
+    (figures / "plot.pdf").write_text("fake pdf", encoding="utf-8")
+    (tmp_path / "refs.bib").write_text("@article{x,title={X}}", encoding="utf-8")
+    tex_path = tmp_path / "main.tex"
+    tex = TexFile(
+        path=tex_path,
+        is_main=True,
+        raw_text=r"""
+\documentclass{article}
+\graphicspath{{figures/}}
+\addbibresource{refs.bib}
+\begin{document}
+\includegraphics{plot}
+\end{document}
+""",
+        citations=[],
+        graphics=["plot"],
+    )
+    paper = ParsedPaper(
+        project_dir=tmp_path,
+        tex_files=[tex],
+        bib_entries=[BibEntry(key="x", entry_type="article")],
+        bib_file_path=tmp_path / "refs.bib",
+        all_files=list(tmp_path.rglob("*")),
+        figure_files=[figures / "plot.pdf"],
+    )
+
+    result = await StructureGate().check(paper)
+    messages = [issue.message for issue in result.issues]
+    assert not any("图片文件不存在" in m for m in messages)
+    assert not any("addbibresource" in m for m in messages)
+
+
+@pytest.mark.asyncio
 async def test_writing_quality_detects_ai_markers():
     """Test that Gate 6 detects AI-generated text markers."""
     tex = TexFile(

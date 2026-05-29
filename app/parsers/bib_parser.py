@@ -23,6 +23,18 @@ def _parse_authors(author_str: str) -> list[str]:
     return [a.strip() for a in authors if a.strip()]
 
 
+def _normalize_doi(doi: str | None) -> str | None:
+    """Normalize common DOI forms from BibTeX fields."""
+    if not doi:
+        return None
+    cleaned = doi.strip().strip("{}\"'")
+    cleaned = re.sub(r"\\_", "_", cleaned)
+    cleaned = re.sub(r"^https?://(dx\.)?doi\.org/", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"^doi:\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = cleaned.rstrip(".,;")
+    return cleaned or None
+
+
 def parse_bib_file(file_path: Path) -> list[BibEntry]:
     """Parse a .bib file and return structured entries."""
     text = file_path.read_text(encoding="utf-8", errors="replace")
@@ -47,7 +59,7 @@ def parse_bib_file(file_path: Path) -> list[BibEntry]:
             title=entry.get("title"),
             authors=_parse_authors(entry.get("author", "")),
             year=entry.get("year"),
-            doi=entry.get("doi"),
+            doi=_normalize_doi(entry.get("doi")),
             journal=entry.get("journal"),
             booktitle=entry.get("booktitle"),
             volume=entry.get("volume"),
