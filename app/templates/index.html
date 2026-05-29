@@ -2371,6 +2371,9 @@ async function aiFixIssue(message, file, line) {
         });
         const d = await r.json();
         if (d.status === 'ok' && d.suggestion) {
+            // Store the exact original snippet + fix so we can do a precise
+            // find-and-replace instead of blindly overwriting lines by number.
+            window._singleFix = { original: d.original || '', fixed: d.suggestion, file: d.file || file };
             const suggestionEncoded = btoa(encodeURIComponent(d.suggestion));
             const modal = document.createElement('div');
             modal.className = 'modal-bg';
@@ -2382,7 +2385,7 @@ async function aiFixIssue(message, file, line) {
                 <div style="display:flex; gap:8px; margin-top:16px; justify-content:flex-end;">
                     <button onclick="this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-size:13px;">关闭</button>
                     <button onclick="navigator.clipboard.writeText(decodeURIComponent(atob('${suggestionEncoded}')));toast('已复制','success',1500);this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:none; background:#64748b; color:#fff; cursor:pointer; font-size:13px;">复制</button>
-                    <button onclick="applyAiFix(${line||0}, decodeURIComponent(atob('${suggestionEncoded}')));this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:none; background:#22c55e; color:#fff; cursor:pointer; font-size:13px; font-weight:600;">✅ 应用到编辑器</button>
+                    <button onclick="applySingleFix();this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:none; background:#22c55e; color:#fff; cursor:pointer; font-size:13px; font-weight:600;">✅ 应用到编辑器</button>
                 </div>
             </div>`;
             document.body.appendChild(modal);
@@ -2396,21 +2399,22 @@ async function aiFixIssue(message, file, line) {
     }
 }
 
-function applyAiFix(lineNum, fixedCode) {
-    if (!editor) return;
-    fixedCode = stripFences(fixedCode);
-    if (lineNum > 0) {
-        // Replace the line and a few surrounding lines with the fix
-        const startLine = Math.max(0, lineNum - 2);
-        const endLine = Math.min(editor.lineCount() - 1, lineNum + 2);
-        const from = {line: startLine, ch: 0};
-        const to = {line: endLine, ch: editor.getLine(endLine).length};
-        editor.replaceRange(fixedCode, from, to);
-    } else {
-        // No specific line — append at cursor
-        editor.replaceSelection(fixedCode);
+// Apply the single AI fix by precisely replacing the exact original snippet
+// the backend sent to the model (never a blind line-range overwrite).
+async function applySingleFix() {
+    const fix = window._singleFix;
+    if (!fix || !editor) return;
+    if (fix.original && fix.original.trim()) {
+        const ok = await applyOneFix(fix);  // robust: EOL/fence/$-safe/cross-file
+        if (ok) {
+            toast('✅ 已应用修复', 'success', 1500);
+            if (currentFile) { highlightErrors(); renderIssues(currentFile); }
+            return;
+        }
+        // Exact match failed (file changed since suggestion) — do NOT clobber.
+        toast('⚠️ 未能精确定位原文，已在光标处插入，请手动核对位置', 'warning', 3500);
     }
-    toast('✅ 已应用修复', 'success', 2000);
+    editor.replaceSelection(stripFences(fix.fixed));
 }
 
 // === AI Polish (integrated into right-click) ===

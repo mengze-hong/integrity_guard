@@ -706,19 +706,22 @@ async def ai_fix_suggestion(job_id: str, request: Request):
     lang = _detect_lang(context, issue_message)
     if lang == "zh":
         sys_prompt = (
-            "你是一个 LaTeX 学术论文修复助手。这篇论文是中文写的，"
-            "请用中文给出修复后的 LaTeX 代码片段。只输出可直接粘贴使用的代码，不要解释。"
+            "你是一个 LaTeX 学术论文修复助手。这篇论文是中文写的。"
+            "请返回修复后的【完整】代码片段：保留所有未改动的行，仅修正问题处，"
+            "使其能够整体替换原始片段。只输出代码本身，不要解释、不要省略任何行。"
         )
-        user_prompt = f"问题: {issue_message}\n\n相关代码:\n```latex\n{context}\n```\n\n请给出修复后的代码:"
+        user_prompt = f"问题: {issue_message}\n\n原始片段:\n```latex\n{context}\n```\n\n请返回修复后的完整片段:"
     else:
         sys_prompt = (
             "You are a LaTeX academic writing assistant. The paper is written in ENGLISH, "
             "so your fix MUST be in English — never insert Chinese text. "
-            "Return only the corrected LaTeX snippet, ready to paste, with no explanation."
+            "Return the COMPLETE corrected version of the snippet: keep every unchanged line "
+            "intact and only fix the issue, so your output can replace the original snippet "
+            "verbatim. Output only the code, no explanation, do not omit any line."
         )
         user_prompt = (
-            f"Issue: {issue_message}\n\nRelevant code:\n```latex\n{context}\n```\n\n"
-            "Provide the corrected LaTeX code:"
+            f"Issue: {issue_message}\n\nOriginal snippet:\n```latex\n{context}\n```\n\n"
+            "Return the complete corrected snippet:"
         )
 
     import httpx
@@ -736,7 +739,7 @@ async def ai_fix_suggestion(job_id: str, request: Request):
             if resp.status_code == 200:
                 data = resp.json()
                 suggestion = _strip_code_fence(data["choices"][0]["message"]["content"])
-                return {"status": "ok", "suggestion": suggestion}
+                return {"status": "ok", "suggestion": suggestion, "original": context, "file": file_path}
             else:
                 return {"status": "error", "detail": f"LLM API returned {resp.status_code}"}
     except Exception as e:
