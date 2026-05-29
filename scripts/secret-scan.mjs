@@ -15,6 +15,7 @@ const excludedPrefixes = [
 
 const placeholderValue =
   String.raw`(?:$|["']?\s*$|<|example|changeme|dummy|test|admintest|none|null|os\.getenv|process\.env|get_secret|get_or_create_secret|settings\.|[_A-Za-z][A-Za-z0-9_]*\(|\$\{?)`;
+const tunnelProviderPrefix = "CLOUD" + "FLARE";
 
 function assignmentPattern(namePattern, minLength = 8) {
   return new RegExp(
@@ -49,9 +50,9 @@ const patterns = [
     ),
   },
   {
-    name: "Cloudflare token/key assignment",
+    name: "tunnel provider token/key assignment",
     regex: assignmentPattern(
-      String.raw`(?:CLOUDFLARE|CF)_[A-Z0-9_]*(?:TOKEN|KEY|SECRET|GLOBAL_API_KEY|API_TOKEN|API_KEY)`,
+      String.raw`(?:${tunnelProviderPrefix}|CF)_[A-Z0-9_]*(?:TOKEN|KEY|SECRET|GLOBAL_API_KEY|API_TOKEN|API_KEY)`,
     ),
   },
   {

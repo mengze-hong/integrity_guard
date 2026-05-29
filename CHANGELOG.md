@@ -1,7 +1,12 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.51 (2026-05-29) — Frontend Helper Tests
+- 新增 `app/static/js/helpers.js`，把 inline script 中可复用的纯前端 helper 抽为非 module 全局脚本，保留现有 onclick/inline 调用方式
+- 批量 AI 修复前端改用 `groupFixesByGate()`、`indexesForGate()`、`prepareFixText()` 与 `$` 安全的 `replaceOnce()`，减少模板内重复逻辑
+- 新增 `scripts/test-js-helpers.mjs`，用 Node 内置 test 覆盖 helper 行为，并在 CI 前端语法检查后运行 `npm run test:js`
+
 ## v5.3.50 (2026-05-29) — CI Secret Scan Coverage
-- 新增 `scripts/secret-scan.mjs`，CI secret scan 改为复用本地无依赖脚本，并排除脚本自身、workflow 与 changelog，避免规则文本自检误报
+- 新增 `scripts/secret-scan.mjs`，CI secret scan 改为复用本地无依赖脚本；脚本仅排除自身和本地生成目录，workflow 与 tracked data/config 仍会被扫描
 - Secret scan 扩展覆盖内部 LLM endpoint/key、Bearer key、Cloudflare token/key、JWT/admin credential、payment provider key 与 private key block
 - Release checklist 改为可执行的 `npm run scan:secrets` 本地检查命令，TODO 同步记录 CI secret scan 覆盖范围
 - 本地验证通过：`npm run scan:secrets`、`npm run check:js`、`python -m pytest -q`

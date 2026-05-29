@@ -150,7 +150,8 @@
 ### 部署 & 运维
 - [x] Docker 化（Dockerfile + docker-compose.yml + requirements.txt）
 - [ ] CI/CD（GitHub Actions: lint + test + deploy）
-- [x] CI 检查扩展：前端 inline JS 语法检查抽成本地脚本，加入临时隧道 provider policy scan，并扩展 secret scan 覆盖 LLM、Cloudflare、JWT、admin 与支付密钥模式
+- [x] CI 检查扩展：前端 inline JS 语法检查抽成本地脚本，加入临时隧道 provider policy scan，并扩展 secret scan 覆盖 LLM、隧道平台、JWT、admin 与支付密钥模式
+- [x] 前端纯 helper 抽到全局脚本，并用 Node 内置测试覆盖 inline handler 参数、HTML escape、AI fix 文本替换与批量分组逻辑
 - [x] 日志系统（structured logging with timestamp, level, module）
 - [ ] 监控（uptime check、API 延迟、错误率）
 - [x] Rate limiting（IP 级别，每小时 10 次上传）

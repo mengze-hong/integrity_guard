@@ -1,6 +1,7 @@
 {
   "scripts": {
     "check:js": "node scripts/check-inline-js.mjs",
+    "test:js": "node --test scripts/test-js-helpers.mjs",
     "scan:secrets": "node scripts/secret-scan.mjs"
   },
   "dependencies": {

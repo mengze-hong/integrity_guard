@@ -736,6 +736,7 @@
     </div>
 </div>
 
+<script src="/static/js/helpers.js"></script>
 <script>
 // === State ===
 let jobId=null, shareToken=null, report=null, editor=null, currentFile=null, saveTimer=null, dismissCtx=null, uploadedFile=null;
@@ -827,10 +828,6 @@ async function apiFetch(path, options = {}) {
 
 function fileApiUrl(path) {
     return apiUrl(`/api/files/${jobId}/${String(path).split('/').map(encodeURIComponent).join('/')}`);
-}
-
-function jsArg(value) {
-    return JSON.stringify(String(value ?? ''));
 }
 
 document.addEventListener('click', event => {
@@ -1368,18 +1365,6 @@ function getFileStatus(path) {
     if (hasErr) return 'err';
     if (hasDismissed) return 'warn';
     return 'ok';
-}
-
-const REF_AUTH_ISSUE_PATTERNS = [
-    'DOI 无法解析', '缺少 DOI', '无可信来源', '标题搜索未找到',
-    '无法验证', '伪造', '撤稿', 'Unverified reference', 'source not found',
-    'DOI/source not found', 'official URL/DOI'
-];
-
-function canAiSuggestFix(gateName, message) {
-    if (gateName === 'reference_authenticity') return false;
-    const msg = message || '';
-    return !REF_AUTH_ISSUE_PATTERNS.some(p => msg.includes(p));
 }
 
 function issueMatchesFile(issue, path) {
@@ -2437,11 +2422,7 @@ function batchFixMarkdown() {
         `- 本次上限: ${summary.limit ?? 'N/A'}`,
         '',
     ];
-    const groups = fixes.reduce((acc, fix, i) => {
-        const gate = fix.gate_name || 'unknown';
-        (acc[gate] ||= []).push({...fix, _idx: i});
-        return acc;
-    }, {});
+    const groups = groupFixesByGate(fixes);
     Object.entries(groups).forEach(([gate, items]) => {
         const info = GATE_INFO[gate] || {name: gate, icon: '📋'};
         lines.push(`## ${info.icon || ''} ${info.name || gate}`);
@@ -2489,11 +2470,7 @@ async function doBatchFix() {
             const skippedCounts = Object.entries(summary.skipped || {})
                 .map(([reason, count]) => `${reason}: ${count}`)
                 .join(' · ');
-            const grouped = d.fixes.reduce((acc, fix, i) => {
-                const gate = fix.gate_name || 'unknown';
-                (acc[gate] ||= []).push({...fix, _idx: i});
-                return acc;
-            }, {});
+            const grouped = groupFixesByGate(d.fixes);
             const summaryHtml = `<div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin:12px 0;">
                 ${[
                     ['可修复', summary.total_fixable ?? d.total_fixable ?? d.fixes.length],
@@ -2576,8 +2553,7 @@ async function doBatchFix() {
 // Handles CRLF/LF differences, markdown fences, and cross-file fixes.
 async function applyOneFix(fix) {
     if (!fix) return false;
-    const original = normEol(fix.original);
-    const fixed = stripFences(normEol(fix.fixed));
+    const {original, fixed} = prepareFixText(fix);
     if (!original) return false;
     const targetFile = fix.file || currentFile;
     if (!targetFile) return false;
@@ -2585,17 +2561,16 @@ async function applyOneFix(fix) {
     const viaEditor = (targetFile === currentFile && editor);
     let content;
     if (viaEditor) {
-        content = normEol(editor.getValue());
+        content = editor.getValue();
     } else {
         try {
             const r = await apiFetch(`/api/files/${jobId}/${String(targetFile).split('/').map(encodeURIComponent).join('/')}`);
-            content = normEol((await r.json()).content);
+            content = (await r.json()).content;
         } catch (e) { return false; }
     }
 
-    if (!content.includes(original)) return false;
-    // Use a replacer function so '$' sequences in LaTeX aren't treated specially.
-    const updated = content.replace(original, () => fixed);
+    const updated = replaceOnce(content, original, fixed);
+    if (updated === null) return false;
 
     if (viaEditor) editor.setValue(updated);
     try {
@@ -2624,10 +2599,7 @@ async function applyBatchFix(index) {
 }
 
 async function applyBatchFixGroup(gateName) {
-    const indexes = (window._batchFixes || [])
-        .map((fix, i) => ({fix, i}))
-        .filter(({fix}) => (fix.gate_name || 'unknown') === gateName)
-        .map(({i}) => i);
+    const indexes = indexesForGate(window._batchFixes || [], gateName);
     const info = GATE_INFO[gateName] || {name: gateName};
     await applyBatchFixIndexes(indexes, info.name || gateName);
 }
@@ -3118,7 +3090,6 @@ function latexHint(cm) {
     };
 }
 
-function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
 function safeUrl(url){
     const raw = String(url || '').trim();
     if (!raw) return '';
@@ -3142,8 +3113,6 @@ document.addEventListener('keydown', e => {
         modals[modals.length - 1]?.remove();
     }
 });
-function normEol(s){return (s||'').replace(/\r\n?/g,'\n');}
-function stripFences(s){let t=(s||'').trim();if(t.startsWith('```')){t=t.replace(/^```[^\n]*\n/,'').replace(/\n?```\s*$/,'');}return t;}
 function linkify(s){return esc(s).replace(/(https?:\/\/[^\s&<]+)/g,function(url){try{const u=new URL(url);if(u.protocol==='http:'||u.protocol==='https:')return'<a href="'+u.href+'" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline hover:text-blue-800">'+u.href+'</a>';} catch(e){}return url;}).replace(/\n/g,'<br>');}
 
 const TOAST_MAX_VISIBLE = 4;
