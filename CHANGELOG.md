@@ -1,5 +1,10 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.54 (2026-05-30) — Minimal API E2E Recheck Coverage
+- 新增 `tests/test_e2e_minimal.py`，用 FastAPI TestClient 挂载真实 API router，覆盖上传 ZIP、查看报告、列文件、读取/保存 `main.tex`、重新质检与报告刷新
+- E2E 不 mock `_run_checks`，仅 stub `ReferenceAuthenticityGate.check` 避免外网，确保真实解压、文件保存和 gate 编排参与流程
+- 通过 figure 缺少 `\label` 的稳定用例验证编辑后 recheck 会清除 `figure_table_crossref` 问题并提升 gate 分数
+
 ## v5.3.53 (2026-05-30) — Parser Graphicspath Test Coverage
 - 新增 parser 回归测试，确认无扩展名 `\includegraphics{plot}` 与带 optional args 的路径会原样进入 `TexFile.graphics`，注释内图片命令会被忽略
 - 扩展 StructureGate 测试，覆盖 `\graphicspath` 下无扩展名图片匹配 `.png/.pdf/.jpg/.jpeg/.eps`、多目录解析和无支持后缀时的缺图 warning
