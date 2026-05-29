@@ -53,6 +53,7 @@ class Settings(BaseModel):
     # Server
     host: str = "0.0.0.0"
     port: int = 8000
+    app_env: str = os.environ.get("APP_ENV", "local").lower()
 
     # Auth & Billing — generated + persisted to the encrypted store if absent.
     jwt_secret: str = get_or_create_secret("JWT_SECRET", 32)

@@ -1,5 +1,12 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.24 (2026-05-29) — 健康检查与部署就绪探针
+- 新增 `/healthz` liveness probe，返回服务名和当前版本，用于本地演示和容器健康检查
+- 新增 `/readyz` readiness probe，检查数据库、加密后端、LLM 配置、支付 sandbox 生产风险、上传/数据目录状态
+- `/readyz` 只返回布尔值和状态摘要，不暴露 API key、Bearer token 或内部 LLM endpoint
+- 配置新增 `APP_ENV` / `settings.app_env`，生产环境下会把 `PAYMENT_SANDBOX=true` 标记为 degraded
+- 新增健康检查回归测试，确认 liveness 可用且 readiness 不泄露 secret 模式
+
 ## v5.3.23 (2026-05-29) — 前端 inline handler 参数注入加固
 - 新增 `jsArg()`，所有动态 inline handler 参数统一通过 JSON string literal 编码，避免文件名、issue message、job_id 中的引号或特殊字符破坏 JavaScript
 - 加固文件树、编辑器 tab、overview 问题跳转、问题卡片、AI 建议按钮、忽略按钮、真实文献候选、历史项目/所有项目恢复与删除入口

@@ -14,7 +14,7 @@ from app.api.auth_routes import router as auth_router
 from app.api.payment_routes import router as payment_router
 from app import storage
 from app.logging_config import logger
-from app.database import init_db
+from app.database import engine, init_db
 
 
 @asynccontextmanager
@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="ScholarLint",
     description="投稿通 — Academic paper pre-submission integrity checker",
-    version="5.3.23",
+    version="5.3.24",
     lifespan=lifespan,
 )
 
@@ -62,6 +62,59 @@ async def global_exception_handler(request: Request, exc: Exception):
 async def index(request: Request):
     """Render the upload page."""
     return templates.TemplateResponse(request=request, name="index.html")
+
+
+@app.get("/healthz")
+async def healthz():
+    """Liveness probe: process is running."""
+    return {"status": "ok", "service": "scholarlint", "version": app.version}
+
+
+@app.get("/readyz")
+async def readyz():
+    """Readiness probe with deployment-risk checks.
+
+    This intentionally returns sanitized booleans/status strings only. Never
+    include secret values or internal LLM endpoints in health responses.
+    """
+    from sqlalchemy import text
+    from app import secrets_manager as sm
+
+    checks: dict[str, dict] = {}
+
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        checks["database"] = {"ok": True}
+    except Exception as exc:
+        checks["database"] = {"ok": False, "detail": type(exc).__name__}
+
+    crypto_ok = sm.is_available()
+    checks["crypto"] = {
+        "ok": crypto_ok,
+        "detail": "encrypted store available" if crypto_ok else "encrypted store unavailable",
+    }
+
+    checks["llm"] = {
+        "ok": bool(settings.llm_api_key and settings.llm_base_url and settings.llm_model),
+        "model_configured": bool(settings.llm_model),
+    }
+
+    production = settings.app_env in {"prod", "production"}
+    checks["payment"] = {
+        "ok": not (production and settings.payment_sandbox),
+        "sandbox": settings.payment_sandbox,
+        "detail": "sandbox must be disabled in production" if production and settings.payment_sandbox else "ok",
+    }
+
+    checks["storage"] = {
+        "ok": settings.upload_dir.exists() and settings.data_dir.exists(),
+        "upload_dir": settings.upload_dir.exists(),
+        "data_dir": settings.data_dir.exists(),
+    }
+
+    ready = all(item.get("ok") for item in checks.values())
+    return {"status": "ready" if ready else "degraded", "environment": settings.app_env, "checks": checks}
 
 
 @app.get("/report/{job_id}", response_class=HTMLResponse)
