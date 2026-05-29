@@ -2551,18 +2551,19 @@ function toast(message, type='info', duration=4000) {
     setTimeout(() => { el.style.opacity='0'; el.style.transform='translateX(100%)'; setTimeout(()=>el.remove(), 300); }, duration);
 }
 
-// Persistent AI loading overlay — stays until hideAiLoading() is called,
-// so users get a clear "working…" expectation for the whole AI call.
+// Persistent AI loading indicator — stays until hideAiLoading() is called.
+// It is intentionally non-blocking: shown as a bottom-right floating card and
+// does not intercept clicks/keyboard input, so users can continue working.
 function showAiLoading(message) {
     hideAiLoading();
     const el = document.createElement('div');
     el.id = 'ai-loading-overlay';
-    el.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.18);';
-    el.innerHTML = `<div style="background:#fff;border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,0.25);padding:20px 26px;display:flex;align-items:center;gap:14px;min-width:240px;max-width:80%;">
-        <div style="width:22px;height:22px;border:3px solid #e2e8f0;border-top-color:#6366f1;border-radius:50%;animation:aispin 0.8s linear infinite;flex-shrink:0;"></div>
+    el.style.cssText = 'position:fixed;right:20px;bottom:20px;z-index:9999;pointer-events:none;display:block;';
+    el.innerHTML = `<div style="background:#fff;border-radius:14px;box-shadow:0 16px 40px rgba(15,23,42,0.20);border:1px solid #e2e8f0;padding:14px 16px;display:flex;align-items:center;gap:12px;min-width:260px;max-width:min(360px,calc(100vw - 40px));animation:slideUp 0.2s ease;">
+        <div style="width:20px;height:20px;border:3px solid #e2e8f0;border-top-color:#6366f1;border-radius:50%;animation:aispin 0.8s linear infinite;flex-shrink:0;"></div>
         <div style="min-width:0;">
             <p id="ai-loading-msg" style="margin:0;font-size:14px;font-weight:600;color:#1e293b;">${esc(message||'AI 处理中…')}</p>
-            <p style="margin:3px 0 0;font-size:11px;color:#94a3b8;">正在调用 AI，请稍候（通常几秒到几十秒）…</p>
+            <p style="margin:3px 0 0;font-size:11px;color:#94a3b8;">后台处理中，可继续浏览和编辑…</p>
         </div>
     </div>`;
     document.body.appendChild(el);
