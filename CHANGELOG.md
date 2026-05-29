@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.41 (2026-05-29) — 文件树搜索
+- 工作台文件面板新增文件搜索框，可按文件名或路径快速过滤项目文件
+- 文件树渲染拆出 `renderFileTree()`，保留原有目录分组、错误徽标和文件打开行为
+- 搜索无结果时显示空状态，不影响当前已打开文件和 tab
+- 本地验证通过：前端 inline JavaScript 语法检查、全量 pytest 58 项
+
 ## v5.3.40 (2026-05-29) — AI Loading 耗时显示
 - 右下角 AI loading card 增加后台处理耗时秒表，长时间 LLM 请求时用户能确认任务仍在进行
 - `hideAiLoading()` 会清理计时器，避免多次 AI 请求后残留 interval

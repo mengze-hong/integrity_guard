@@ -561,6 +561,7 @@
             <div id="file-panel">
                 <div id="file-panel-header">
                     <h3>文件</h3>
+                    <input id="file-search" type="text" placeholder="搜索文件..." oninput="setFileSearch(this.value)" style="margin-top:8px; width:100%; padding:5px 8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#cbd5e1; font-size:11px; outline:none;">
                 </div>
                 <div id="file-tree"></div>
             </div>
@@ -740,6 +741,8 @@
 let jobId=null, shareToken=null, report=null, editor=null, currentFile=null, saveTimer=null, dismissCtx=null, uploadedFile=null;
 let textMarkers = [];
 let openTabs = [];  // list of open file paths
+let fileTreeFiles = [];
+let fileTreeSearch = '';
 let issueFilter = 'all';  // 'all' | 'error' | 'warning' | 'dismissed'
 let issueSearchQuery = '';  // text search in issues
 let editorDark = localStorage.getItem('editorTheme') === 'dark';
@@ -1272,7 +1275,20 @@ function enterWorkspace() {
 
 async function loadFileTree() {
     const r = await apiFetch(`/api/files/${jobId}`); const {files} = await r.json();
+    fileTreeFiles = files || [];
+    renderFileTree();
+    if (fileTreeFiles.length && !currentFile) openFile(fileTreeFiles[0].path);
+}
 
+function setFileSearch(value) {
+    fileTreeSearch = String(value || '').trim().toLowerCase();
+    renderFileTree();
+}
+
+function renderFileTree() {
+    const files = fileTreeSearch
+        ? fileTreeFiles.filter(f => `${f.path} ${f.name}`.toLowerCase().includes(fileTreeSearch))
+        : fileTreeFiles;
     // Group files by their containing folder so the real directory
     // structure (e.g. floats/, sections/) is visible.
     const byDir = {};
@@ -1289,6 +1305,10 @@ async function loadFileTree() {
     });
 
     let html = '';
+    if (!files.length && fileTreeSearch) {
+        document.getElementById('file-tree').innerHTML = `<div class="text-center py-8 text-slate-500 text-xs">没有匹配的文件</div>`;
+        return;
+    }
     for (const dir of dirs) {
         const indent = dir === '' ? '' : ' style="padding-left:18px;"';
         if (dir === '') {
@@ -1306,7 +1326,6 @@ async function loadFileTree() {
     }
 
     document.getElementById('file-tree').innerHTML = html;
-    if (files.length && !currentFile) openFile(files[0].path);
 }
 
 function renderFileItem(f, indented) {

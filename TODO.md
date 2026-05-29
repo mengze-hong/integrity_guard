@@ -127,6 +127,7 @@
 - [ ] Loading skeleton（加载时的骨架屏）
 - [x] 错误状态设计（网络错误 toast 提示、graceful fallback）
 - [x] AI loading card 显示后台处理耗时，长请求更可观察
+- [x] 文件树支持按文件名/路径搜索，文件多时可快速定位
 
 ---
 
