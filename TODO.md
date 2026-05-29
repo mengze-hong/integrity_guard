@@ -61,6 +61,11 @@
 - [x] **Abstract vs Conclusion 重复检测**（>60% 相似 → warning）
 - [x] **"et al" 格式检查**（应为 "et al." 带句点）
 
+### Parser / Gate 准确性
+- [x] cite parser 支持常见 natbib/biblatex 命令与 optional args
+- [x] ref parser 支持 cleveref/autoref/subref/vref/range 基础命令
+- [x] cite/ref parser 继续补充 `smartcite/supercite/citeyearpar/citeposs` 与 `pageref/nameref/namecref/cpageref`
+
 ### 编辑器功能
 - [x] **鼠标滚动修复验证**（CodeMirror position:absolute + overflow-y:auto）
 - [x] **搜索替换功能**（Ctrl+F / Ctrl+G，通过 CodeMirror search addon）

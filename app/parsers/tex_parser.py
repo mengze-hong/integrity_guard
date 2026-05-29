@@ -9,11 +9,13 @@ from app.models import TexFile
 # Regex patterns for LaTeX commands
 _CITE_PATTERN = re.compile(
     r"\\(?:cite|citep|citet|citealt|citealp|citeauthor|citeyear|parencite|"
-    r"textcite|autocite|footcite|nocite)\*?(?:\s*\[[^\]]*\]){0,2}\s*\{([^}]+)\}"
+    r"citeyearpar|citeposs|citeaffixed|textcite|autocite|footcite|smartcite|"
+    r"supercite|nocite)\*?(?:\s*\[[^\]]*\]){0,2}\s*\{([^}]+)\}"
 )
 _LABEL_PATTERN = re.compile(r"\\label\s*\{([^}]+)\}")
 _REF_PATTERN = re.compile(
-    r"\\(?:ref|eqref|cref|Cref|autoref|subref|vref|Vref)\*?"
+    r"\\(?:ref|eqref|cref|Cref|autoref|subref|vref|Vref|pageref|nameref|"
+    r"namecref|nameCref|cpageref|Cpageref)\*?"
     r"(?:\s*\[[^\]]*\])?\s*\{([^}]+)\}"
 )
 _REF_RANGE_PATTERN = re.compile(r"\\(?:crefrange|Crefrange)\s*\{([^}]+)\}\s*\{([^}]+)\}")

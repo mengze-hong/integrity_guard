@@ -35,6 +35,10 @@ def test_parse_tex_extended_citation_commands(tmp_path):
 \citep[see][p. 3]{smith2020,doe2021}
 \textcite{miller2022}
 \autocite{nguyen2023}
+\smartcite{smart2024}
+\supercite{super2025}
+\citeyearpar{year2026}
+\citeposs{possessive2027}
 \nocite{dataset2024}
 \end{document}
 """,
@@ -42,7 +46,17 @@ def test_parse_tex_extended_citation_commands(tmp_path):
     )
 
     tex = parse_tex_file(tex_path)
-    assert tex.citations == ["smith2020", "doe2021", "miller2022", "nguyen2023", "dataset2024"]
+    assert tex.citations == [
+        "smith2020",
+        "doe2021",
+        "miller2022",
+        "nguyen2023",
+        "smart2024",
+        "super2025",
+        "year2026",
+        "possessive2027",
+        "dataset2024",
+    ]
 
 
 def test_parse_tex_labels_and_refs():
@@ -66,13 +80,27 @@ def test_parse_tex_extended_refs(tmp_path):
 \Cref{fig:a,tab:b}
 \crefrange{eq:start}{eq:end}
 \subref{fig:sub}
+\pageref{sec:appendix}
+\nameref{sec:intro}
+\namecref{fig:name}
+\cpageref{tab:pages}
 \end{document}
 """,
         encoding="utf-8",
     )
 
     tex = parse_tex_file(tex_path)
-    assert tex.refs == ["fig:a", "tab:b", "fig:sub", "eq:start", "eq:end"]
+    assert tex.refs == [
+        "fig:a",
+        "tab:b",
+        "fig:sub",
+        "sec:appendix",
+        "sec:intro",
+        "fig:name",
+        "tab:pages",
+        "eq:start",
+        "eq:end",
+    ]
 
 
 def test_parse_tex_inputs_and_graphics():

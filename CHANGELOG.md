@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.38 (2026-05-29) — LaTeX Cite/Ref 解析覆盖增强
+- TeX parser 继续扩展真实论文常见引用命令：`smartcite`、`supercite`、`citeyearpar`、`citeposs`
+- Ref parser 新增 `pageref`、`nameref`、`namecref`、`nameCref`、`cpageref`、`Cpageref` 覆盖，减少 cleveref/hyperref 论文误报
+- 更新 parser 回归测试，确认扩展 cite/ref 命令能正确提取 key 且保持顺序
+- 本地验证通过：parser 测试 16 项、全量 pytest 58 项
+
 ## v5.3.37 (2026-05-29) — AI 输出证据与可信边界
 - AI 审稿模拟 prompt 明确标注“模拟审稿意见”，新增 Action Items，并要求证据不足时说明“论文片段中未看到证据”
 - Abstract 优化 prompt 增加 claim consistency guard，禁止夸大正文片段中没有支持的实验结果、数字、贡献或 SOTA claim
