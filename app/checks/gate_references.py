@@ -18,6 +18,10 @@ import httpx
 from app.checks.base import BaseGate
 from app.models import BibEntry, CheckResult, Issue, ParsedPaper, Severity
 
+_DOI_CACHE: dict[str, tuple[dict | None, str]] = {}
+_TITLE_CACHE: dict[str, dict | None] = {}
+_TRANSIENT_SOURCES = {"crossref_unavailable", "datacite_unavailable", "s2_unavailable"}
+
 
 def _normalize_title(s: str) -> str:
     """标准化标题用于精确比较。去除大小写、标点、LaTeX格式、多余空格。"""
@@ -140,6 +144,12 @@ class ReferenceAuthenticityGate(BaseGate):
 
         Returns: (metadata_dict, source) where source is 'crossref'/'datacite'/'s2'/'none'
         """
+        cache_key = doi.lower().strip()
+        if cache_key in _DOI_CACHE:
+            return _DOI_CACHE[cache_key]
+
+        transient_failure = False
+
         async with semaphore:
             # Try Crossref first
             try:
@@ -149,9 +159,13 @@ class ReferenceAuthenticityGate(BaseGate):
                     timeout=self.TIMEOUT,
                 )
                 if resp.status_code == 200:
-                    return resp.json().get("message", {}), "crossref"
+                    result = (resp.json().get("message", {}), "crossref")
+                    _DOI_CACHE[cache_key] = result
+                    return result
+                if resp.status_code == 429 or resp.status_code >= 500:
+                    transient_failure = True
             except (httpx.TimeoutException, httpx.HTTPError):
-                pass
+                transient_failure = True
 
             # Fallback to DataCite (handles arXiv, Zenodo, etc.)
             try:
@@ -160,9 +174,13 @@ class ReferenceAuthenticityGate(BaseGate):
                     timeout=self.TIMEOUT,
                 )
                 if resp.status_code == 200:
-                    return resp.json().get("data", {}).get("attributes", {}), "datacite"
+                    result = (resp.json().get("data", {}).get("attributes", {}), "datacite")
+                    _DOI_CACHE[cache_key] = result
+                    return result
+                if resp.status_code == 429 or resp.status_code >= 500:
+                    transient_failure = True
             except (httpx.TimeoutException, httpx.HTTPError):
-                pass
+                transient_failure = True
 
             # Fallback to Semantic Scholar
             try:
@@ -172,11 +190,17 @@ class ReferenceAuthenticityGate(BaseGate):
                     timeout=self.TIMEOUT,
                 )
                 if resp.status_code == 200:
-                    return resp.json(), "s2"
+                    result = (resp.json(), "s2")
+                    _DOI_CACHE[cache_key] = result
+                    return result
+                if resp.status_code == 429 or resp.status_code >= 500:
+                    transient_failure = True
             except (httpx.TimeoutException, httpx.HTTPError):
-                pass
+                transient_failure = True
 
-        return None, "none"
+        result = (None, "unavailable" if transient_failure else "none")
+        _DOI_CACHE[cache_key] = result
+        return result
 
     def _extract_metadata(self, data: dict, source: str) -> tuple[str, list[dict], str]:
         """从 Crossref 或 DataCite 的响应中统一提取 title, authors, venue。"""
@@ -325,6 +349,16 @@ class ReferenceAuthenticityGate(BaseGate):
         meta["source"] = source
 
         if data is None:
+            if source == "unavailable":
+                issues.append(Issue(
+                    severity=Severity.WARNING,
+                    message=f"[{entry.key}] DOI 暂时无法验证: {doi}",
+                    location=location, file=issue_file, line=issue_line,
+                    evidence="Crossref/DataCite/Semantic Scholar 暂时不可用或限流，未将该引用判定为伪造。",
+                    suggestion="请稍后重新质检，或手动打开 DOI 链接核对来源。",
+                ))
+                meta["status"] = "verification_unavailable"
+                return issues, meta
             issues.append(Issue(
                 severity=Severity.ERROR,
                 message=f"[{entry.key}] DOI 无法解析: {doi}",
@@ -612,6 +646,8 @@ class ReferenceAuthenticityGate(BaseGate):
         norm_title = _normalize_title(title)
         if not norm_title or len(norm_title) < 10:
             return None
+        if norm_title in _TITLE_CACHE:
+            return _TITLE_CACHE[norm_title]
 
         async with semaphore:
             # Try Crossref title search
@@ -630,7 +666,9 @@ class ReferenceAuthenticityGate(BaseGate):
                             item_norm = _normalize_title(item_titles[0])
                             if item_norm == norm_title:
                                 doi = item.get("DOI", "")
-                                return {"title": item_titles[0], "url": f"https://doi.org/{doi}" if doi else ""}
+                                result = {"title": item_titles[0], "url": f"https://doi.org/{doi}" if doi else ""}
+                                _TITLE_CACHE[norm_title] = result
+                                return result
             except (httpx.TimeoutException, httpx.HTTPError):
                 pass
 
@@ -649,7 +687,9 @@ class ReferenceAuthenticityGate(BaseGate):
                             ext_ids = paper.get("externalIds", {})
                             doi = ext_ids.get("DOI", "")
                             url = f"https://doi.org/{doi}" if doi else f"https://www.semanticscholar.org/paper/{paper.get('paperId','')}"
-                            return {"title": paper_title, "url": url}
+                            result = {"title": paper_title, "url": url}
+                            _TITLE_CACHE[norm_title] = result
+                            return result
             except (httpx.TimeoutException, httpx.HTTPError):
                 pass
 
@@ -668,10 +708,13 @@ class ReferenceAuthenticityGate(BaseGate):
                         if _normalize_title(work_title) == norm_title:
                             doi = work.get("doi", "")
                             url = doi if doi else work.get("id", "")
-                            return {"title": work_title, "url": url}
+                            result = {"title": work_title, "url": url}
+                            _TITLE_CACHE[norm_title] = result
+                            return result
             except (httpx.TimeoutException, httpx.HTTPError):
                 pass
 
+        _TITLE_CACHE[norm_title] = None
         return None
 
     @staticmethod

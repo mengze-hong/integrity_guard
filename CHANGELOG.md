@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.25 (2026-05-29) — 引文验证缓存与临时故障降级
+- ReferenceAuthenticityGate 增加 DOI 和标题搜索的进程内轻量缓存，避免同一批检查反复请求 Crossref / DataCite / Semantic Scholar / OpenAlex
+- DOI 解析区分“确实未找到”和“外部 provider 超时/429/5xx 暂不可用”；后者降级为 warning `verification_unavailable`，不再把网络波动误判为 fake reference
+- 标题搜索结果也进入缓存，减少无 DOI 文献的重复外部检索
+- 新增引文验证韧性测试，覆盖成功 DOI 缓存和 provider 临时失败不产生 error 的行为
+
 ## v5.3.24 (2026-05-29) — 健康检查与部署就绪探针
 - 新增 `/healthz` liveness probe，返回服务名和当前版本，用于本地演示和容器健康检查
 - 新增 `/readyz` readiness probe，检查数据库、加密后端、LLM 配置、支付 sandbox 生产风险、上传/数据目录状态
