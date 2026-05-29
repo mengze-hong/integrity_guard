@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "check:js": "node scripts/check-inline-js.mjs"
+  },
   "dependencies": {
     "pptxgenjs": "^4.0.1"
   }

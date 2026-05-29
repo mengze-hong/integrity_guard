@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.49 (2026-05-29) — CI Syntax Check Script
+- 新增 `scripts/check-inline-js.mjs`，把 GitHub Actions 里 inline `<script>` 语法解析抽成本地可复用 Node 脚本
+- CI 前端语法检查改为执行脚本，并新增 no-Cloudflare policy scan，排除 workflow 自身与本地数据/上传/截图目录避免自检误报
+- Release checklist、TODO 补充本地 `npm run check:js` 与 policy scan 自检步骤
+- 本地验证通过：`npm run check:js`、no-Cloudflare policy scan、`python -m pytest -q`（65 项）
+
 ## v5.3.48 (2026-05-29) — AI Router Share-Token Permission Test
 - `tests/test_ai_routes.py` 的 AI fixture 现在带 session owner 与 share token metadata，成功路径不再依赖 legacy 无 owner 默认放行
 - 新增 share-token 只读权限测试，确认 `POST /api/ai-diagnosis/{job_id}?share=...` 返回 403
