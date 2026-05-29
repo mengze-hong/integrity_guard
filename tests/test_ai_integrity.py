@@ -10,6 +10,11 @@ from app.api.routes import (
     _not_fixable_reference_payload,
 )
 from app.models import CheckResult, DismissedIssue, FullReport, Issue, Severity
+from app.services.ai_reports import (
+    build_diagnosis_payload,
+    fallback_diagnosis,
+    parse_diagnosis_response,
+)
 
 
 def test_reference_authenticity_issue_is_not_fixable_payload():
@@ -154,3 +159,77 @@ def test_batch_fix_candidates_return_provenance_inputs_by_gate(tmp_path: Path):
     assert candidates[0]["issue_index"] == 0
     assert candidates[0]["file"] == "main.tex"
     assert "System overview" in candidates[0]["context"]
+
+
+def test_diagnosis_payload_excludes_internal_project_path():
+    report = _batch_report(CheckResult(
+        gate_name="writing_quality",
+        gate_description="writing",
+        passed=False,
+        score=60,
+        summary="Writing issues found",
+        issues=[
+            Issue(
+                severity=Severity.ERROR,
+                message="Abstract and conclusion are too similar",
+                suggestion="Rewrite the conclusion to emphasize findings.",
+                file="main.tex",
+                line=12,
+            )
+        ],
+    ))
+    report.project_dir = "C:/Users/example/private/job"
+    report.metadata = {
+        "word_count": 1234,
+        "project_dir": "C:/Users/example/private/job",
+        "owner_id": "secret-owner",
+    }
+
+    payload = build_diagnosis_payload(report)
+
+    assert payload["metadata"] == {"word_count": 1234}
+    assert "project_dir" not in str(payload)
+    assert "secret-owner" not in str(payload)
+    assert payload["top_issues"][0]["gate_name"] == "writing_quality"
+
+
+def test_parse_diagnosis_response_accepts_json_fence():
+    payload = {"overall_score": 80, "issue_counts": {"errors": 1, "warnings": 2}, "top_issues": []}
+    text = """```json
+{
+  "summary": "Needs revision.",
+  "top_priorities": [],
+  "quick_wins": ["Fix anchored issues."],
+  "estimated_time": "30 minutes",
+  "risk_notes": ["Verify AI advice."],
+  "next_actions": ["Open workspace."]
+}
+```"""
+
+    diagnosis, used_fallback = parse_diagnosis_response(text, payload)
+
+    assert used_fallback is False
+    assert diagnosis["summary"] == "Needs revision."
+
+
+def test_parse_diagnosis_response_falls_back_on_bad_json():
+    payload = {
+        "overall_score": 50,
+        "issue_counts": {"errors": 2, "warnings": 1},
+        "top_issues": [
+            {
+                "gate_name": "figure_table_crossref",
+                "severity": "error",
+                "message": "Figure is not referenced",
+                "suggestion": "Reference the figure in the text.",
+                "file": "main.tex",
+                "line": 4,
+            }
+        ],
+    }
+
+    diagnosis, used_fallback = parse_diagnosis_response("not json", payload)
+
+    assert used_fallback is True
+    assert diagnosis == fallback_diagnosis(payload)
+    assert diagnosis["top_priorities"][0]["target"] == "main.tex:4"

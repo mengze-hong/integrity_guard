@@ -1,5 +1,12 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.35 (2026-05-29) — AI 论文诊断报告接口
+- 新增 `/api/ai-diagnosis/{job_id}`，基于 gate 摘要、top issues 和安全 metadata 生成结构化论文诊断
+- 新增 `app/services/ai_reports.py`，集中处理诊断输入构建、JSON 解析和确定性 fallback，避免继续膨胀 routes 单体
+- 诊断输入不会包含 `project_dir`、owner 信息或论文全文，只保留报告统计和问题摘要，降低敏感数据进入 LLM 的范围
+- LLM 返回非 JSON、缺字段或调用失败时，会返回可展示的 fallback 诊断，不阻塞用户工作流
+- 新增 AI integrity 回归测试，覆盖诊断 payload 脱敏、JSON fence 解析和 bad JSON fallback
+
 ## v5.3.34 (2026-05-29) — AI 批量建议按 Gate 分组
 - AI 批量建议弹窗新增 dry-run 统计卡片，展示可修复数量、本次生成数量、生成上限和跳过项数量
 - 批量建议按 gate 分组展示，每组可单独应用并只触发一次重新质检，全部应用也只重检一次
