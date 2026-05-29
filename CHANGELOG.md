@@ -1,8 +1,16 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.22 (2026-05-29) — FileStore 服务抽取
+- 新增 `app/services/file_store.py`，集中管理项目内安全路径解析、可编辑文件列表和当前项目 ZIP 打包
+- `app/api/routes.py` 改用 FileStore helper，减少 routes 单体职责，文件读取/保存、文件树和下载 ZIP 共享同一套路径安全逻辑
+- 新增 FileStore 单元测试，覆盖路径穿越拦截、LaTeX 支撑文件列表和 ZIP 相对路径保留
+- 本地验证通过：ruff、JS syntax check、pytest 45 项
+
 ## v5.3.21 (2026-05-29) — Release Checklist 与 CI Secret Scan 修正
 - 新增 `docs/RELEASE_CHECKLIST.md`，固定每次发布/备份前的 changelog、版本、JS、pytest、secret scan、git status、提交推送和本地重启检查步骤
 - 修正 CI secret scan，排除 workflow 文件自身，避免扫描规则中的敏感模式字符串触发自检失败
+- 将 ARR / NeurIPS 官方 checklist 模板从 `app/api/routes.py` 抽到 `app/checklists.py`，减少路由上帝文件体积，并为后续扩展 venue-specific 模板铺路
+- 新增 checklist 模板回归测试，锁定 ARR `A1-E1` 18 项和 NeurIPS `1-16` 16 项
 
 ## v5.3.20 (2026-05-29) — CI 扩展与 Ruff 清理
 - GitHub Actions CI 增加 Node 环境、前端内联 JavaScript 语法检查、敏感信息扫描和统一 `python -m pytest -q`
