@@ -2180,6 +2180,25 @@ async function showVenueChecklist() {
     document.body.appendChild(modal);
 }
 
+function checklistToMarkdown(data) {
+    const lines = [
+        `# ${data.name || 'Reproducibility Checklist'}`,
+        '',
+        data.source ? `Source: ${data.source}` : '',
+        '',
+    ].filter(Boolean);
+    (data.checklist || []).forEach(item => {
+        lines.push(`## [${item.id}] ${item.text}`);
+        lines.push(`- Answer: ${item.answer || 'unknown'}`);
+        if (item.evidence) lines.push(`- Evidence: ${item.evidence}`);
+        if (item.justification) lines.push(`- Justification: ${item.justification}`);
+        if (item.missing_type) lines.push(`- Missing type: ${item.missing_type}`);
+        if (item.rewrite_suggestion) lines.push(`- Suggested addition: ${item.rewrite_suggestion}`);
+        lines.push('');
+    });
+    return lines.join('\n');
+}
+
 async function generateVenueChecklist(venue) {
     showAiLoading('📝 AI 正在分析论文并填写复现清单…');
     try {
@@ -2189,6 +2208,7 @@ async function generateVenueChecklist(venue) {
         });
         const d = await r.json();
         if (d.status === 'ok' && d.checklist) {
+            window._lastChecklistMarkdown = checklistToMarkdown(d);
             // Show results
             const yesCount = d.checklist.filter(i => i.answer === 'yes').length;
             const noCount = d.checklist.filter(i => i.answer === 'no').length;
@@ -2204,7 +2224,10 @@ async function generateVenueChecklist(venue) {
                     <span style="flex-shrink:0;">${icon}</span>
                     <div>
                         <p style="font-size:12px; color:#1e293b; margin:0; font-weight:500;">[${item.id}] ${item.text}</p>
+                        ${item.evidence ? `<p style="font-size:11px; color:#2563eb; margin:4px 0 0; background:#eff6ff; padding:4px 8px; border-radius:4px; border:1px solid #bfdbfe;">证据：${esc(item.evidence)}</p>` : ''}
                         ${item.justification ? `<p style="font-size:11px; color:#475569; margin:4px 0 0; background:#f8fafc; padding:4px 8px; border-radius:4px; border:1px solid #e2e8f0; cursor:pointer; user-select:all;" title="点击复制" onclick="event.stopPropagation();navigator.clipboard.writeText(this.textContent);toast('已复制','success',1000)">${esc(item.justification)}</p>` : ''}
+                        ${item.missing_type ? `<p style="font-size:10px; color:#92400e; margin:4px 0 0;">缺失类型：${esc(item.missing_type)}</p>` : ''}
+                        ${item.rewrite_suggestion ? `<p style="font-size:11px; color:#7c2d12; margin:4px 0 0; background:#fff7ed; padding:4px 8px; border-radius:4px; border:1px solid #fed7aa;">补写建议：${esc(item.rewrite_suggestion)}</p>` : ''}
                     </div>
                 </div>`;
             }).join('');
@@ -2222,7 +2245,10 @@ async function generateVenueChecklist(venue) {
                 </div>
                 ${noCount > 0 ? `<div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:10px; margin-bottom:12px; font-size:12px; color:#991b1b;">⚠️ ${noCount} 项需要补充，请在论文中添加相关内容后重新提交。</div>` : '<div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px; margin-bottom:12px; font-size:12px; color:#166534;">✅ 所有必填项已满足！</div>'}
                 <div>${html}</div>
-                <button onclick="this.closest('.modal-bg').remove()" style="margin-top:16px; width:100%; padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:13px; color:#64748b;">关闭</button>
+                <div style="display:flex; gap:8px; margin-top:16px;">
+                    <button onclick="navigator.clipboard.writeText(window._lastChecklistMarkdown || '');toast('已复制 Checklist Markdown','success',1500)" style="flex:1; padding:10px; background:#334155; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:13px;">复制 Markdown</button>
+                    <button onclick="this.closest('.modal-bg').remove()" style="flex:1; padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:13px; color:#64748b;">关闭</button>
+                </div>
             </div>`;
             document.body.appendChild(modal);
         } else {

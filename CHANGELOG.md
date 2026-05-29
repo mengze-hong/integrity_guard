@@ -1,5 +1,12 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.37 (2026-05-29) — AI 输出证据与可信边界
+- AI 审稿模拟 prompt 明确标注“模拟审稿意见”，新增 Action Items，并要求证据不足时说明“论文片段中未看到证据”
+- Abstract 优化 prompt 增加 claim consistency guard，禁止夸大正文片段中没有支持的实验结果、数字、贡献或 SOTA claim
+- 官方 Checklist 生成要求每项返回 `evidence`，对缺失项返回 `missing_type` 和 `rewrite_suggestion`
+- Checklist 前端展示证据、缺失类型和补写建议，并支持一键复制 Markdown 版清单
+- 本地验证通过：前端 inline JavaScript 语法检查、Checklist/AI 专项测试 11 项、全量 pytest 58 项
+
 ## v5.3.36 (2026-05-29) — AI 论文诊断报告前端
 - Overview 操作区新增「诊断报告」入口，工作台「AI 助手」下拉菜单新增「论文诊断报告」
 - 新增诊断报告弹窗，展示核心摘要、先改哪三处、预计修改时间、快速收益、风险提示和下一步行动

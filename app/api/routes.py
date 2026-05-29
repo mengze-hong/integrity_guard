@@ -1466,13 +1466,14 @@ async def ai_reviewer_simulation(job_id: str, request: Request, response: Respon
                 client,
                 [
                     {"role": "system", "content": """你是一位严格的顶会审稿人（ACL/NeurIPS/ICML level）。
-请阅读以下论文片段，给出：
+这是【模拟审稿意见】，不是正式审稿结论。请阅读以下论文片段，给出：
 1. **Strengths** (2-3 点，简洁)
 2. **Weaknesses** (3-5 点，具体且可操作)
 3. **Questions for Authors** (2-3 个关键问题)
 4. **Overall Score**: Accept / Borderline / Reject
+5. **Action Items** (3-5 条作者下一步应该优先完成的具体修改)
 
-用中文回复，格式清晰。每点用 - 开头。注意：你应该像真正的审稿人一样严格但公正。"""},
+用中文回复，格式清晰。每点用 - 开头。不要编造论文中没有的实验、结果或引用；证据不足时明确写“论文片段中未看到证据”。注意：你应该像真正的审稿人一样严格但公正。"""},
                     {"role": "user", "content": f"请审阅这篇论文:\n\n{main_text}"},
                 ],
                 max_tokens=1000,
@@ -1574,6 +1575,12 @@ async def ai_optimize_abstract(job_id: str, request: Request, response: Response
 3. 突出贡献和创新点
 4. 使用主动语态和强动词
 
+关键事实约束：
+- 不得夸大论文正文片段中没有支持的实验结果、贡献、数字或结论
+- 不得新增不存在的指标、数据集、baseline、SOTA claim 或引用
+- 如果原 abstract 的 claim 在正文片段中看不到证据，请降低措辞强度而不是增强
+- 保留 LaTeX 命令和科学含义，不要改变数字与引用
+
 输出格式：
 **优化后的 Abstract:**
 [优化后的文本]
@@ -1643,8 +1650,8 @@ async def generate_venue_checklist(job_id: str, request: Request, response: Resp
                     {"role": "system", "content": f"""You are an academic reproducibility assistant helping authors fill out the official {template['name']} for their paper.
 
 For each checklist item, determine:
-- "yes": The paper addresses this. Provide the EXACT section/paragraph reference (e.g., "Section 5, paragraph 2")
-- "no": The paper does NOT address this. Write a brief justification the author can paste directly into the checklist.
+- "yes": The paper addresses this. Provide the exact section/paragraph evidence if visible.
+- "no": The paper does NOT address this. Write a brief justification and a concrete rewrite/addition suggestion.
 - "na": Not applicable. Explain why in one sentence.
 
 IMPORTANT:
@@ -1652,11 +1659,14 @@ IMPORTANT:
 - The justification must be a complete sentence that can be directly pasted into the submission form.
 - Write in English (this is for conference submission).
 - If the paper is missing evidence, answer "no"; do not infer unstated compliance.
+- Include an "evidence" field for every item. Use "Not found in provided excerpt" if no evidence is visible.
+- For "no", include "missing_type": "missing_from_paper" or "insufficient_evidence".
+- Include "rewrite_suggestion" for "no" items. Keep it actionable but do not invent claims or results.
 
 Examples:
-- {{"id":"C1","answer":"yes","justification":"We release our source code at the anonymized repository linked in Section 1, with a README describing how to reproduce all results."}}
-- {{"id":"E3","answer":"no","justification":"We report only single-run results; we will add mean and standard deviation over multiple seeds."}}
-- {{"id":"T1","answer":"na","justification":"Our work is empirical and contains no theoretical claims requiring proofs."}}
+- {{"id":"C1","answer":"yes","evidence":"Section 1 states that code will be released in an anonymized repository.","justification":"We release our source code at the anonymized repository linked in Section 1, with a README describing how to reproduce all results.","missing_type":"","rewrite_suggestion":""}}
+- {{"id":"E3","answer":"no","evidence":"Not found in provided excerpt","justification":"We report only single-run results; we will add mean and standard deviation over multiple seeds.","missing_type":"missing_from_paper","rewrite_suggestion":"Add a paragraph in the Experiments section reporting mean and standard deviation over multiple random seeds."}}
+- {{"id":"T1","answer":"na","evidence":"The paper excerpt describes empirical experiments only.","justification":"Our work is empirical and contains no theoretical claims requiring proofs.","missing_type":"","rewrite_suggestion":""}}
 
 Output as JSON array."""},
                     {"role": "user", "content": f"Checklist items:\n{checklist_str}\n\nPaper content:\n{main_text[:6000]}"},
@@ -1686,6 +1696,9 @@ Output as JSON array."""},
                         **item,
                         "answer": answer_data.get("answer", "unknown") if answer_data else "unknown",
                         "justification": answer_data.get("justification", answer_data.get("reason", "")) if answer_data else "",
+                        "evidence": answer_data.get("evidence", "") if answer_data else "",
+                        "missing_type": answer_data.get("missing_type", "") if answer_data else "",
+                        "rewrite_suggestion": answer_data.get("rewrite_suggestion", "") if answer_data else "",
                     })
 
                 return {

@@ -241,6 +241,12 @@
   - [x] 包含：核心问题、修改优先级排序、预估修改时间
   - [x] 增加“先改哪三处”极速版本（30 秒可读）
 
+### ✅ AI 可信输出强化
+- [x] 审稿模拟明确标注“模拟意见”，并增加 Action Items
+- [x] Abstract 优化加入 claim consistency guard，禁止夸大未被正文支持的 claim
+- [x] Checklist 输出增加 evidence / missing_type / rewrite_suggestion
+- [x] Checklist 结果支持复制 Markdown
+
 ### 📊 智能分析（低成本高价值）
 - [x] 章节字数分布
 - [x] 引文年份分布 + 新鲜度
