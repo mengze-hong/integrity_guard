@@ -5,6 +5,7 @@
 - gpt-5.2 非推理模型，原生支持 `temperature`，实测 V2 key + SGP endpoint 可用
 - 仅改默认值与 `.env`，无需改动统一 LLM 调用层（仍兼容推理/非推理模型）
 - 安全清理：用 git-filter-repo 从全部历史中移除已失效的旧密钥（V1 key / 旧 JWT / 旧 admin key），强制推送覆盖远程；清洗前已完整备份（bundle + mirror）
+- **base_url 也视为敏感信息**：从 `config.py` 移除硬编码的公司 endpoint 默认值（改为仅从 `.env` 读取），并再次清洗历史，移除全部公司 LiteLLM endpoint（`REMOVED_HOST` / `REMOVED_HOST`）
 
 ## v5.2.0 (2026-05-29) — 公司内网 LLM 接入 + 修复
 打通 LLM 全流程，改用公司内网 LiteLLM（UXBench）API，并修复阻断质检的 bug。

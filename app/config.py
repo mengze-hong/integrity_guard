@@ -59,9 +59,11 @@ class Settings(BaseModel):
     crossref_timeout: float = 10.0
     crossref_max_concurrent: int = 5
 
-    # LLM (internal LiteLLM) — keys MUST come from .env / environment, never hardcoded
+    # LLM (internal LiteLLM) — key AND base_url are sensitive: MUST come from
+    # .env / environment. Never hardcode the company endpoint or key here
+    # (config.py is tracked by git and would leak to GitHub).
     llm_api_key: str = os.environ.get("LLM_API_KEY", "")
-    llm_base_url: str = os.environ.get("LLM_BASE_URL", "http://REMOVED_HOST")
+    llm_base_url: str = os.environ.get("LLM_BASE_URL", "")
     llm_model: str = os.environ.get("LLM_MODEL", "gpt-5.2")
 
     # Gate thresholds
