@@ -1627,6 +1627,7 @@ function renderIssues(path) {
             // Text search filter
             if (issueSearchQuery && !issue.message?.toLowerCase().includes(issueSearchQuery)
                 && !(issue.suggestion||'').toLowerCase().includes(issueSearchQuery)
+                && !(issue.evidence||'').toLowerCase().includes(issueSearchQuery)
                 && !(issue.location||'').toLowerCase().includes(issueSearchQuery)) return false;
             return true; // 'all'
         });
@@ -1656,7 +1657,18 @@ function renderIssues(path) {
             if (isDismissed) {
                 html += `<p class="text-[11px] text-slate-400 mt-1 bg-slate-50 rounded p-1.5">🙋 "${esc(dismissInfo.reason)}"</p>`;
             } else {
-                if (issue.suggestion) html += `<p class="text-[11px] text-slate-500 mt-1.5 leading-relaxed" style="padding-left:2px; border-left:2px solid #e2e8f0;">${linkify(esc(issue.suggestion))}</p>`;
+                const detailText = [issue.evidence ? `证据：${issue.evidence}` : '', issue.suggestion || ''].filter(Boolean).join('\n\n');
+                if (detailText) {
+                    const detailHtml = linkify(detailText);
+                    if (detailText.length > 180) {
+                        html += `<details class="mt-1.5" onclick="event.stopPropagation()">
+                            <summary class="text-[11px] text-slate-500 cursor-pointer select-none">展开证据/建议</summary>
+                            <div class="text-[11px] text-slate-500 mt-1.5 leading-relaxed" style="padding-left:8px; border-left:2px solid #e2e8f0; max-height:180px; overflow:auto;">${detailHtml}</div>
+                        </details>`;
+                    } else {
+                        html += `<p class="text-[11px] text-slate-500 mt-1.5 leading-relaxed" style="padding-left:2px; border-left:2px solid #e2e8f0;">${detailHtml}</p>`;
+                    }
+                }
                 // Add "fetch official bib" button for reference issues with DOI link
                 if (gate.gate_name === 'reference_authenticity' && issue.suggestion?.includes('doi.org/')) {
                     const doiMatch = issue.suggestion.match(/doi\.org\/([^\s<]+)/);

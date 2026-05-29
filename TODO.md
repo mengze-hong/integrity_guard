@@ -128,6 +128,7 @@
 - [x] 错误状态设计（网络错误 toast 提示、graceful fallback）
 - [x] AI loading card 显示后台处理耗时，长请求更可观察
 - [x] 文件树支持按文件名/路径搜索，文件多时可快速定位
+- [x] Issue 面板长证据/建议默认折叠，避免撑爆侧栏，并支持 evidence 搜索
 
 ---
 
