@@ -120,8 +120,9 @@ async def admin_add_credits(request: Request):
     amount = body.get("amount", 100)
     admin_key = body.get("admin_key")
 
-    # Simple admin auth (change this in production)
-    if admin_key != "***REMOVED_ADMIN_KEY***":
+    # Simple admin auth (loaded from environment)
+    from app.config import settings
+    if admin_key != settings.admin_key:
         raise HTTPException(403, "Unauthorized")
 
     db = SessionLocal()

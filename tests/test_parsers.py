@@ -1,9 +1,14 @@
 """Tests for parsers module."""
 
+import zipfile
+
+import pytest
+
 from pathlib import Path
 
 from app.parsers.tex_parser import parse_tex_file
 from app.parsers.bib_parser import parse_bib_file
+from app.parsers.zip_parser import extract_zip
 
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -87,3 +92,32 @@ def test_parse_bib_authors():
     bert_authors = entry_map["real_entry_bert"].authors
     assert len(bert_authors) == 4
     assert any("Devlin" in a for a in bert_authors)
+
+
+# === ZIP extraction security ===
+
+def test_extract_zip_skips_dangerous_files(tmp_path):
+    """Executable files inside a zip must not be written to disk."""
+    zip_path = tmp_path / "payload.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("paper/main.tex", "\\documentclass{article}")
+        zf.writestr("paper/evil.exe", "MZ binary")
+        zf.writestr("paper/run.sh", "#!/bin/sh\nrm -rf /")
+
+    dest = tmp_path / "out"
+    root = extract_zip(zip_path, dest)
+
+    assert (root / "main.tex").exists()
+    assert not (root / "evil.exe").exists()
+    assert not (root / "run.sh").exists()
+
+
+def test_extract_zip_blocks_path_traversal(tmp_path):
+    """Zip Slip: a member escaping the destination must raise."""
+    zip_path = tmp_path / "slip.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("../../escape.tex", "pwned")
+
+    dest = tmp_path / "out"
+    with pytest.raises(ValueError):
+        extract_zip(zip_path, dest)

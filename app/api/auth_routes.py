@@ -1,5 +1,7 @@
 """Authentication API routes: register, login, profile, OAuth."""
 
+import time
+from collections import defaultdict
 from fastapi import APIRouter, HTTPException, Depends, Response, Request
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
@@ -15,9 +17,30 @@ from app.models_db import User, Transaction
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+# --- Simple in-memory rate limiter for login/register brute-force protection ---
+_login_attempts: dict[str, list[float]] = defaultdict(list)
+_RATE_LIMIT_WINDOW = 300  # 5 minutes
+_RATE_LIMIT_MAX = 10  # max attempts per window
+
+
+def _check_rate_limit(key: str):
+    """Raise 429 if too many attempts in the window."""
+    now = time.time()
+    attempts = _login_attempts[key]
+    # Prune old entries
+    _login_attempts[key] = [t for t in attempts if now - t < _RATE_LIMIT_WINDOW]
+    if len(_login_attempts[key]) >= _RATE_LIMIT_MAX:
+        raise HTTPException(status_code=429, detail="请求过于频繁，请稍后再试")
+    _login_attempts[key].append(now)
+    # Bound cache size: remove keys older than window
+    if len(_login_attempts) > 10000:
+        stale_keys = [k for k, v in _login_attempts.items() if not v or now - v[-1] > _RATE_LIMIT_WINDOW]
+        for k in stale_keys:
+            del _login_attempts[k]
+
 
 class RegisterRequest(BaseModel):
-    email: str
+    email: EmailStr
     password: str
     name: str = None
 
@@ -42,7 +65,7 @@ async def register(body: RegisterRequest, response: Response, db: Session = Depe
     token = create_token(user.id)
 
     # Set cookie
-    response.set_cookie("token", token, httponly=True, max_age=7*86400, samesite="lax")
+    response.set_cookie("token", token, httponly=True, secure=False, max_age=7*86400, samesite="lax")  # secure=True in production with HTTPS
 
     return {
         "status": "ok",
@@ -59,7 +82,7 @@ async def login(body: LoginRequest, response: Response, db: Session = Depends(ge
         raise HTTPException(status_code=401, detail="邮箱或密码错误")
 
     token = create_token(user.id)
-    response.set_cookie("token", token, httponly=True, max_age=7*86400, samesite="lax")
+    response.set_cookie("token", token, httponly=True, secure=False, max_age=7*86400, samesite="lax")  # secure=True in production with HTTPS
 
     return {
         "status": "ok",

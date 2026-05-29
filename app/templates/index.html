@@ -1033,7 +1033,7 @@ function showOverview() {
             for (const entry of entries) {
                 const statusMap = {'pass':'<span style="color:#059669;font-weight:700;">✓</span>','minor_issues':'<span style="color:#d97706;font-weight:700;">~</span>','unknown':'<span style="color:#94a3b8;">?</span>','unsure':'<span style="color:#ea580c;font-weight:700;">!</span>','fake':'<span style="color:#dc2626;font-weight:700;">✗</span>','no_doi_but_url':'<span style="color:#d97706;">~</span>','verified_by_title_search':'<span style="color:#059669;">✓</span>'};
                 const icon = statusMap[entry.status] || '<span style="color:#dc2626;">✗</span>';
-                const link = entry.doi_link ? `<a href="${entry.doi_link}" target="_blank" class="text-blue-500 hover:underline ml-1">↗</a>` : '';
+                const link = (entry.doi_link && /^https?:\/\//.test(entry.doi_link)) ? `<a href="${esc(entry.doi_link)}" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline ml-1">↗</a>` : '';
                 cardsHtml += `<div class="flex items-center gap-1">${icon} <span class="font-mono">${esc(entry.key)}</span>${link}</div>`;
             }
             cardsHtml += `</div></details>`;
@@ -1043,7 +1043,7 @@ function showOverview() {
         if (g.gate_name === 'writing_quality' && g.metadata?.tips?.length > 0) {
             cardsHtml += `<div class="mt-2 pt-2 border-t border-slate-200">
                 <p style="font-size:10px; font-weight:600; color:#64748b; margin:0 0 4px;">写作建议</p>
-                ${g.metadata.tips.map(t => `<p style="font-size:11px; color:#475569; margin:2px 0; padding-left:8px; border-left:2px solid #3b82f6;">` + t + `</p>`).join('')}
+                ${g.metadata.tips.map(t => `<p style="font-size:11px; color:#475569; margin:2px 0; padding-left:8px; border-left:2px solid #3b82f6;">${esc(t)}</p>`).join('')}
             </div>`;
         }
 
@@ -2430,7 +2430,7 @@ function latexHint(cm) {
 }
 
 function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
-function linkify(s){return s.replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" class="text-blue-600 underline hover:text-blue-800">$1</a>').replace(/\n/g,'<br>');}
+function linkify(s){return esc(s).replace(/(https?:\/\/[^\s&<]+)/g,function(url){try{const u=new URL(url);if(u.protocol==='http:'||u.protocol==='https:')return'<a href="'+u.href+'" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline hover:text-blue-800">'+u.href+'</a>';} catch(e){}return url;}).replace(/\n/g,'<br>');}
 
 function toast(message, type='info', duration=4000) {
     const container = document.getElementById('toast-container');

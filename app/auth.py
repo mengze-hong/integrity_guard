@@ -48,7 +48,7 @@ def decode_token(token: str) -> dict | None:
 def register_user(db: Session, email: str, password: str, name: str = None) -> User:
     """Create a new user with email + password."""
     user = User(
-        id=str(uuid.uuid4())[:8],
+        id=uuid.uuid4().hex[:12],
         email=email.lower().strip(),
         password_hash=hash_password(password),
         name=name or email.split("@")[0],
@@ -59,7 +59,7 @@ def register_user(db: Session, email: str, password: str, name: str = None) -> U
 
     # Record welcome gift
     db.add(Transaction(
-        id=str(uuid.uuid4())[:8],
+        id=uuid.uuid4().hex[:12],
         user_id=user.id,
         type="gift",
         amount=2,
@@ -111,7 +111,7 @@ def get_or_create_oauth_user(
 
     # Create new user
     user = User(
-        id=str(uuid.uuid4())[:8],
+        id=uuid.uuid4().hex[:12],
         email=email.lower(),
         name=name or email.split("@")[0],
         avatar_url=avatar,
@@ -123,7 +123,7 @@ def get_or_create_oauth_user(
     )
     db.add(user)
     db.add(Transaction(
-        id=str(uuid.uuid4())[:8],
+        id=uuid.uuid4().hex[:12],
         user_id=user.id,
         type="gift",
         amount=2,

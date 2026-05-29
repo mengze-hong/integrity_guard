@@ -1,4 +1,33 @@
-# IntegrityGuard Changelog
+# ScholarLint · 投稿通 Changelog
+
+## v5.1.0 (2026-05-29) — 安全加固 Security Hardening
+重点：在不改变任何已有功能/设计的前提下，修复一批安全问题，并补齐加固中遗留的缺陷。
+
+### 密钥与配置
+- 所有敏感配置改为优先从环境变量读取（`LLM_API_KEY` / `JWT_SECRET` / `ADMIN_KEY` / 支付宝密钥 / `PAYMENT_SANDBOX`）
+- **JWT secret / admin key 持久化**：未设置环境变量时，自动生成并写入 `data/.jwt_secret`、`data/.admin_key`（权限 0600）。修复了此前 `os.urandom()` 默认值导致每次重启都失效、用户全部被登出的回归问题
+- 管理员充值接口的 admin_key 不再硬编码，改为从 `settings.admin_key` 读取
+- 新增 `.gitignore` 条目，确保密钥文件永不入库
+
+### 上传与文件安全
+- **Zip Slip 路径穿越防护**：解压前逐条校验成员路径，越界即拒绝（组件级 `relative_to` 校验，修复 `startswith` 绕过漏洞）
+- **危险文件过滤真正生效**：改为逐个解压成员，跳过 `.exe/.sh/.bat/.cmd/.ps1/.dll/.so/.bin/.msi`（此前 `extractall` 会忽略过滤、解压全部文件）
+- 上传增加 `Content-Length` 预检（100MB），避免读入超大请求体
+- 文件保存接口限制为文本源文件白名单（`.tex/.bib/.cls/.sty/.bst/.txt/.md`），阻止写入二进制/可执行文件，同时保留 `.cls/.sty` 等的正常编辑能力
+- format-normalize 接口增加路径穿越校验
+
+### 认证
+- 登录/注册增加内存级限流（5 分钟内 10 次），防暴力破解
+- 注册邮箱改用 `EmailStr` 校验；新增 `email-validator` 依赖（此前缺失会导致应用无法启动）
+- 登录/注册 Cookie 显式标注 `secure`（生产 HTTPS 下应置为 True）
+- 用户 / 交易 / Job ID 从 8 位 UUID 提升到 12 位 hex（熵 32→48 bit）
+
+### 前端 XSS
+- `linkify` 先转义再生成链接，仅允许 http/https，并加 `rel="noopener noreferrer"`
+- 引文 DOI 链接、写作建议 tips 渲染统一经 `esc()` 转义
+
+### 测试
+- 新增 ZIP 安全回归测试（危险文件跳过、路径穿越拦截），共 16 个单元测试全部通过
 
 ## v2.8 (2026-05-28)
 - File tree error count badges (red number showing unresolved errors per file)

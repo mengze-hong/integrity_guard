@@ -103,13 +103,18 @@ async def upload_paper(request: Request, background_tasks: BackgroundTasks, file
     if not file.filename or not file.filename.endswith(".zip"):
         raise HTTPException(status_code=400, detail="请上传 .zip 文件")
 
+    # Security: check Content-Length header before reading
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > 100 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="文件过大（最大 100MB）")
+
     content = await file.read()
 
     # Security: file size check (max 100MB)
     if len(content) > 100 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="文件过大（最大 100MB）")
 
-    job_id = str(uuid.uuid4())[:8]
+    job_id = uuid.uuid4().hex[:12]  # 12 hex chars = 48 bits entropy
     upload_path = settings.upload_dir / f"{job_id}.zip"
     extract_dir = settings.upload_dir / job_id
 
@@ -201,6 +206,12 @@ async def save_file(job_id: str, file_path: str, request: Request):
     project_dir = _job_dirs.get(job_id)
     if not project_dir:
         raise HTTPException(status_code=404, detail="Project not found")
+
+    # Security: only allow editing known plain-text source files (blocks
+    # writing binaries/executables while preserving editor functionality)
+    EDITABLE_EXTENSIONS = (".tex", ".bib", ".cls", ".sty", ".bst", ".txt", ".md")
+    if not any(file_path.lower().endswith(ext) for ext in EDITABLE_EXTENSIONS):
+        raise HTTPException(status_code=403, detail="只能编辑文本源文件（.tex/.bib/.cls/.sty 等）")
 
     target = project_dir / file_path
     try:
@@ -579,7 +590,10 @@ async def format_normalize(job_id: str, request: Request):
     targets = []
 
     if file_path:
-        target = project_dir / file_path
+        target = (project_dir / file_path).resolve()
+        # Path traversal check: must stay within project_dir
+        if not str(target).startswith(str(project_dir.resolve())):
+            raise HTTPException(status_code=400, detail="Invalid file path")
         if target.exists() and target.suffix == ".tex":
             targets.append(target)
     else:

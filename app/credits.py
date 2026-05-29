@@ -31,7 +31,7 @@ def deduct_credits(db: Session, user_id: str, amount: int, description: str) -> 
 
     user.credits -= amount
     db.add(Transaction(
-        id=str(uuid.uuid4())[:8],
+        id=str(uuid.uuid4().hex[:12]),
         user_id=user_id,
         type="consume",
         amount=-amount,
@@ -51,7 +51,7 @@ def add_credits(db: Session, user_id: str, amount: int, description: str, paymen
 
     user.credits += amount
     db.add(Transaction(
-        id=str(uuid.uuid4())[:8],
+        id=str(uuid.uuid4().hex[:12]),
         user_id=user_id,
         type="purchase",
         amount=amount,
