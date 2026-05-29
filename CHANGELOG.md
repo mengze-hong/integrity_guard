@@ -1,5 +1,10 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.23 (2026-05-29) — 前端 inline handler 参数注入加固
+- 新增 `jsArg()`，所有动态 inline handler 参数统一通过 JSON string literal 编码，避免文件名、issue message、job_id 中的引号或特殊字符破坏 JavaScript
+- 加固文件树、编辑器 tab、overview 问题跳转、问题卡片、AI 建议按钮、忽略按钮、真实文献候选、历史项目/所有项目恢复与删除入口
+- 文件树 `data-path`、tab 文件名等动态内容补充 HTML escape，降低用户上传文件名造成 XSS/DOM 注入的风险
+
 ## v5.3.22 (2026-05-29) — FileStore 服务抽取
 - 新增 `app/services/file_store.py`，集中管理项目内安全路径解析、可编辑文件列表和当前项目 ZIP 打包
 - `app/api/routes.py` 改用 FileStore helper，减少 routes 单体职责，文件读取/保存、文件树和下载 ZIP 共享同一套路径安全逻辑
