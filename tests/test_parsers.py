@@ -121,3 +121,49 @@ def test_extract_zip_blocks_path_traversal(tmp_path):
     dest = tmp_path / "out"
     with pytest.raises(ValueError):
         extract_zip(zip_path, dest)
+    assert not dest.exists()
+
+
+def test_extract_zip_blocks_too_many_members(tmp_path):
+    """Archives with excessive member counts are rejected before extraction."""
+    zip_path = tmp_path / "many.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        for i in range(2001):
+            zf.writestr(f"paper/{i}.txt", "x")
+
+    with pytest.raises(ValueError, match="too many files"):
+        extract_zip(zip_path, tmp_path / "out")
+
+
+def test_extract_zip_blocks_zip_bomb_ratio(tmp_path):
+    """Highly-compressible huge members are rejected as suspicious."""
+    zip_path = tmp_path / "bomb.zip"
+    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("paper/main.tex", "A" * (1024 * 1024))
+
+    with pytest.raises(ValueError, match="compression ratio"):
+        extract_zip(zip_path, tmp_path / "out")
+
+
+def test_extract_zip_blocks_deep_paths(tmp_path):
+    """Extremely deep member paths are rejected to avoid path/resource abuse."""
+    zip_path = tmp_path / "deep.zip"
+    deep_name = "/".join(["paper", *[f"d{i}" for i in range(25)], "main.tex"])
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr(deep_name, "\\documentclass{article}")
+
+    with pytest.raises(ValueError, match="too deep"):
+        extract_zip(zip_path, tmp_path / "out")
+
+
+def test_extract_zip_blocks_symlink_entries(tmp_path):
+    """Symlink entries must not be extracted."""
+    zip_path = tmp_path / "symlink.zip"
+    info = zipfile.ZipInfo("paper/link.tex")
+    info.external_attr = 0o120777 << 16
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("paper/main.tex", "\\documentclass{article}")
+        zf.writestr(info, "main.tex")
+
+    with pytest.raises(ValueError, match="Symlink"):
+        extract_zip(zip_path, tmp_path / "out")

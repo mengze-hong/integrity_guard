@@ -1,10 +1,11 @@
 """API routes for integrity checks + file editor + human-in-the-loop."""
 
+import secrets
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, UploadFile, File, BackgroundTasks, HTTPException, Request
+from fastapi import APIRouter, UploadFile, File, BackgroundTasks, HTTPException, Request, Response
 from fastapi.responses import PlainTextResponse
 
 from app.config import settings, LLM_RATE_PER_IP, LLM_RATE_WINDOW, LLM_GLOBAL_HOURLY_CAP
@@ -29,6 +30,162 @@ _jobs: dict[str, FullReport] = {}
 _job_status: dict[str, str] = {}
 _job_dirs: dict[str, Path] = {}  # job_id → extracted project directory
 _job_progress: dict[str, list[str]] = {}  # job_id → list of completed gate names
+_job_owners: dict[str, dict] = {}  # job_id → owner/share metadata while processing
+
+SESSION_COOKIE_NAME = "sl_session"
+SESSION_COOKIE_MAX_AGE = 30 * 86400
+
+
+def _request_share_token(request: Request) -> str:
+    """Read share token from query string or header."""
+    return (
+        request.query_params.get("share")
+        or request.headers.get("X-Share-Token")
+        or ""
+    ).strip()
+
+
+def _set_session_cookie_if_needed(response: Response | None, session_id: str) -> None:
+    """Persist a generated anonymous session id in an httpOnly cookie."""
+    if response is None:
+        return
+    response.set_cookie(
+        SESSION_COOKIE_NAME,
+        session_id,
+        httponly=True,
+        secure=False,  # Set True behind HTTPS in production.
+        max_age=SESSION_COOKIE_MAX_AGE,
+        samesite="lax",
+    )
+
+
+async def _get_request_owner(
+    request: Request,
+    response: Response | None = None,
+    current_user=None,
+) -> dict:
+    """Return the authenticated user owner or anonymous session owner."""
+    if current_user is None:
+        from app.dependencies import get_current_user_optional
+
+        current_user = await get_current_user_optional(request)
+
+    if current_user:
+        return {"owner_type": "user", "owner_id": str(current_user.id)}
+
+    session_id = (request.cookies.get(SESSION_COOKIE_NAME) or "").strip()
+    if not session_id:
+        session_id = secrets.token_urlsafe(32)
+        _set_session_cookie_if_needed(response, session_id)
+    return {"owner_type": "session", "owner_id": session_id, "session_id": session_id}
+
+
+def _new_share_token() -> str:
+    return secrets.token_urlsafe(24)
+
+
+def _owner_metadata(owner: dict, share_token: str | None = None) -> dict:
+    metadata = {
+        "owner_type": owner["owner_type"],
+        "owner_id": owner["owner_id"],
+        "share_token": share_token or _new_share_token(),
+    }
+    if owner.get("session_id"):
+        metadata["session_id"] = owner["session_id"]
+    return metadata
+
+
+def _extract_owner_metadata(report_or_metadata) -> dict:
+    metadata = getattr(report_or_metadata, "metadata", report_or_metadata) or {}
+    return {
+        "owner_type": metadata.get("owner_type"),
+        "owner_id": metadata.get("owner_id"),
+        "session_id": metadata.get("session_id"),
+        "share_token": metadata.get("share_token"),
+    }
+
+
+async def _owner_metadata_allows(
+    metadata: dict,
+    request: Request,
+    response: Response | None = None,
+    *,
+    write: bool = False,
+    allow_share: bool = True,
+) -> bool:
+    owner_type = metadata.get("owner_type")
+    owner_id = metadata.get("owner_id")
+    share_token = metadata.get("share_token")
+
+    # Legacy reports created before ownership metadata remain readable/writable
+    # for local demo compatibility.
+    if not owner_type or not owner_id:
+        return True
+
+    request_owner = await _get_request_owner(request, response)
+    if request_owner["owner_type"] == owner_type and request_owner["owner_id"] == str(owner_id):
+        return True
+
+    request_share = _request_share_token(request)
+    if allow_share and request_share and share_token and secrets.compare_digest(request_share, str(share_token)):
+        return not write
+
+    return False
+
+
+async def _can_access_report(
+    report: FullReport,
+    request: Request,
+    response: Response | None = None,
+    *,
+    mode: str = "read",
+    allow_share: bool = True,
+) -> bool:
+    return await _owner_metadata_allows(
+        _extract_owner_metadata(report),
+        request,
+        response,
+        write=(mode == "write"),
+        allow_share=allow_share,
+    )
+
+
+async def _require_job_access(
+    job_id: str,
+    request: Request,
+    response: Response | None = None,
+    *,
+    write: bool = False,
+    allow_share: bool = True,
+) -> FullReport | None:
+    """Require read/write access to a job; returns report when one exists."""
+    report = _get_report(job_id)
+    if report:
+        if not await _can_access_report(
+            report,
+            request,
+            response,
+            mode="write" if write else "read",
+            allow_share=allow_share,
+        ):
+            raise HTTPException(status_code=403, detail="Access denied")
+        return report
+
+    owner_metadata = _job_owners.get(job_id)
+    if owner_metadata:
+        if not await _owner_metadata_allows(
+            owner_metadata,
+            request,
+            response,
+            write=write,
+            allow_share=allow_share,
+        ):
+            raise HTTPException(status_code=403, detail="Access denied")
+        return None
+
+    if job_id in _job_status:
+        return None
+    raise HTTPException(status_code=404, detail="Job not found")
 
 
 def _get_report(job_id: str) -> FullReport | None:
@@ -45,6 +202,9 @@ def _get_report(job_id: str) -> FullReport | None:
             proj = Path(report.project_dir)
             if proj.exists():
                 _job_dirs[job_id] = proj
+        owner_metadata = _extract_owner_metadata(report)
+        if owner_metadata.get("owner_type") and owner_metadata.get("owner_id"):
+            _job_owners[job_id] = owner_metadata
         return report
     return None
 
@@ -187,7 +347,12 @@ def _detect_lang(*texts: str) -> str:
 # ─── Upload & Check ───────────────────────────────────────────
 
 @router.post("/upload")
-async def upload_paper(request: Request, background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+async def upload_paper(
+    request: Request,
+    response: Response,
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+):
     """Upload a zip file and start integrity checks."""
     from app.dependencies import get_current_user_optional
     from app.credits import deduct_credits, InsufficientCredits
@@ -226,18 +391,22 @@ async def upload_paper(request: Request, background_tasks: BackgroundTasks, file
     job_id = uuid.uuid4().hex[:12]  # 12 hex chars = 48 bits entropy
     upload_path = settings.upload_dir / f"{job_id}.zip"
     extract_dir = settings.upload_dir / job_id
+    owner = await _get_request_owner(request, response, current_user=user)
+    owner_metadata = _owner_metadata(owner)
 
     with open(upload_path, "wb") as f:
         f.write(content)
 
     _job_status[job_id] = "processing"
-    background_tasks.add_task(_run_checks, job_id, upload_path, extract_dir, file.filename)
+    _job_owners[job_id] = owner_metadata
+    background_tasks.add_task(_run_checks, job_id, upload_path, extract_dir, file.filename, owner_metadata)
 
-    return {"job_id": job_id, "status": "processing"}
+    return {"job_id": job_id, "status": "processing", "share_token": owner_metadata["share_token"]}
 
 
 @router.get("/status/{job_id}")
-async def get_status(job_id: str):
+async def get_status(job_id: str, request: Request, response: Response):
+    await _require_job_access(job_id, request, response)
     status = _job_status.get(job_id)
     if not status:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -249,8 +418,8 @@ async def get_status(job_id: str):
 
 
 @router.get("/report/{job_id}")
-async def get_report(job_id: str):
-    report = _get_report(job_id)
+async def get_report(job_id: str, request: Request, response: Response):
+    report = await _require_job_access(job_id, request, response)
     if not report:
         status = _job_status.get(job_id, "not_found")
         if status == "processing":
@@ -262,8 +431,9 @@ async def get_report(job_id: str):
 # ─── File CRUD (for editor) ───────────────────────────────────
 
 @router.get("/files/{job_id}")
-async def list_files(job_id: str):
+async def list_files(job_id: str, request: Request, response: Response):
     """List all editable files (.tex, .bib) in the project."""
+    await _require_job_access(job_id, request, response)
     # Ensure job_dirs is populated (may need disk recovery)
     if job_id not in _job_dirs:
         _get_report(job_id)
@@ -285,8 +455,9 @@ async def list_files(job_id: str):
 
 
 @router.get("/files/{job_id}/{file_path:path}")
-async def read_file(job_id: str, file_path: str):
+async def read_file(job_id: str, file_path: str, request: Request, response: Response):
     """Read a file's content."""
+    await _require_job_access(job_id, request, response)
     if job_id not in _job_dirs:
         _get_report(job_id)
     project_dir = _job_dirs.get(job_id)
@@ -308,8 +479,9 @@ async def read_file(job_id: str, file_path: str):
 
 
 @router.put("/files/{job_id}/{file_path:path}")
-async def save_file(job_id: str, file_path: str, request: Request):
+async def save_file(job_id: str, file_path: str, request: Request, response: Response):
     """Save file content (auto-save from editor)."""
+    await _require_job_access(job_id, request, response, write=True)
     if job_id not in _job_dirs:
         _get_report(job_id)
     project_dir = _job_dirs.get(job_id)
@@ -338,11 +510,13 @@ async def save_file(job_id: str, file_path: str, request: Request):
 # ─── Recheck (re-run checks on modified files) ────────────────
 
 @router.post("/recheck/{job_id}")
-async def recheck(request: Request, job_id: str, background_tasks: BackgroundTasks):
+async def recheck(request: Request, response: Response, job_id: str, background_tasks: BackgroundTasks):
     """Re-run all checks on the (possibly modified) project files."""
     from app.dependencies import get_current_user_optional
     from app.credits import deduct_credits, InsufficientCredits
     from app.database import SessionLocal
+
+    report = await _require_job_access(job_id, request, response, write=True)
 
     # Deduct credits if logged in
     user = await get_current_user_optional(request)
@@ -361,14 +535,14 @@ async def recheck(request: Request, job_id: str, background_tasks: BackgroundTas
     if not project_dir or not project_dir.exists():
         raise HTTPException(status_code=404, detail="Project not found")
 
-    report = _jobs.get(job_id)
     filename = report.filename if report else "unknown.zip"
 
     # Keep dismissed issues from previous run
     old_dismissed = report.dismissed_issues if report else []
+    owner_metadata = _extract_owner_metadata(report) if report else _job_owners.get(job_id, {})
 
     _job_status[job_id] = "processing"
-    background_tasks.add_task(_run_checks_from_dir, job_id, project_dir, filename, old_dismissed)
+    background_tasks.add_task(_run_checks_from_dir, job_id, project_dir, filename, old_dismissed, owner_metadata)
 
     return {"job_id": job_id, "status": "processing"}
 
@@ -376,9 +550,9 @@ async def recheck(request: Request, job_id: str, background_tasks: BackgroundTas
 # ─── Human-in-the-Loop: Dismiss ──────────────────────────────
 
 @router.post("/dismiss/{job_id}")
-async def dismiss_issue(job_id: str, request: Request):
+async def dismiss_issue(job_id: str, request: Request, response: Response):
     """Student dismisses an issue with a reason."""
-    report = _get_report(job_id)
+    report = await _require_job_access(job_id, request, response, write=True)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
 
@@ -416,9 +590,9 @@ async def dismiss_issue(job_id: str, request: Request):
 # ─── Export Report (for supervisor) ──────────────────────────
 
 @router.get("/export/{job_id}")
-async def export_report(job_id: str):
+async def export_report(job_id: str, request: Request, response: Response):
     """Export a human-readable report for supervisor review."""
-    report = _get_report(job_id)
+    report = await _require_job_access(job_id, request, response)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
 
@@ -513,8 +687,9 @@ async def export_report(job_id: str):
 # ─── Bib Cleaning Tools ──────────────────────────────────────
 
 @router.post("/bib-clean/{job_id}")
-async def clean_bib(job_id: str, request: Request):
+async def clean_bib(job_id: str, request: Request, response: Response):
     """Clean and sort the .bib file. Actions: clean, sort, separate_unused."""
+    await _require_job_access(job_id, request, response, write=True)
     if job_id not in _job_dirs:
         _get_report(job_id)
     project_dir = _job_dirs.get(job_id)
@@ -630,8 +805,9 @@ async def fetch_official_bib(doi: str):
 # ─── Project Tidy Up ─────────────────────────────────────────
 
 @router.get("/tidyup/{job_id}")
-async def analyze_tidyup_changes(job_id: str):
+async def analyze_tidyup_changes(job_id: str, request: Request, response: Response):
     """Analyze what tidy-up changes would be made (preview only)."""
+    await _require_job_access(job_id, request, response, write=True)
     if job_id not in _job_dirs:
         _get_report(job_id)
     project_dir = _job_dirs.get(job_id)
@@ -652,8 +828,9 @@ async def analyze_tidyup_changes(job_id: str):
 
 
 @router.post("/tidyup/{job_id}")
-async def execute_tidyup(job_id: str, request: Request):
+async def execute_tidyup(job_id: str, request: Request, response: Response):
     """Execute selected tidy-up changes."""
+    await _require_job_access(job_id, request, response, write=True)
     if job_id not in _job_dirs:
         _get_report(job_id)
     project_dir = _job_dirs.get(job_id)
@@ -681,8 +858,9 @@ async def execute_tidyup(job_id: str, request: Request):
 # ─── Format Normalization ────────────────────────────────────
 
 @router.post("/format-normalize/{job_id}")
-async def format_normalize(job_id: str, request: Request):
+async def format_normalize(job_id: str, request: Request, response: Response):
     """Auto-fix formatting inconsistencies in .tex files."""
+    await _require_job_access(job_id, request, response, write=True)
     if job_id not in _job_dirs:
         _get_report(job_id)
     project_dir = _job_dirs.get(job_id)
@@ -725,8 +903,9 @@ async def format_normalize(job_id: str, request: Request):
 # ─── AI-Powered Fix Suggestions ──────────────────────────────
 
 @router.post("/ai-fix/{job_id}")
-async def ai_fix_suggestion(job_id: str, request: Request):
+async def ai_fix_suggestion(job_id: str, request: Request, response: Response):
     """Use LLM to suggest a fix for a specific issue."""
+    await _require_job_access(job_id, request, response, write=True)
     _llm_usage_guard(request)
     if job_id not in _job_dirs:
         _get_report(job_id)
@@ -819,8 +998,9 @@ async def ai_fix_suggestion(job_id: str, request: Request):
 
 
 @router.post("/ai-batch-fix/{job_id}")
-async def ai_batch_fix(job_id: str, request: Request):
+async def ai_batch_fix(job_id: str, request: Request, response: Response):
     """Batch AI fix: attempt to fix all auto-fixable issues at once."""
+    await _require_job_access(job_id, request, response, write=True)
     _llm_usage_guard(request)
     if job_id not in _job_dirs:
         _get_report(job_id)
@@ -920,8 +1100,9 @@ async def ai_batch_fix(job_id: str, request: Request):
 
 
 @router.post("/ai-review/{job_id}")
-async def ai_reviewer_simulation(job_id: str, request: Request):
+async def ai_reviewer_simulation(job_id: str, request: Request, response: Response):
     """Simulate a peer reviewer reading the paper — identify weaknesses and questions."""
+    await _require_job_access(job_id, request, response, write=True)
     _llm_usage_guard(request)
     if job_id not in _job_dirs:
         _get_report(job_id)
@@ -969,8 +1150,9 @@ async def ai_reviewer_simulation(job_id: str, request: Request):
 
 
 @router.post("/ai-polish/{job_id}")
-async def ai_polish_text(job_id: str, request: Request):
+async def ai_polish_text(job_id: str, request: Request, response: Response):
     """Polish a selected paragraph to be more academic and fluent."""
+    await _require_job_access(job_id, request, response, write=True)
     _llm_usage_guard(request)
     if job_id not in _job_dirs:
         _get_report(job_id)
@@ -1015,8 +1197,9 @@ async def ai_polish_text(job_id: str, request: Request):
 
 
 @router.post("/ai-abstract/{job_id}")
-async def ai_optimize_abstract(job_id: str, request: Request):
+async def ai_optimize_abstract(job_id: str, request: Request, response: Response):
     """Optimize the paper's abstract based on full content analysis."""
+    await _require_job_access(job_id, request, response, write=True)
     _llm_usage_guard(request)
     if job_id not in _job_dirs:
         _get_report(job_id)
@@ -1130,8 +1313,9 @@ CHECKLISTS = {
 
 
 @router.post("/venue-checklist/{job_id}")
-async def generate_venue_checklist(job_id: str, request: Request):
+async def generate_venue_checklist(job_id: str, request: Request, response: Response):
     """AI auto-fill an official ARR / NeurIPS checklist based on paper content."""
+    await _require_job_access(job_id, request, response, write=True)
     _llm_usage_guard(request)
     if job_id not in _job_dirs:
         _get_report(job_id)
@@ -1235,20 +1419,34 @@ Output as JSON array."""},
 # ─── History & Cleanup ────────────────────────────────────────
 
 @router.get("/history")
-async def get_history():
+async def get_history(request: Request, response: Response):
     """Return list of recent jobs for the history panel."""
-    return {"jobs": storage.list_jobs(limit=50)}
+    owner = await _get_request_owner(request, response)
+    return {
+        "jobs": storage.list_jobs(
+            limit=50,
+            owner_type=owner["owner_type"],
+            owner_id=owner["owner_id"],
+            include_legacy=False,
+        )
+    }
 
 
 @router.get("/compare/{job_id}")
-async def compare_with_previous(job_id: str):
+async def compare_with_previous(job_id: str, request: Request, response: Response):
     """Compare current check results with the previous check of the same file."""
-    report = _get_report(job_id)
+    report = await _require_job_access(job_id, request, response, allow_share=False)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
 
     # Find previous check of same filename
-    all_jobs = storage.list_jobs(limit=50)
+    owner = await _get_request_owner(request, response)
+    all_jobs = storage.list_jobs(
+        limit=50,
+        owner_type=owner["owner_type"],
+        owner_id=owner["owner_id"],
+        include_legacy=False,
+    )
     same_file = [j for j in all_jobs if j["filename"] == report.filename and j["job_id"] != job_id]
     same_file.sort(key=lambda x: x["timestamp"], reverse=True)
 
@@ -1293,16 +1491,22 @@ async def compare_with_previous(job_id: str):
 
 
 @router.get("/score-trend/{job_id}")
-async def get_score_trend(job_id: str):
+async def get_score_trend(job_id: str, request: Request, response: Response):
     """Return score history for the same filename as the given job.
 
     Useful for showing improvement trend across multiple checks.
     """
-    report = _get_report(job_id)
+    report = await _require_job_access(job_id, request, response, allow_share=False)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
 
-    all_jobs = storage.list_jobs(limit=50)
+    owner = await _get_request_owner(request, response)
+    all_jobs = storage.list_jobs(
+        limit=50,
+        owner_type=owner["owner_type"],
+        owner_id=owner["owner_id"],
+        include_legacy=False,
+    )
     # Filter to same filename, sorted chronologically
     same_file = [j for j in all_jobs if j["filename"] == report.filename]
     same_file.sort(key=lambda x: x["timestamp"])
@@ -1319,8 +1523,9 @@ async def get_score_trend(job_id: str):
 
 
 @router.get("/analysis/{job_id}")
-async def get_analysis(job_id: str):
+async def get_analysis(job_id: str, request: Request, response: Response):
     """Return detailed analysis: section word counts + citation year distribution."""
+    await _require_job_access(job_id, request, response, allow_share=False)
     if job_id not in _job_dirs:
         _get_report(job_id)
     project_dir = _job_dirs.get(job_id)
@@ -1393,12 +1598,14 @@ async def get_analysis(job_id: str):
 
 
 @router.delete("/job/{job_id}")
-async def delete_job(job_id: str):
+async def delete_job(job_id: str, request: Request, response: Response):
     """Delete a job and its files permanently."""
+    await _require_job_access(job_id, request, response, write=True, allow_share=False)
     # Remove from memory
     _jobs.pop(job_id, None)
     _job_status.pop(job_id, None)
     _job_dirs.pop(job_id, None)
+    _job_owners.pop(job_id, None)
     # Remove from disk
     deleted = storage.delete_job(job_id)
     if not deleted:
@@ -1408,7 +1615,7 @@ async def delete_job(job_id: str):
 
 # ─── Internal helpers ─────────────────────────────────────────
 
-async def _run_checks(job_id: str, zip_path: Path, extract_dir: Path, filename: str):
+async def _run_checks(job_id: str, zip_path: Path, extract_dir: Path, filename: str, owner_metadata: dict):
     """Extract zip and run checks."""
     try:
         extract_dir.mkdir(parents=True, exist_ok=True)
@@ -1424,12 +1631,13 @@ async def _run_checks(job_id: str, zip_path: Path, extract_dir: Path, filename: 
                 elif f.stat().st_size > 50 * 1024 * 1024:  # >50MB single file
                     f.unlink()  # Remove oversized files
 
-        await _run_checks_from_dir(job_id, project_dir, filename, [])
+        await _run_checks_from_dir(job_id, project_dir, filename, [], owner_metadata)
     except Exception as e:
         _job_status[job_id] = "failed"
         _jobs[job_id] = FullReport(
             job_id=job_id, filename=filename,
             timestamp=datetime.now(timezone.utc).isoformat(),
+            metadata=owner_metadata,
         )
         logger.error(f" Job {job_id} failed: {redact(str(e))}")
     finally:
@@ -1440,6 +1648,7 @@ async def _run_checks(job_id: str, zip_path: Path, extract_dir: Path, filename: 
 async def _run_checks_from_dir(
     job_id: str, project_dir: Path, filename: str,
     old_dismissed: list[DismissedIssue],
+    owner_metadata: dict | None = None,
 ):
     """Run checks from an already-extracted directory."""
     try:
@@ -1488,10 +1697,12 @@ async def _run_checks_from_dir(
             "page_estimate": round(total_words / 500, 1),  # ~500 words/page for ACL format
             "bib_count": len(paper.bib_entries),
             "tex_count": len(paper.tex_files),
+            **(owner_metadata or {}),
         }
 
         report.compute_overall()
         _jobs[job_id] = report
+        _job_owners[job_id] = _extract_owner_metadata(report)
         _job_status[job_id] = "completed"
         _persist(job_id)
 

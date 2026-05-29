@@ -503,18 +503,6 @@
                 <button onclick="enterWorkspace()" class="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold text-base hover:bg-blue-700 shadow-lg transition-all hover:shadow-xl">
                     进入工作台修复问题
                 </button>
-                <button onclick="doAiReview()" id="ai-review-btn" class="bg-slate-700 text-white px-6 py-3 rounded-xl font-bold text-base hover:bg-slate-800 shadow-lg transition-all hover:shadow-xl">
-                    模拟审稿人反馈
-                </button>
-            </div>
-
-            <!-- AI Review Result (hidden by default) -->
-            <div id="ai-review-result" class="hidden" style="margin-top:24px; background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:20px;">
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
-                    <h3 style="font-size:15px; font-weight:700; color:#0f172a; margin:0;">审稿人反馈</h3>
-                    <span style="font-size:10px; color:#94a3b8;">AI 模拟 · 仅供参考</span>
-                </div>
-                <div id="ai-review-content" style="font-size:13px; line-height:1.8; color:#334155; white-space:pre-wrap;"></div>
             </div>
 
             <p style="margin-top:28px; padding-top:16px; border-top:1px solid #e2e8f0; color:#94a3b8; font-size:11px; line-height:1.7; text-align:center;">
@@ -711,7 +699,6 @@
     <div style="height:1px; background:#e2e8f0; margin:4px 0;" id="ctx-divider-ai" style="display:none;"></div>
     <div class="ctx-item" onclick="doBibClean(); hideContextMenu()">整理 Bib</div>
     <div class="ctx-item" onclick="doFormatNormalize(); hideContextMenu()">格式规范化</div>
-    <div class="ctx-item" onclick="doAiReview(); hideContextMenu()">模拟审稿反馈</div>
     <div class="ctx-item" onclick="exportReport(); hideContextMenu()">导出报告</div>
 </div>
 
@@ -1078,7 +1065,7 @@ function showOverview() {
     const errTotal = gates.reduce((s,g) => s + g.issues.filter(i=>i.severity==='error').length, 0);
     if (report.overall_passed) {
         verdictEl.style.cssText = 'padding:16px 20px; border-radius:12px; font-size:14px; background:#f0fdf4; border:1px solid #bbf7d0; color:#166534;';
-        verdictEl.innerHTML = '<strong>可以提交。</strong> 所有检查已通过，论文准备就绪。建议获取一次审稿人反馈做最后确认。';
+        verdictEl.innerHTML = '<strong>可以提交。</strong> 所有检查已通过，论文准备就绪。';
     } else if (errTotal <= 2) {
         verdictEl.style.cssText = 'padding:16px 20px; border-radius:12px; font-size:14px; background:#fffbeb; border:1px solid #fde68a; color:#92400e;';
         verdictEl.innerHTML = `<strong>接近就绪。</strong> 还有 ${errTotal} 个问题需要处理。修复后即可安全提交。`;
@@ -1135,32 +1122,6 @@ async function loadComparison() {
 
         scoreEl.innerHTML += `<br><span style="font-size:12px; color:${diffColor}; margin-top:4px; display:inline-block;">${diffIcon} 较上次: ${diff>0?'+':''}${diff.toFixed(1)} 分 ${errText}</span>`;
     } catch(e) { /* silent */ }
-}
-
-// === AI Review (integrated into overview flow) ===
-async function doAiReview() {
-    const btn = document.getElementById('ai-review-btn');
-    btn.disabled = true; btn.textContent = '🎓 分析中...';
-    showAiLoading('🎓 AI 审稿人正在通读全文…');
-
-    try {
-        const r = await fetch(`/api/ai-review/${jobId}`, {method: 'POST'});
-        const d = await r.json();
-        if (d.status === 'ok' && d.review) {
-            document.getElementById('ai-review-result').classList.remove('hidden');
-            document.getElementById('ai-review-content').textContent = d.review;
-            btn.textContent = '🎓 重新获取反馈';
-        } else {
-            toast('审稿反馈获取失败: ' + (d.detail || ''), 'warning');
-            btn.textContent = '🎓 模拟审稿人反馈';
-        }
-    } catch(e) {
-        toast('请求失败', 'error');
-        btn.textContent = '🎓 模拟审稿人反馈';
-    } finally {
-        hideAiLoading();
-        btn.disabled = false;
-    }
 }
 
 // === Workspace ===
@@ -2603,7 +2564,7 @@ function showAiLoading(message) {
         <div style="width:20px;height:20px;border:3px solid #e2e8f0;border-top-color:#6366f1;border-radius:50%;animation:aispin 0.8s linear infinite;flex-shrink:0;"></div>
         <div style="min-width:0;">
             <p id="ai-loading-msg" style="margin:0;font-size:14px;font-weight:600;color:#1e293b;">${esc(message||'AI 处理中…')}</p>
-            <p style="margin:3px 0 0;font-size:11px;color:#94a3b8;">后台处理中，可继续浏览和编辑…</p>
+            <p style="margin:3px 0 0;font-size:11px;color:#94a3b8;">后台处理中...</p>
         </div>
     </div>`;
     document.body.appendChild(el);

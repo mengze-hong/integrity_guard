@@ -74,7 +74,12 @@ def _iter_report_files():
     yield from JOBS_DIR.glob("*.json")
 
 
-def list_jobs(limit: int = 50) -> list[dict]:
+def list_jobs(
+    limit: int = 50,
+    owner_type: str | None = None,
+    owner_id: str | None = None,
+    include_legacy: bool = True,
+) -> list[dict]:
     """List recent jobs (id, filename, timestamp, score, passed, gate_count)."""
     _ensure_dir()
     jobs = []
@@ -82,6 +87,15 @@ def list_jobs(limit: int = 50) -> list[dict]:
         report = _read_report_file(f)
         if not report:
             continue
+        if owner_type and owner_id:
+            metadata = report.metadata or {}
+            report_owner_type = metadata.get("owner_type")
+            report_owner_id = metadata.get("owner_id")
+            if report_owner_type and report_owner_id:
+                if report_owner_type != owner_type or str(report_owner_id) != str(owner_id):
+                    continue
+            elif not include_legacy:
+                continue
         jobs.append({
             "job_id": report.job_id,
             "filename": report.filename,
