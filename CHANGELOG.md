@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.50 (2026-05-29) — CI Secret Scan Coverage
+- 新增 `scripts/secret-scan.mjs`，CI secret scan 改为复用本地无依赖脚本，并排除脚本自身、workflow 与 changelog，避免规则文本自检误报
+- Secret scan 扩展覆盖内部 LLM endpoint/key、Bearer key、Cloudflare token/key、JWT/admin credential、payment provider key 与 private key block
+- Release checklist 改为可执行的 `npm run scan:secrets` 本地检查命令，TODO 同步记录 CI secret scan 覆盖范围
+- 本地验证通过：`npm run scan:secrets`、`npm run check:js`、`python -m pytest -q`
+
 ## v5.3.49 (2026-05-29) — CI Syntax Check Script
 - 新增 `scripts/check-inline-js.mjs`，把 GitHub Actions 里 inline `<script>` 语法解析抽成本地可复用 Node 脚本
 - CI 前端语法检查改为执行脚本，并新增 no-Cloudflare policy scan，排除 workflow 自身与本地数据/上传/截图目录避免自检误报

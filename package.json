@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "check:js": "node scripts/check-inline-js.mjs"
+    "check:js": "node scripts/check-inline-js.mjs",
+    "scan:secrets": "node scripts/secret-scan.mjs"
   },
   "dependencies": {
     "pptxgenjs": "^4.0.1"
