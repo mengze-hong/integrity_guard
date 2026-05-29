@@ -1,4 +1,4 @@
-# IntegrityGuard - 产品开发 TODO
+# ScholarLint · 投稿通 - 产品开发 TODO
 
 > 目标：打造一款让人眼前一亮的学术论文提交前质检 SaaS 产品
 > 核心原则：宁可错杀不能放过（严格检查）、false positive 可接受、rule-based + LLM-based 结合
@@ -101,6 +101,7 @@
 - [x] PDF 导出（打开打印窗口，浏览器另存为 PDF）
 - [x] 检查证书（通过后生成 Certificate，可打印为 PDF）
 - [x] 时间线视图（多次检查的分数变化趋势）
+- [x] Markdown 导出报告后端品牌 header/footer（报告 ID、报告类型、官网、免责声明）
 - [ ] 对比视图（前后两次检查的 diff）
 
 ---

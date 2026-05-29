@@ -1,5 +1,10 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.57 (2026-05-30) — Branded Markdown Export Header
+- 后端 Markdown 导出报告新增统一品牌 header/footer，包含报告 ID、检查时间、导出时间、报告类型、官网与免责声明
+- 分享链接导出会标记为「导师只读分享版」，作者工作区导出标记为「作者工作区版」，保留原有 gate 详情正文
+- 新增导出 API 回归测试覆盖作者与分享两条路径，确认报告不再出现旧品牌名
+
 ## v5.3.56 (2026-05-30) — Frontend Brand Unification
 - 导出 Markdown 报告标题、证书页脚与独立报告页标题统一使用 `ScholarLint · 投稿通` 对外品牌
 - Crossref、Semantic Scholar/OpenAlex 相关对外 HTTP User-Agent 去除旧 `IntegrityAssurance/0.1` 标识，改用 `ScholarLint/5.3` 风格
