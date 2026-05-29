@@ -99,6 +99,23 @@ async def _llm_chat_post(client, messages, max_tokens, temperature=None):
     return resp
 
 
+def _detect_lang(*texts: str) -> str:
+    """Roughly detect whether the given text is mainly Chinese or English.
+
+    Returns "zh" if CJK characters make up a meaningful share, else "en".
+    Used so AI fixes inserted into the paper match the paper's language.
+    """
+    sample = " ".join(t for t in texts if t)
+    if not sample:
+        return "en"
+    cjk = sum(1 for ch in sample if "\u4e00" <= ch <= "\u9fff")
+    latin = sum(1 for ch in sample if ch.isascii() and ch.isalpha())
+    # Even a modest amount of CJK means the paper is Chinese-language.
+    if cjk >= 8 or (cjk > 0 and cjk * 4 >= latin):
+        return "zh"
+    return "en"
+
+
 # ─── Upload & Check ───────────────────────────────────────────
 
 @router.post("/upload")
@@ -669,15 +686,33 @@ async def ai_fix_suggestion(job_id: str, request: Request):
             else:
                 context = "\n".join(lines[:20])
 
-    # Call LLM
+    # Call LLM — output language must match the paper's own language
+    lang = _detect_lang(context, issue_message)
+    if lang == "zh":
+        sys_prompt = (
+            "你是一个 LaTeX 学术论文修复助手。这篇论文是中文写的，"
+            "请用中文给出修复后的 LaTeX 代码片段。只输出可直接粘贴使用的代码，不要解释。"
+        )
+        user_prompt = f"问题: {issue_message}\n\n相关代码:\n```latex\n{context}\n```\n\n请给出修复后的代码:"
+    else:
+        sys_prompt = (
+            "You are a LaTeX academic writing assistant. The paper is written in ENGLISH, "
+            "so your fix MUST be in English — never insert Chinese text. "
+            "Return only the corrected LaTeX snippet, ready to paste, with no explanation."
+        )
+        user_prompt = (
+            f"Issue: {issue_message}\n\nRelevant code:\n```latex\n{context}\n```\n\n"
+            "Provide the corrected LaTeX code:"
+        )
+
     import httpx
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await _llm_chat_post(
                 client,
                 [
-                    {"role": "system", "content": "你是一个 LaTeX 学术论文修复助手。根据检测到的问题和上下文代码，给出具体的修复建议。只输出修复后的代码片段，不要解释。"},
-                    {"role": "user", "content": f"问题: {issue_message}\n\n相关代码:\n```latex\n{context}\n```\n\n请给出修复后的代码:"},
+                    {"role": "system", "content": sys_prompt},
+                    {"role": "user", "content": user_prompt},
                 ],
                 max_tokens=500,
                 temperature=0.3,
@@ -739,12 +774,29 @@ async def ai_batch_fix(job_id: str, request: Request):
             end = min(len(lines), item["line"] + 4)
             context = "\n".join(lines[start:end])
 
+            lang = _detect_lang(context, item["message"])
+            if lang == "zh":
+                sys_prompt = (
+                    "你是 LaTeX 学术论文修复助手。这篇论文是中文写的，请用中文给出修复后的"
+                    "代码片段。只输出可直接粘贴的代码，不要解释。"
+                )
+                user_prompt = f"问题: {item['message']}\n建议: {item['suggestion']}\n\n代码:\n```latex\n{context}\n```\n\n修复后:"
+            else:
+                sys_prompt = (
+                    "You are a LaTeX academic writing assistant. The paper is written in ENGLISH, "
+                    "so your fix MUST be in English — never insert Chinese text. "
+                    "Return only the corrected LaTeX snippet, no explanation."
+                )
+                user_prompt = (
+                    f"Issue: {item['message']}\nHint: {item['suggestion']}\n\n"
+                    f"Code:\n```latex\n{context}\n```\n\nFixed:"
+                )
             try:
                 resp = await _llm_chat_post(
                     client,
                     [
-                        {"role": "system", "content": "你是 LaTeX 学术论文修复助手。根据问题和上下文，给出修复后的代码片段。只输出修复后的代码，不要解释。"},
-                        {"role": "user", "content": f"问题: {item['message']}\n建议: {item['suggestion']}\n\n代码:\n```latex\n{context}\n```\n\n修复后:"},
+                        {"role": "system", "content": sys_prompt},
+                        {"role": "user", "content": user_prompt},
                     ],
                     max_tokens=400,
                     temperature=0.2,

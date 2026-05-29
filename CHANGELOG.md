@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.2.2 (2026-05-29) — AI 修复跟随论文语言
+- 修复 AI 修复建议（`/ai-fix`、`/ai-batch-fix`）对英文论文输出中文的问题
+- 新增 `_detect_lang()` 语言检测（按上下文 CJK 占比判定 zh/en）
+- 英文论文 → 强制英文修复（明确禁止插入中文）；中文论文 → 中文修复
+- 实测：英文 figure 未引用问题现在返回正确的英文 `\ref` + figure 块
+
 ## v5.2.1 (2026-05-29) — 默认模型切换 gpt-5.2
 - 默认模型由 `gpt-5.5` 改为 `gpt-5.2`：更快（1.6–2.5s vs ~2.3s+）、成本更低
 - gpt-5.2 非推理模型，原生支持 `temperature`，实测 V2 key + SGP endpoint 可用
