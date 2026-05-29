@@ -2,11 +2,13 @@
 
 import secrets
 import uuid
+import zipfile
+from io import BytesIO
 from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, UploadFile, File, BackgroundTasks, HTTPException, Request, Response
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, StreamingResponse
 
 from app.config import settings, LLM_RATE_PER_IP, LLM_RATE_WINDOW, LLM_GLOBAL_HOURLY_CAP
 from app.secrets_manager import redact
@@ -824,6 +826,37 @@ async def export_report(job_id: str, request: Request, response: Response):
     lines.append("")
 
     return PlainTextResponse("\n".join(lines), media_type="text/plain; charset=utf-8")
+
+
+@router.get("/download/{job_id}")
+async def download_project_zip(job_id: str, request: Request, response: Response):
+    """Download the current edited project as a ZIP archive."""
+    report = await _require_job_access(job_id, request, response)
+    if job_id not in _job_dirs:
+        _get_report(job_id)
+    project_dir = _job_dirs.get(job_id)
+    if not project_dir or not project_dir.exists():
+        raise HTTPException(status_code=404, detail="Project files not found")
+
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for path in sorted(project_dir.rglob("*")):
+            if not path.is_file():
+                continue
+            try:
+                path.resolve().relative_to(project_dir.resolve())
+            except ValueError:
+                continue
+            zf.write(path, path.relative_to(project_dir).as_posix())
+    buffer.seek(0)
+
+    stem = Path(report.filename if report else job_id).stem
+    filename = f"{stem or job_id}-scholarlint.zip"
+    return StreamingResponse(
+        buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 # ─── Bib Cleaning Tools ──────────────────────────────────────

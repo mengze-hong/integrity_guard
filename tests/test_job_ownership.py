@@ -142,6 +142,18 @@ def test_file_tree_lists_editable_latex_support_files(ownership_app, tmp_path):
     assert "custom.sty" in paths
 
 
+def test_download_project_zip_allows_share_read_only(ownership_app, tmp_path):
+    owner = TestClient(ownership_app)
+    upload = _upload(owner, tmp_path)
+
+    shared = TestClient(ownership_app)
+    response = shared.get(f"/api/download/{upload['job_id']}?share={upload['share_token']}")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/zip"
+    assert response.content.startswith(b"PK")
+
+
 def test_history_only_lists_current_owner_jobs(ownership_app, tmp_path):
     first = TestClient(ownership_app)
     first_upload = _upload(first, tmp_path)

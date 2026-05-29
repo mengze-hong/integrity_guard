@@ -531,6 +531,8 @@
                 <button onclick="showVenueChecklist()" class="toolbar-btn">📝 复现清单</button>
                 <span style="width:1px; height:20px; background:#e2e8f0; margin:0 4px;"></span>
                 <button onclick="doRecheck()" id="recheck-btn" class="toolbar-btn-primary" title="重新运行质检 (Ctrl+Shift+R)">重新质检</button>
+                <button onclick="copyShareLink()" class="toolbar-btn" title="复制导师只读分享链接">🔗 分享</button>
+                <button onclick="downloadProjectZip()" class="toolbar-btn" title="下载当前修复后的 ZIP">⬇️ 下载 ZIP</button>
                 <button onclick="exportReport()" class="toolbar-btn">📄 导出</button>
                 <button onclick="document.getElementById('shortcuts-modal').classList.remove('hidden')" class="toolbar-btn" style="padding:4px 6px;" title="快捷键帮助 (?)">⌨️</button>
             </div>
@@ -718,7 +720,7 @@
 
 <script>
 // === State ===
-let jobId=null, report=null, editor=null, currentFile=null, saveTimer=null, dismissCtx=null, uploadedFile=null;
+let jobId=null, shareToken=null, report=null, editor=null, currentFile=null, saveTimer=null, dismissCtx=null, uploadedFile=null;
 let textMarkers = [];
 let openTabs = [];  // list of open file paths
 let issueFilter = 'all';  // 'all' | 'error' | 'warning' | 'dismissed'
@@ -742,10 +744,13 @@ const GATE_INFO = {
 function persistState(view) {
     try {
         if (!jobId) return;
-        const url = `${window.location.pathname}?job=${encodeURIComponent(jobId)}&view=${view}`;
+        const share = shareToken ? `&share=${encodeURIComponent(shareToken)}` : '';
+        const url = `${window.location.pathname}?job=${encodeURIComponent(jobId)}&view=${view}${share}`;
         history.replaceState({jobId, view}, '', url);
-        localStorage.setItem('sl_lastJob', jobId);
-        localStorage.setItem('sl_lastView', view);
+        if (!shareToken) {
+            localStorage.setItem('sl_lastJob', jobId);
+            localStorage.setItem('sl_lastView', view);
+        }
     } catch(e) {}
 }
 function clearPersistedState() {
@@ -776,8 +781,14 @@ function resetWorkspaceState() {
     }
 }
 
+function apiUrl(path) {
+    if (!shareToken) return path;
+    const sep = path.includes('?') ? '&' : '?';
+    return `${path}${sep}share=${encodeURIComponent(shareToken)}`;
+}
+
 function fileApiUrl(path) {
-    return `/api/files/${jobId}/${String(path).split('/').map(encodeURIComponent).join('/')}`;
+    return apiUrl(`/api/files/${jobId}/${String(path).split('/').map(encodeURIComponent).join('/')}`);
 }
 
 function showScreen(id) {
@@ -896,6 +907,7 @@ document.getElementById('upload-form').addEventListener('submit', async e => {
 
     if (jobId !== uploadResult.job_id) resetWorkspaceState();
     jobId = uploadResult.job_id;
+    shareToken = uploadResult.share_token || null;
     btn.textContent = '🔍 正在检查...';
     if (progressBar) progressBar.style.width = '30%';
     if (progressText) progressText.textContent = '开始质检...';
@@ -916,7 +928,7 @@ async function waitForResult() {
 
     return new Promise(resolve => {
         const iv = setInterval(async () => {
-            const r = await fetch(`/api/status/${jobId}`);
+            const r = await fetch(apiUrl(`/api/status/${jobId}`));
             const d = await r.json();
             // Update progress display (30-100% range, upload was 0-30%)
             if (d.progress && d.progress.length > 0) {
@@ -945,9 +957,10 @@ async function waitForResult() {
 }
 async function loadReport() {
     try {
-        const r = await fetch(`/api/report/${jobId}`);
+        const r = await fetch(apiUrl(`/api/report/${jobId}`));
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         report = await r.json();
+        shareToken = shareToken || report?.metadata?.share_token || null;
     } catch(e) {
         toast('加载报告失败: ' + e.message, 'error', 5000);
         report = null;
@@ -1207,7 +1220,7 @@ function enterWorkspace() {
 }
 
 async function loadFileTree() {
-    const r = await fetch(`/api/files/${jobId}`); const {files} = await r.json();
+    const r = await fetch(apiUrl(`/api/files/${jobId}`)); const {files} = await r.json();
 
     // Group files by their containing folder so the real directory
     // structure (e.g. floats/, sections/) is visible.
@@ -1642,7 +1655,7 @@ async function gotoIssueFromOverview(gateName, idx) {
     enterWorkspace();
     try {
         if (issue.file) {
-            const r = await fetch(`/api/files/${jobId}`);
+            const r = await fetch(apiUrl(`/api/files/${jobId}`));
             const {files} = await r.json();
             const want = issue.file.split('/').pop();
             const match = files.find(f => f.path.split('/').pop() === want);
@@ -2457,7 +2470,7 @@ async function doBibClean() {
 
 // === Export ===
 async function exportReport() {
-    const r = await fetch(`/api/export/${jobId}`); const text = await r.text();
+    const r = await fetch(apiUrl(`/api/export/${jobId}`)); const text = await r.text();
     // Download as .md file
     const blob = new Blob([text], {type:'text/markdown;charset=utf-8'});
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
@@ -2475,10 +2488,17 @@ async function deleteCurrentJob() {
 }
 
 function copyShareLink() {
-    const url = `${window.location.origin}/?job=${jobId}`;
+    const token = shareToken || report?.metadata?.share_token || '';
+    const share = token ? `&share=${encodeURIComponent(token)}` : '';
+    const url = `${window.location.origin}/?job=${encodeURIComponent(jobId)}&view=overview${share}`;
     navigator.clipboard.writeText(url).then(() => {
-        toast('🔗 分享链接已复制！发给导师即可查看结果。', 'success', 3000);
+        toast(token ? '🔗 只读分享链接已复制' : '🔗 分享链接已复制', 'success', 3000);
     });
+}
+
+function downloadProjectZip() {
+    if (!jobId) return;
+    window.open(apiUrl(`/api/download/${jobId}`), '_blank', 'noopener');
 }
 
 async function aiFixIssue(message, file, line, gate) {
@@ -3085,6 +3105,7 @@ loadHistory();
     const urlParams = new URLSearchParams(window.location.search);
     let restoreJob = urlParams.get('job');
     let restoreView = urlParams.get('view');
+    shareToken = urlParams.get('share') || null;
     if (!restoreJob) {
         try {
             restoreJob = localStorage.getItem('sl_lastJob');
