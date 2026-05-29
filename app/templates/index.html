@@ -2182,34 +2182,61 @@ async function doBatchFix() {
     }
 }
 
-function applyBatchFix(index) {
-    const fix = window._batchFixes?.[index];
-    if (!fix || !editor) return;
-    // Find and replace the original text in the editor
-    const content = editor.getValue();
-    if (content.includes(fix.original)) {
-        editor.setValue(content.replace(fix.original, fix.fixed));
-        toast(`✅ 已应用修复 #${index+1}`, 'success', 1500);
+// Apply a single fix to its target file (the editor if open, else via API).
+// Handles CRLF/LF differences, markdown fences, and cross-file fixes.
+async function applyOneFix(fix) {
+    if (!fix) return false;
+    const original = normEol(fix.original);
+    const fixed = stripFences(normEol(fix.fixed));
+    if (!original) return false;
+    const targetFile = fix.file || currentFile;
+    if (!targetFile) return false;
+
+    const viaEditor = (targetFile === currentFile && editor);
+    let content;
+    if (viaEditor) {
+        content = normEol(editor.getValue());
     } else {
-        toast('无法定位原文，可能已被修改', 'warning');
+        try {
+            const r = await fetch(`/api/files/${jobId}/${targetFile}`);
+            content = normEol((await r.json()).content);
+        } catch (e) { return false; }
+    }
+
+    if (!content.includes(original)) return false;
+    // Use a replacer function so '$' sequences in LaTeX aren't treated specially.
+    const updated = content.replace(original, () => fixed);
+
+    if (viaEditor) editor.setValue(updated);
+    try {
+        await fetch(`/api/files/${jobId}/${targetFile}`, {method: 'PUT', body: updated});
+    } catch (e) { return false; }
+    return true;
+}
+
+async function applyBatchFix(index) {
+    const fix = window._batchFixes?.[index];
+    if (!fix) return;
+    const ok = await applyOneFix(fix);
+    if (ok) {
+        toast(`✅ 已应用修复 #${index+1}`, 'success', 1500);
+        if (typeof loadFileTree === 'function') loadFileTree();
+    } else {
+        toast('无法定位原文（可能已修改，或在其它文件中）', 'warning', 3000);
     }
 }
 
-function applyAllBatchFixes() {
-    if (!window._batchFixes || !editor) return;
-    let content = editor.getValue();
+async function applyAllBatchFixes() {
+    if (!window._batchFixes) return;
     let applied = 0;
     for (const fix of window._batchFixes) {
-        if (content.includes(fix.original)) {
-            content = content.replace(fix.original, fix.fixed);
-            applied++;
-        }
+        if (await applyOneFix(fix)) applied++;
     }
     if (applied > 0) {
-        editor.setValue(content);
-        toast(`✅ 已应用 ${applied} 个修复`, 'success', 3000);
+        toast(`✅ 已应用 ${applied}/${window._batchFixes.length} 个修复`, 'success', 3000);
+        if (typeof loadFileTree === 'function') loadFileTree();
     } else {
-        toast('无法匹配原文', 'warning');
+        toast('无法匹配原文（原文可能已被修改）', 'warning', 3000);
     }
 }
 
@@ -2322,6 +2349,7 @@ async function aiFixIssue(message, file, line) {
 
 function applyAiFix(lineNum, fixedCode) {
     if (!editor) return;
+    fixedCode = stripFences(fixedCode);
     if (lineNum > 0) {
         // Replace the line and a few surrounding lines with the fix
         const startLine = Math.max(0, lineNum - 2);
@@ -2430,6 +2458,8 @@ function latexHint(cm) {
 }
 
 function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function normEol(s){return (s||'').replace(/\r\n?/g,'\n');}
+function stripFences(s){let t=(s||'').trim();if(t.startsWith('```')){t=t.replace(/^```[^\n]*\n/,'').replace(/\n?```\s*$/,'');}return t;}
 function linkify(s){return esc(s).replace(/(https?:\/\/[^\s&<]+)/g,function(url){try{const u=new URL(url);if(u.protocol==='http:'||u.protocol==='https:')return'<a href="'+u.href+'" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline hover:text-blue-800">'+u.href+'</a>';} catch(e){}return url;}).replace(/\n/g,'<br>');}
 
 function toast(message, type='info', duration=4000) {

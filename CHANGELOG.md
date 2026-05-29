@@ -1,5 +1,13 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.2.3 (2026-05-29) — AI 修复"无法匹配原文"修复
+修复 AI 批量/单条修复应用失败的多个叠加 bug：
+- **行尾符**：Windows 文件为 CRLF，编辑器为 LF，导致 `includes()` 永远匹配不到原文 → 应用前统一规范化为 LF
+- **markdown 围栏**：AI 返回的 ```latex ... ``` 会被插进 `.tex` → 前后端都剥离围栏（新增后端 `_strip_code_fence()` + 前端 `stripFences()`）
+- **跨文件**：编辑器只持有当前文件，修复若针对其它文件则匹配失败 → 按 `fix.file` 自动读取/写回目标文件
+- **`$` 转义**：用替换函数应用修复，避免 LaTeX 数学环境的 `$` 被 `String.replace` 当成特殊序列
+- 应用成功后刷新文件树状态
+
 ## v5.2.2 (2026-05-29) — AI 修复跟随论文语言
 - 修复 AI 修复建议（`/ai-fix`、`/ai-batch-fix`）对英文论文输出中文的问题
 - 新增 `_detect_lang()` 语言检测（按上下文 CJK 占比判定 zh/en）

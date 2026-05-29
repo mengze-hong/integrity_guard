@@ -99,6 +99,22 @@ async def _llm_chat_post(client, messages, max_tokens, temperature=None):
     return resp
 
 
+def _strip_code_fence(text: str) -> str:
+    """Remove a wrapping markdown code fence (```lang ... ```), if present.
+
+    LLMs often wrap code in fences; inserting those into a .tex file breaks it.
+    """
+    t = (text or "").strip()
+    if t.startswith("```"):
+        lines = t.split("\n")
+        if lines and lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip().startswith("```"):
+            lines = lines[:-1]
+        t = "\n".join(lines).strip()
+    return t
+
+
 def _detect_lang(*texts: str) -> str:
     """Roughly detect whether the given text is mainly Chinese or English.
 
@@ -719,7 +735,7 @@ async def ai_fix_suggestion(job_id: str, request: Request):
             )
             if resp.status_code == 200:
                 data = resp.json()
-                suggestion = data["choices"][0]["message"]["content"].strip()
+                suggestion = _strip_code_fence(data["choices"][0]["message"]["content"])
                 return {"status": "ok", "suggestion": suggestion}
             else:
                 return {"status": "error", "detail": f"LLM API returned {resp.status_code}"}
@@ -803,7 +819,7 @@ async def ai_batch_fix(job_id: str, request: Request):
                 )
                 if resp.status_code == 200:
                     data = resp.json()
-                    fix_text = data["choices"][0]["message"]["content"].strip()
+                    fix_text = _strip_code_fence(data["choices"][0]["message"]["content"])
                     fixes.append({
                         "file": item["file"],
                         "line": item["line"],
