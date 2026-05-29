@@ -582,14 +582,16 @@ async def list_files(job_id: str, request: Request, response: Response):
     if not project_dir or not project_dir.exists():
         raise HTTPException(status_code=404, detail="Project not found")
 
+    editable_extensions = (".tex", ".bib", ".cls", ".sty", ".bst", ".txt", ".md")
     files = []
     for f in sorted(project_dir.rglob("*")):
-        if f.is_file() and f.suffix.lower() in (".tex", ".bib"):
+        if f.is_file() and f.suffix.lower() in editable_extensions:
             rel = f.relative_to(project_dir)
+            suffix = f.suffix.lower().lstrip(".")
             files.append({
                 "path": str(rel).replace("\\", "/"),
                 "name": f.name,
-                "type": "tex" if f.suffix == ".tex" else "bib",
+                "type": suffix or "text",
                 "size": f.stat().st_size,
             })
     return {"files": files}

@@ -37,6 +37,7 @@ def ownership_app(tmp_path, monkeypatch):
         project_dir = extract_dir / "paper"
         project_dir.mkdir(parents=True, exist_ok=True)
         (project_dir / "main.tex").write_text("\\documentclass{article}\n", encoding="utf-8")
+        (project_dir / "custom.sty").write_text("\\ProvidesPackage{custom}\n", encoding="utf-8")
 
         report = FullReport(
             job_id=job_id,
@@ -127,6 +128,18 @@ def test_share_token_is_read_only(ownership_app, tmp_path):
 
     response = shared.put(f"/api/files/{job_id}/main.tex?share={share}", content="changed")
     assert response.status_code == 403
+
+
+def test_file_tree_lists_editable_latex_support_files(ownership_app, tmp_path):
+    client = TestClient(ownership_app)
+    upload = _upload(client, tmp_path)
+
+    response = client.get(f"/api/files/{upload['job_id']}")
+
+    assert response.status_code == 200
+    paths = {f["path"] for f in response.json()["files"]}
+    assert "main.tex" in paths
+    assert "custom.sty" in paths
 
 
 def test_history_only_lists_current_owner_jobs(ownership_app, tmp_path):

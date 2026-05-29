@@ -756,6 +756,30 @@ function clearPersistedState() {
     } catch(e) {}
 }
 
+function resetWorkspaceState() {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    currentFile = null;
+    openTabs = [];
+    textMarkers.forEach(m => m.clear?.());
+    textMarkers = [];
+    _issueNavIndex = -1;
+    const tabs = document.getElementById('editor-tabs');
+    if (tabs) tabs.innerHTML = '';
+    const tree = document.getElementById('file-tree');
+    if (tree) tree.innerHTML = '';
+    const issues = document.getElementById('issues-list');
+    if (issues) issues.innerHTML = '';
+    if (editor) {
+        editor.setValue('');
+        editor.clearHistory();
+    }
+}
+
+function fileApiUrl(path) {
+    return `/api/files/${jobId}/${String(path).split('/').map(encodeURIComponent).join('/')}`;
+}
+
 function showScreen(id) {
     ['screen-upload','screen-overview','screen-workspace'].forEach(s => {
         document.getElementById(s).classList.add('hidden');
@@ -870,6 +894,7 @@ document.getElementById('upload-form').addEventListener('submit', async e => {
         return;
     }
 
+    if (jobId !== uploadResult.job_id) resetWorkspaceState();
     jobId = uploadResult.job_id;
     btn.textContent = '🔍 正在检查...';
     if (progressBar) progressBar.style.width = '30%';
@@ -1297,11 +1322,20 @@ function issueMatchesFile(issue, path) {
 }
 
 async function openFile(path) {
-    // Show loading state — temporarily disable auto-save
     const prevFile = currentFile;
+    if (prevFile && saveTimer) {
+        await flushAutoSave(prevFile);
+    }
+    // Show loading state — temporarily disable auto-save
     currentFile = null;  // prevent auto-save during loading
     if (editor) editor.setValue('// Loading...');
-    const r = await fetch(`/api/files/${jobId}/${path}`); const d = await r.json();
+    const r = await fetch(fileApiUrl(path));
+    if (!r.ok) {
+        currentFile = prevFile;
+        toast('打开文件失败', 'error');
+        return;
+    }
+    const d = await r.json();
     currentFile = path;
     editor.setValue(d.content);
     editor.clearHistory();  // don't let user undo back to "Loading..."
@@ -1723,13 +1757,28 @@ function completeSubmission() {
 }
 
 // === Auto-save ===
-async function autoSave() {
-    if (!currentFile||!jobId) return;
+async function autoSave(file = currentFile, content = editor?.getValue()) {
+    if (!file||!jobId) return false;
     const dot = document.getElementById('save-dot');
     dot.className = 'w-2 h-2 rounded-full bg-amber-400';
-    await fetch(`/api/files/${jobId}/${currentFile}`, {method:'PUT', body:editor.getValue()});
-    dot.className = 'w-2 h-2 rounded-full bg-green-400';
-    setTimeout(()=>dot.className='w-2 h-2 rounded-full',1500);
+    try {
+        const r = await fetch(fileApiUrl(file), {method:'PUT', body:content || ''});
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        dot.className = 'w-2 h-2 rounded-full bg-green-400';
+        setTimeout(()=>dot.className='w-2 h-2 rounded-full',1500);
+        return true;
+    } catch(e) {
+        dot.className = 'w-2 h-2 rounded-full bg-red-500';
+        toast('保存失败，请检查网络后重试', 'error', 3000);
+        return false;
+    }
+}
+
+async function flushAutoSave(file = currentFile) {
+    if (!file || !editor) return true;
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    return await autoSave(file, editor.getValue());
 }
 
 // === Recheck ===
@@ -1884,29 +1933,28 @@ async function searchReferenceCandidates(gateName, issueIndex) {
             toast(d.detail || '未找到可信候选，请手动在官方数据库检索', 'warning', 4000);
             return;
         }
-        const rows = d.candidates.map(c => `<div style="border:1px solid #e2e8f0; border-radius:10px; padding:10px; margin-bottom:8px;">
+        const rows = d.candidates.map(c => {
+            const url = safeUrl(c.url);
+            return `<div style="border:1px solid #e2e8f0; border-radius:10px; padding:10px; margin-bottom:8px;">
             <div style="display:flex; justify-content:space-between; gap:8px;">
                 <p style="font-size:13px; font-weight:700; color:#0f172a; margin:0;">${esc(c.title || '(untitled)')}</p>
                 <span style="font-size:10px; color:#475569; background:#f1f5f9; border-radius:999px; padding:2px 7px; height:fit-content;">${esc(c.source)}</span>
             </div>
             <p style="font-size:11px; color:#64748b; margin:5px 0 0;">${esc((c.authors || []).join(', '))}${c.year ? ' · ' + esc(String(c.year)) : ''}</p>
             ${c.doi ? `<p style="font-size:11px; color:#2563eb; margin:5px 0 0;">DOI: ${esc(c.doi)}</p>` : ''}
-            ${c.url ? `<a href="${esc(c.url)}" target="_blank" rel="noopener" style="font-size:11px; color:#2563eb;">打开来源</a>` : ''}
+            ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener" style="font-size:11px; color:#2563eb;">打开来源</a>` : ''}
             <div style="margin-top:8px; display:flex; gap:6px;">
                 ${c.doi ? `<button onclick="fetchOfficialBib('${esc(c.doi)}')" style="font-size:11px; padding:4px 8px; border-radius:6px; border:1px solid #bfdbfe; background:#eff6ff; color:#1d4ed8;">获取官方 Bib</button>` : ''}
                 <button data-candidate="${esc(encodeURIComponent(JSON.stringify(c)))}" onclick="copyCandidateInfo(this)" style="font-size:11px; padding:4px 8px; border-radius:6px; border:1px solid #e2e8f0; background:#fff; color:#475569;">复制候选 JSON</button>
             </div>
-        </div>`).join('');
-        const modal = document.createElement('div');
-        modal.className = 'modal-bg';
-        modal.onclick = e => { if(e.target===modal) modal.remove(); };
-        modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:22px; max-width:760px; width:90%; max-height:80vh; overflow-y:auto;">
+        </div>`;
+        }).join('');
+        showModal(`
             <h3 style="font-size:16px; font-weight:700; margin:0 0 6px;">真实文献候选</h3>
             <p style="font-size:12px; color:#64748b; margin:0 0 12px;">只展示 Crossref / Semantic Scholar / OpenAlex 返回的候选；请人工核对作者、标题、年份、DOI 后再替换。</p>
             ${rows}
             <button onclick="this.closest('.modal-bg').remove()" style="margin-top:8px; width:100%; padding:9px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:13px; color:#64748b;">关闭</button>
-        </div>`;
-        document.body.appendChild(modal);
+        `, {maxWidth:'760px'});
     } catch(e) {
         toast('候选检索失败: ' + e.message, 'error');
     } finally {
@@ -2314,7 +2362,8 @@ async function applyOneFix(fix) {
         content = normEol(editor.getValue());
     } else {
         try {
-            const r = await fetch(`/api/files/${jobId}/${targetFile}`);
+            const r = await fetch(fileApiUrl(targetFile));
+            if (!r.ok) return false;
             content = normEol((await r.json()).content);
         } catch (e) { return false; }
     }
@@ -2325,7 +2374,8 @@ async function applyOneFix(fix) {
 
     if (viaEditor) editor.setValue(updated);
     try {
-        await fetch(`/api/files/${jobId}/${targetFile}`, {method: 'PUT', body: updated});
+        const r = await fetch(fileApiUrl(targetFile), {method: 'PUT', body: updated});
+        if (!r.ok) return false;
     } catch (e) { return false; }
     return true;
 }
@@ -2614,6 +2664,29 @@ function latexHint(cm) {
 }
 
 function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function safeUrl(url){
+    const raw = String(url || '').trim();
+    if (!raw) return '';
+    try {
+        const u = new URL(raw, window.location.origin);
+        if (!['http:', 'https:', 'mailto:'].includes(u.protocol)) return '';
+        return u.href;
+    } catch { return ''; }
+}
+function showModal(html, {maxWidth='700px'} = {}) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-bg';
+    modal.onclick = e => { if(e.target===modal) modal.remove(); };
+    modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:24px; max-width:${maxWidth}; width:90%; max-height:80vh; overflow-y:auto;">${html}</div>`;
+    document.body.appendChild(modal);
+    return modal;
+}
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        const modals = document.querySelectorAll('.modal-bg');
+        modals[modals.length - 1]?.remove();
+    }
+});
 function normEol(s){return (s||'').replace(/\r\n?/g,'\n');}
 function stripFences(s){let t=(s||'').trim();if(t.startsWith('```')){t=t.replace(/^```[^\n]*\n/,'').replace(/\n?```\s*$/,'');}return t;}
 function linkify(s){return esc(s).replace(/(https?:\/\/[^\s&<]+)/g,function(url){try{const u=new URL(url);if(u.protocol==='http:'||u.protocol==='https:')return'<a href="'+u.href+'" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline hover:text-blue-800">'+u.href+'</a>';} catch(e){}return url;}).replace(/\n/g,'<br>');}
@@ -2743,6 +2816,7 @@ async function deleteJobInModal(id) {
 }
 
 async function resumeJob(id) {
+    if (jobId !== id) resetWorkspaceState();
     jobId = id;
     // Show overview with skeleton loading state
     showScreen('screen-overview');
@@ -3018,6 +3092,7 @@ loadHistory();
         } catch(e) {}
     }
     if (!restoreJob) return;
+    if (jobId !== restoreJob) resetWorkspaceState();
     jobId = restoreJob;
     loadReport().then(() => {
         if (report) {

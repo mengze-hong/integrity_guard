@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.18 (2026-05-29) — 前端弹窗与文件树体验加固
+- 新增前端 `showModal()`、`safeUrl()` 和 ESC 关闭顶层弹窗能力，减少重复 modal 代码并避免不安全 URL 直接进入链接
+- 真实文献候选弹窗改用统一 modal helper，候选来源 URL 经过协议白名单过滤，仅允许 http/https/mailto
+- 文件列表 API 与保存 API 对齐，文件树现在会列出 `.cls/.sty/.bst/.txt/.md` 等可编辑 LaTeX 支撑文件，不再只能看到 `.tex/.bib`
+- 新增文件树回归测试，确认 `.sty` 等支持文件会展示在编辑器文件列表中
+
 ## v5.3.17 (2026-05-29) — Job 状态持久化与并发保护
 - 上传/重新质检中的 job 增加内存锁，阻止同一 job 重复触发并发 recheck，避免多个后台任务同时写同一目录和报告
 - 后台检查失败时生成并持久化 failed report，保存脱敏错误摘要、owner/share metadata 和 `status=failed`，服务重启后可恢复失败状态
