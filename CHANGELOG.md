@@ -1,5 +1,10 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.30 (2026-05-29) — 安全响应头与兼容 CSP
+- 新增 FastAPI security headers middleware，所有响应默认带 `X-Content-Type-Options: nosniff`、`X-Frame-Options: DENY`、`Referrer-Policy` 和基础 `Permissions-Policy`
+- 新增兼容当前单页应用的 Content-Security-Policy：限制 `object-src`、`base-uri`、`frame-ancestors`、`form-action`，同时允许现有 Tailwind/CodeMirror CDN 与 inline 脚本样式
+- 增加安全响应头回归测试，确认首页响应包含 CSP、anti-clickjacking 与 nosniff 保护
+
 ## v5.3.29 (2026-05-29) — 文件树与 Tab 事件委托
 - 文件树项和编辑器 tab 移除 inline `onclick`，改为 `data-action` / `data-path` + 全局 click 事件委托
 - tab 关闭按钮改为 `data-action="close-tab"`，继续阻止事件冒泡，行为保持一致
