@@ -92,7 +92,8 @@ class WritingQualityGate(BaseGate):
         for tex_file in paper.tex_files:
             if not tex_file.is_main and not tex_file.raw_text.strip():
                 continue
-            text = tex_file.raw_text
+            raw_text = tex_file.raw_text
+            text = self._text_layer(raw_text)
             lines = text.split("\n")
 
             # === AI Trace Detection ===
@@ -176,9 +177,9 @@ class WritingQualityGate(BaseGate):
 
             # === Anonymization Check ===
             # Check for [final] mode in ACL/EMNLP templates (should be [review] for double-blind)
-            final_match = re.search(r"\\usepackage\[final\]\{(acl|emnlp|naacl|eacl|coling)\}", text)
+            final_match = re.search(r"\\usepackage\[final\]\{(acl|emnlp|naacl|eacl|coling)\}", raw_text)
             if final_match:
-                line_num = text[:final_match.start()].count("\n") + 1
+                line_num = raw_text[:final_match.start()].count("\n") + 1
                 issues.append(Issue(
                     severity=Severity.WARNING,
                     message="投稿模式为 [final]，double-blind 应使用 [review]",
@@ -190,17 +191,17 @@ class WritingQualityGate(BaseGate):
                 ))
 
             # Check \author{} content (only warn if [final] mode detected)
-            author_match = re.search(r"\\author\{(.+?)\}", text, re.DOTALL)
+            author_match = re.search(r"\\author\{(.+?)\}", raw_text, re.DOTALL)
             author_content = ""
             if author_match:
                 author_content = author_match.group(1).strip()
 
             # Check for PDF metadata leaking author info (\hypersetup, \pdfinfo)
-            hypersetup = re.search(r"\\hypersetup\{(.*?)\}", text, re.DOTALL)
+            hypersetup = re.search(r"\\hypersetup\{(.*?)\}", raw_text, re.DOTALL)
             if hypersetup:
                 hs_content = hypersetup.group(1)
                 if re.search(r"pdfauthor\s*=", hs_content, re.IGNORECASE):
-                    line_num = text[:hypersetup.start()].count("\n") + 1
+                    line_num = raw_text[:hypersetup.start()].count("\n") + 1
                     issues.append(Issue(
                         severity=Severity.WARNING,
                         message="\\hypersetup 中包含 pdfauthor（PDF metadata 泄露作者）",
@@ -240,7 +241,7 @@ class WritingQualityGate(BaseGate):
                         author_surnames.append(words[-1])
 
                 # Search for surnames in body (after \begin{document})
-                body_start = text.find("\\begin{document}")
+                body_start = raw_text.find("\\begin{document}")
                 if body_start > 0 and author_surnames:
                     body_text = text[body_start:]
                     found_names = []
@@ -297,7 +298,7 @@ class WritingQualityGate(BaseGate):
             }
             found_latex_typos = []
             for wrong, right in latex_typos.items():
-                if wrong in text:
+                if wrong in raw_text:
                     found_latex_typos.append(f"{wrong} → {right}")
 
             if found_latex_typos:
@@ -537,6 +538,46 @@ class WritingQualityGate(BaseGate):
             summary=f"写作检查: {error_count} 个错误, {warn_count} 个警告 (Grade {grade})",
             metadata={"grade": grade, "error_count": error_count, "warning_count": warn_count, "tips": tips},
         )
+
+    @staticmethod
+    def _text_layer(raw_text: str) -> str:
+        """Return approximate prose text while preserving line count.
+
+        Writing-quality heuristics should not fire on comments, bibliography,
+        code/listings, or LaTeX command names. This lightweight layer keeps
+        line numbers broadly stable by replacing removed content with blanks.
+        """
+        lines = []
+        in_ignored_env = False
+        ignored_envs = ("bibliography", "thebibliography", "verbatim", "lstlisting", "minted")
+
+        for line in raw_text.split("\n"):
+            stripped = line.strip()
+            if any(re.search(rf"\\begin\{{{env}\}}", stripped) for env in ignored_envs):
+                in_ignored_env = True
+                lines.append("")
+                continue
+            if in_ignored_env:
+                if any(re.search(rf"\\end\{{{env}\}}", stripped) for env in ignored_envs):
+                    in_ignored_env = False
+                lines.append("")
+                continue
+
+            # Remove unescaped comments.
+            no_comment = ""
+            i = 0
+            while i < len(line):
+                if line[i] == "%" and (i == 0 or line[i - 1] != "\\"):
+                    break
+                no_comment += line[i]
+                i += 1
+
+            # Keep command arguments but drop command names/options.
+            no_command = re.sub(r"\\[a-zA-Z]+\*?(?:\s*\[[^\]]*\])?", " ", no_comment)
+            no_command = re.sub(r"[{}$\\]", " ", no_command)
+            lines.append(no_command)
+
+        return "\n".join(lines)
 
     @staticmethod
     def _extract_paragraphs(text: str) -> list[dict]:

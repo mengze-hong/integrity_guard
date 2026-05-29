@@ -145,6 +145,32 @@ async def test_writing_quality_detects_ai_markers():
 
 
 @pytest.mark.asyncio
+async def test_writing_quality_ignores_comments_and_bibliography():
+    """AI markers in comments/bibliography should not trigger writing errors."""
+    tex = TexFile(
+        path=Path("test.tex"),
+        is_main=True,
+        raw_text=(
+            "\\documentclass{article}\n"
+            "\\begin{document}\n"
+            "% As an AI language model, I cannot help you.\n"
+            "This is normal prose.\n"
+            "\\begin{thebibliography}{1}\n"
+            "\\bibitem{x} As an AI language model, I cannot help you.\n"
+            "\\end{thebibliography}\n"
+            "\\end{document}"
+        ),
+        citations=[],
+    )
+    paper = ParsedPaper(project_dir=FIXTURES, tex_files=[tex], bib_entries=[], all_files=[], figure_files=[])
+
+    result = await WritingQualityGate().check(paper)
+
+    error_messages = [i.message for i in result.issues if i.severity == Severity.ERROR]
+    assert not any("prompt" in m.lower() or "ai" in m.lower() for m in error_messages)
+
+
+@pytest.mark.asyncio
 async def test_writing_quality_detects_final_mode():
     """Test that Gate 6 detects [final] mode in ACL template."""
     tex = TexFile(

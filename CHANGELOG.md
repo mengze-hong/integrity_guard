@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.26 (2026-05-29) — 写作质量检查正文层降噪
+- WritingQualityGate 新增 lightweight text layer，写作启发式分析会排除 LaTeX comments、bibliography/thebibliography、verbatim、lstlisting、minted 等非正文区域
+- AI 痕迹、套话、段落重复、拼写等文本启发式改为基于正文层运行，减少注释、参考文献或代码块触发误报
+- `[final]` 模式、author、hypersetup、LaTeX 命令拼写等结构性检查仍基于原始 LaTeX，避免漏掉模板/命令问题
+- 新增回归测试，确认注释和 bibliography 中的 AI marker 不会触发写作质量 error
+
 ## v5.3.25 (2026-05-29) — 引文验证缓存与临时故障降级
 - ReferenceAuthenticityGate 增加 DOI 和标题搜索的进程内轻量缓存，避免同一批检查反复请求 Crossref / DataCite / Semantic Scholar / OpenAlex
 - DOI 解析区分“确实未找到”和“外部 provider 超时/429/5xx 暂不可用”；后者降级为 warning `verification_unavailable`，不再把网络波动误判为 fake reference
