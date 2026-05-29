@@ -813,6 +813,19 @@ function jsArg(value) {
     return JSON.stringify(String(value ?? ''));
 }
 
+document.addEventListener('click', event => {
+    const el = event.target.closest('[data-action]');
+    if (!el) return;
+    const action = el.dataset.action;
+    const path = el.dataset.path;
+    if (action === 'open-file' && path) {
+        openFile(path);
+    } else if (action === 'close-tab' && path) {
+        event.stopPropagation();
+        closeTab(path);
+    }
+});
+
 function showScreen(id) {
     ['screen-upload','screen-overview','screen-workspace'].forEach(s => {
         document.getElementById(s).classList.add('hidden');
@@ -1297,7 +1310,7 @@ function renderFileItem(f, indented) {
         }
     }
     const badge = errCount > 0 ? `<span style="background:#ef4444;color:#fff;font-size:10px;padding:1px 5px;border-radius:8px;font-weight:600;">${errCount}</span>` : '';
-    return `<div class="file-item" data-path="${esc(f.path)}" onclick="openFile(${jsArg(f.path)})"${indentStyle}>
+    return `<div class="file-item" data-action="open-file" data-path="${esc(f.path)}"${indentStyle}>
         <span class="file-icon">${icon}</span>
         <span class="file-name">${f.name}</span>
         ${badge}
@@ -1388,9 +1401,9 @@ function renderTabs() {
     container.innerHTML = openTabs.map(path => {
         const name = path.split('/').pop();
         const active = path === currentFile ? 'active' : '';
-        return `<div class="editor-tab ${active}" onclick="openFile(${jsArg(path)})">
+        return `<div class="editor-tab ${active}" data-action="open-file" data-path="${esc(path)}">
             <span>${esc(name)}</span>
-            <span class="tab-close" onclick="event.stopPropagation();closeTab(${jsArg(path)})">✕</span>
+            <span class="tab-close" data-action="close-tab" data-path="${esc(path)}">✕</span>
         </div>`;
     }).join('');
 }

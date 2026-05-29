@@ -1,5 +1,10 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.29 (2026-05-29) — 文件树与 Tab 事件委托
+- 文件树项和编辑器 tab 移除 inline `onclick`，改为 `data-action` / `data-path` + 全局 click 事件委托
+- tab 关闭按钮改为 `data-action="close-tab"`，继续阻止事件冒泡，行为保持一致
+- 进一步缩小用户上传文件路径进入 JavaScript handler 的范围，为后续逐步移除剩余 inline event 打基础
+
 ## v5.3.28 (2026-05-29) — AI Guardrails 服务模块抽取
 - 新增 `app/services/ai_guardrails.py`，集中管理 reference authenticity 判定、not-fixable payload、AI provenance、reference title 提取和候选元数据转换
 - `app/api/routes.py` 删除对应 helper 定义并改为引用服务模块，减少路由文件职责，保持现有 API 和测试导入兼容
