@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.44 (2026-05-29) — 更多 AI 端点迁移
+- `POST /api/ai-review/{job_id}`、`/api/ai-polish/{job_id}`、`/api/ai-abstract/{job_id}` 已迁入 `app/api/ai_routes.py`
+- 新增轻量 helper 复用主 `.tex` 提取与 project directory 查找逻辑，减少 AI 路由重复代码
+- 旧 `routes.py` 不再注册上述 AI 路径，避免重复路由和后续维护分叉
+- 本地验证通过：全量 pytest 58 项
+
 ## v5.3.43 (2026-05-29) — AI 路由拆分起步
 - 新增 `app/api/ai_routes.py`，开始把 AI 专属 API 从旧的全量 `routes.py` 拆出
 - `POST /api/ai-diagnosis/{job_id}` 已迁入新路由模块，外部 API 路径保持兼容
