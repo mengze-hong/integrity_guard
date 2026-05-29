@@ -479,10 +479,13 @@
             <!-- Progress nodes -->
             <div class="flex items-center justify-center gap-0 mb-8 px-4" id="overview-nodes"></div>
 
-            <!-- Score -->
-            <div class="text-center mb-8">
-                <span class="text-5xl font-black" id="overview-score">0</span><span class="text-xl text-slate-400">/100</span>
-                <p class="text-sm mt-2" id="overview-status-text"></p>
+            <!-- Score + quick stats (one row) -->
+            <div class="flex items-center justify-center gap-8 mb-8 flex-wrap">
+                <div class="text-center">
+                    <div><span class="text-5xl font-black" id="overview-score">0</span><span class="text-xl text-slate-400">/100</span></div>
+                    <p class="text-sm mt-2" id="overview-status-text"></p>
+                </div>
+                <div id="overview-stats" class="flex gap-6 text-sm"></div>
             </div>
 
             <!-- Gate summary cards -->
@@ -979,18 +982,17 @@ function showOverview() {
     });
     document.getElementById('overview-nodes').innerHTML = nodesHtml;
 
-    // Quick stats summary
+    // Quick stats summary (rendered next to the score, not on its own row)
     const totalErrors = gates.reduce((s,g) => s + g.issues.filter(i=>i.severity==='error').length, 0);
     const totalWarnings = gates.reduce((s,g) => s + g.issues.filter(i=>i.severity==='warning').length, 0);
     const refGate = gates.find(g=>g.gate_name==='reference_authenticity');
     const bibCount = refGate?.metadata?.verified_entries?.length || 0;
     const wordCount = report.metadata?.word_count || 0;
-    const statsHtml = `<div class="flex justify-center gap-6 mb-6 text-sm">
+    document.getElementById('overview-stats').innerHTML = `
         <div class="text-center"><span class="text-2xl font-bold text-red-600">${totalErrors}</span><p class="text-xs text-slate-400">错误</p></div>
         <div class="text-center"><span class="text-2xl font-bold text-amber-500">${totalWarnings}</span><p class="text-xs text-slate-400">警告</p></div>
         <div class="text-center"><span class="text-2xl font-bold text-blue-600">${bibCount}</span><p class="text-xs text-slate-400">引文</p></div>
-        <div class="text-center"><span class="text-2xl font-bold text-slate-600">${wordCount>1000?(wordCount/1000).toFixed(1)+'k':wordCount}</span><p class="text-xs text-slate-400">词数</p></div>
-    </div>`;
+        <div class="text-center"><span class="text-2xl font-bold text-slate-600">${wordCount>1000?(wordCount/1000).toFixed(1)+'k':wordCount}</span><p class="text-xs text-slate-400">词数</p></div>`;
 
     // Gate cards
     let cardsHtml = '';
@@ -1060,7 +1062,7 @@ function showOverview() {
 
         cardsHtml += `</div>`;
     });
-    document.getElementById('overview-gates').innerHTML = statsHtml +
+    document.getElementById('overview-gates').innerHTML =
         `<div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; align-items:stretch;">${cardsHtml}</div>`;
 
     // Submission verdict
