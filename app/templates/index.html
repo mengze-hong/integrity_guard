@@ -1279,11 +1279,24 @@ function getFileStatus(path) {
 }
 
 function issueMatchesFile(issue, path) {
-    if (issue.file===path) return true;
-    if (path.endsWith('.bib') && issue.location?.startsWith('bib:')) return true;
-    if (path.endsWith('.tex') && issue.location && !issue.location.startsWith('bib:')) return true;
     const fname = path.split('/').pop();
-    if (issue.location?.includes(fname)) return true;
+    // 1. Explicit file attribution wins (gates set issue.file = filename).
+    //    Compare by basename so floats/x.tex matches issue.file "x.tex".
+    if (issue.file) {
+        return issue.file.split('/').pop() === fname;
+    }
+    // 2. bib-scoped issues (location like "bib:key") belong to .bib files.
+    if (issue.location && issue.location.startsWith('bib:')) {
+        return path.endsWith('.bib');
+    }
+    // 3. Fall back to a filename appearing in the location string
+    //    (e.g. "main.tex:42" or "a.tex, b.tex"). Do NOT blanket-match all
+    //    .tex files — that's what wrongly flagged every file.
+    if (issue.location) {
+        const tokens = issue.location.split(/[\s,:]+/);
+        if (tokens.some(t => t === fname)) return true;
+    }
+    // 4. Otherwise it's a global / cross-file issue, not tied to this file.
     return false;
 }
 
@@ -2140,10 +2153,11 @@ async function executeTidyUp(btn) {
     });
     const d = await r.json();
     modal.remove();
-    toast(`🗂️ 整理完成！执行了 ${d.count} 项改动`, 'success', 4000);
-    // Reload file tree and current file
+    toast(`🗂️ 整理完成！执行了 ${d.count} 项改动，正在重新质检...`, 'success', 3000);
+    // Reload file tree and current file, then auto re-run the quality check
     loadFileTree();
-    if (currentFile) openFile(currentFile);
+    if (currentFile) await openFile(currentFile);
+    await doRecheck();
 }
 
 // === AI Batch Fix ===
