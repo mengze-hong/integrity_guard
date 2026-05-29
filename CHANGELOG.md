@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.2.13 (2026-05-29) — 总览精简：去趋势/对比/评分，卡片对齐
+- **移除分数趋势**（📈 分数趋势）区块与 `loadScoreTrend()` 调用
+- **移除"较上次: X 分"对比**（`loadComparison()` 不再调用）
+- **移除字母评分徽章**（A/B/C/D），分数区只保留 `xx/100` 与状态文案
+- **6 个 gate 卡片对齐**：总览卡片网格由自适应 + 顶部对齐改为固定两列 + 等高对齐（`repeat(2,minmax(0,1fr))` + `align-items:stretch`），不再参差不齐
+
 ## v5.2.12 (2026-05-29) — 投稿清单改为 Reproducibility Checklist
 - **ARR/NeurIPS → Reproducibility Checklist**：将原会议清单（ACL ARR / NeurIPS 二选一）替换为统一的「复现性清单」，更聚焦论文可复现性
 - **后端**：用 `REPRODUCIBILITY_CHECKLIST`（15 项，分 Code & Models / Datasets / Experimental Results / Theoretical Claims 四类）替换 `ARR_CHECKLIST`、`NEURIPS_CHECKLIST`；`/api/venue-checklist` 不再需要 venue 参数，system prompt 改为复现性助手并更新示例

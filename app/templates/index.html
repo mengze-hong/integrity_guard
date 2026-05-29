@@ -482,17 +482,7 @@
             <!-- Score -->
             <div class="text-center mb-8">
                 <span class="text-5xl font-black" id="overview-score">0</span><span class="text-xl text-slate-400">/100</span>
-                <span id="overview-grade" style="display:inline-block; margin-left:12px; padding:4px 12px; border-radius:8px; font-size:16px; font-weight:800; vertical-align:middle;"></span>
                 <p class="text-sm mt-2" id="overview-status-text"></p>
-            </div>
-
-            <!-- Score Trend (shown if multiple checks for same file) -->
-            <div id="score-trend" class="mb-6 hidden">
-                <div class="bg-white border border-slate-200 rounded-lg p-4">
-                    <p class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">📈 分数趋势</p>
-                    <div id="trend-chart" class="flex items-end gap-1 h-16"></div>
-                    <div id="trend-labels" class="flex gap-1 mt-1"></div>
-                </div>
             </div>
 
             <!-- Gate summary cards -->
@@ -971,14 +961,7 @@ function showOverview() {
     }
     animateScore();
 
-    // Show letter grade
-    const score = report.overall_score;
-    const gradeEl = document.getElementById('overview-grade');
-    const grade = score >= 90 ? 'A' : score >= 75 ? 'B' : score >= 60 ? 'C' : 'D';
-    const gradeColors = {A:'background:#dcfce7;color:#166534;',B:'background:#eff6ff;color:#1e40af;',C:'background:#fef3c7;color:#92400e;',D:'background:#fef2f2;color:#991b1b;'};
-    gradeEl.textContent = grade;
-    gradeEl.style.cssText = `display:inline-block; margin-left:12px; padding:4px 12px; border-radius:8px; font-size:16px; font-weight:800; vertical-align:middle; ${gradeColors[grade]}`;
-
+    // Status summary
     const gates = report.gate_results;
     const passCount = gates.filter(g=>g.passed).length;
 
@@ -1078,7 +1061,7 @@ function showOverview() {
         cardsHtml += `</div>`;
     });
     document.getElementById('overview-gates').innerHTML = statsHtml +
-        `<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:12px; align-items:start;">${cardsHtml}</div>`;
+        `<div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; align-items:stretch;">${cardsHtml}</div>`;
 
     // Submission verdict
     const verdictEl = document.getElementById('overview-verdict');
@@ -1094,9 +1077,6 @@ function showOverview() {
         verdictEl.innerHTML = `<strong>尚未准备好。</strong> 发现 ${errTotal} 个错误，建议进入工作台逐一修复后再提交。`;
     }
 
-    // Load score trend
-    loadScoreTrend();
-    loadComparison();
 }
 
 async function loadScoreTrend() {
