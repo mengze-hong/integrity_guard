@@ -73,6 +73,10 @@
 - [x] **撤销重做**（CodeMirror 自带，已确认工作）
 - [x] **多文件 tab**（点击文件打开新 tab，可关闭）
 - [x] **LaTeX 语法补全**（输入 \ 后自动弹出常用命令列表）
+- [x] **前端本地草稿与保存重试**
+  - [x] 按文件维护 dirty / saving / error / pendingContent 状态
+  - [x] 编辑时按 job + path 写入 localStorage 草稿，保存失败保留未同步内容
+  - [x] Tab 显示未保存/保存失败指示，并提供当前文件“重试保存”入口
 
 ---
 

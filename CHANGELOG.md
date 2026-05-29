@@ -1,5 +1,10 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.58 (2026-05-30) — Frontend Draft Save Retry
+- 编辑器按文件维护 dirty / saving / error / pendingContent 状态，tab 会显示未保存或保存失败指示
+- 编辑变更会按 job ID 与文件路径写入 localStorage 草稿，auto-save 成功后清除草稿，失败后保留未同步内容并显示明确 toast
+- 打开文件时若发现本地草稿与服务端内容不同，会优先恢复草稿并提示用户，可通过顶部“重试保存”重新同步当前文件
+
 ## v5.3.57 (2026-05-30) — Branded Markdown Export Header
 - 后端 Markdown 导出报告新增统一品牌 header/footer，包含报告 ID、检查时间、导出时间、报告类型、官网与免责声明
 - 分享链接导出会标记为「导师只读分享版」，作者工作区导出标记为「作者工作区版」，保留原有 gate 详情正文

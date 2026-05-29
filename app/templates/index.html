@@ -96,6 +96,15 @@
         .editor-tab.active { color:#1e40af; border-bottom-color:#3b82f6; font-weight:600; background:#fff; }
         .editor-tab .tab-close { font-size:10px; opacity:0.5; padding:2px; border-radius:3px; }
         .editor-tab .tab-close:hover { opacity:1; background:#fee2e2; color:#ef4444; }
+        .editor-tab .tab-indicator { font-size:13px; line-height:1; margin-left:2px; }
+        .editor-tab .tab-indicator.dirty { color:#f59e0b; }
+        .editor-tab .tab-indicator.error { color:#ef4444; }
+        .save-retry {
+            border:none; background:#fee2e2; color:#b91c1c; border-radius:999px;
+            padding:2px 8px; font-size:11px; font-weight:600; cursor:pointer;
+        }
+        .save-retry:hover { background:#fecaca; }
+        .save-retry.hidden { display:none; }
         #editor-container { flex:1; position:relative; overflow:hidden; }
 
         /* CodeMirror overrides */
@@ -531,6 +540,7 @@
                 <span class="text-xs text-slate-400" id="ws-filename"></span>
                 <span id="ws-stats" class="text-xs px-2 py-0.5 rounded-full font-medium"></span>
                 <span class="w-2 h-2 rounded-full" id="save-dot"></span>
+                <button id="retry-save-btn" onclick="retrySave()" class="save-retry hidden" title="重试保存当前未同步草稿">重试保存</button>
             </div>
             <div class="flex items-center gap-1.5" style="overflow-x:auto; flex-shrink:0;">
                 <button onclick="doBibClean()" class="toolbar-btn">📋 整理 Bib</button>
@@ -715,7 +725,7 @@
 <div id="context-menu" style="display:none; position:fixed; z-index:150; background:#fff; border:1px solid #e2e8f0; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.12); padding:4px 0; min-width:180px;">
     <div class="ctx-item" onclick="jumpToNextIssue(); hideContextMenu()">下一个问题 <span style="color:#94a3b8; float:right;">F8</span></div>
     <div class="ctx-item" onclick="doRecheck(); hideContextMenu()">重新质检 <span style="color:#94a3b8; float:right;">⌘⇧R</span></div>
-    <div class="ctx-item" onclick="autoSave(); toast('已保存','success',1500); hideContextMenu()">保存 <span style="color:#94a3b8; float:right;">⌘S</span></div>
+    <div class="ctx-item" onclick="saveCurrentFile(); hideContextMenu()">保存 <span style="color:#94a3b8; float:right;">⌘S</span></div>
     <div style="height:1px; background:#e2e8f0; margin:4px 0;"></div>
     <div class="ctx-item" id="ctx-polish" style="display:none;" onclick="doPolishSelection(); hideContextMenu()">润色选中文本</div>
     <div class="ctx-item" id="ctx-concise" style="display:none;" onclick="doPolishSelection('concise'); hideContextMenu()">精简选中文本</div>
@@ -745,6 +755,7 @@
 let jobId=null, shareToken=null, report=null, editor=null, currentFile=null, saveTimer=null, dismissCtx=null, uploadedFile=null;
 let textMarkers = [];
 let openTabs = [];  // list of open file paths
+let fileSaveStates = {};  // path -> {dirty, saving, error, pendingContent}
 let fileTreeFiles = [];
 let fileTreeSearch = '';
 let issueFilter = 'all';  // 'all' | 'error' | 'warning' | 'dismissed'
@@ -752,6 +763,8 @@ let issueSearchQuery = '';  // text search in issues
 let editorDark = localStorage.getItem('editorTheme') === 'dark';
 let currentUser = null;  // logged-in user object
 let authMode = 'login';  // 'login' | 'register'
+let hydratingEditor = false;
+let localDraftErrorShown = false;
 
 const GATE_INFO = {
     'structure_integrity':      { name:'文件结构', icon:'📂' },
@@ -790,6 +803,7 @@ function resetWorkspaceState() {
     saveTimer = null;
     currentFile = null;
     openTabs = [];
+    fileSaveStates = {};
     textMarkers.forEach(m => m.clear?.());
     textMarkers = [];
     _issueNavIndex = -1;
@@ -799,6 +813,7 @@ function resetWorkspaceState() {
     if (tree) tree.innerHTML = '';
     const issues = document.getElementById('issues-list');
     if (issues) issues.innerHTML = '';
+    updateSaveIndicator();
     if (editor) {
         editor.setValue('');
         editor.clearHistory();
@@ -831,6 +846,128 @@ async function apiFetch(path, options = {}) {
 
 function fileApiUrl(path) {
     return apiUrl(`/api/files/${jobId}/${String(path).split('/').map(encodeURIComponent).join('/')}`);
+}
+
+function newFileSaveState(baseHash = null) {
+    return {dirty:false, saving:false, error:false, pendingContent:null, savingContent:null, baseHash};
+}
+
+function getFileSaveState(path) {
+    if (!path) return newFileSaveState();
+    return fileSaveStates[path] ||= newFileSaveState();
+}
+
+function draftStorageKey(path) {
+    return `sl_draft:${jobId || 'unknown'}:${String(path)}`;
+}
+
+function contentHash(value) {
+    const text = String(value ?? '');
+    let hash = 2166136261;
+    for (let i = 0; i < text.length; i++) {
+        hash ^= text.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+    }
+    return (hash >>> 0).toString(16);
+}
+
+function getLocalDraft(path) {
+    if (!jobId || !path) return null;
+    try {
+        const raw = localStorage.getItem(draftStorageKey(path));
+        if (raw === null) return null;
+        try {
+            const draft = JSON.parse(raw);
+            if (draft && typeof draft === 'object' && typeof draft.content === 'string') {
+                return {
+                    content: draft.content,
+                    baseHash: typeof draft.baseHash === 'string' ? draft.baseHash : null,
+                    updatedAt: typeof draft.updatedAt === 'number' ? draft.updatedAt : null,
+                };
+            }
+        } catch(e) {}
+        return {content: raw, baseHash: null, updatedAt: null};
+    }
+    catch(e) { return null; }
+}
+
+function setLocalDraft(path, content) {
+    if (!jobId || !path) return;
+    const state = getFileSaveState(path);
+    const draft = {
+        content: content ?? '',
+        baseHash: state.baseHash || null,
+        updatedAt: Date.now(),
+    };
+    try { localStorage.setItem(draftStorageKey(path), JSON.stringify(draft)); }
+    catch(e) {
+        if (!localDraftErrorShown) {
+            localDraftErrorShown = true;
+            toast('本地草稿保存失败，浏览器存储可能已满', 'error', 4000);
+        }
+    }
+}
+
+function clearLocalDraft(path) {
+    if (!jobId || !path) return;
+    try { localStorage.removeItem(draftStorageKey(path)); }
+    catch(e) {}
+}
+
+function resetFileSaveState(path, baseHash = null) {
+    if (!path) return;
+    fileSaveStates[path] = newFileSaveState(baseHash);
+}
+
+function markFileDirty(path, content) {
+    if (!path) return;
+    const state = getFileSaveState(path);
+    state.dirty = true;
+    state.pendingContent = content ?? '';
+    setLocalDraft(path, state.pendingContent);
+    renderTabs();
+    updateSaveIndicator();
+}
+
+function markFileSaved(path, savedContent = null) {
+    if (!path) return;
+    const state = getFileSaveState(path);
+    state.dirty = false;
+    state.saving = false;
+    state.error = false;
+    state.pendingContent = null;
+    state.savingContent = null;
+    if (savedContent !== null) state.baseHash = contentHash(savedContent);
+    clearLocalDraft(path);
+    renderTabs();
+    updateSaveIndicator();
+}
+
+function markFileSaveError(path, content, options = {}) {
+    if (!path) return;
+    const state = getFileSaveState(path);
+    state.dirty = true;
+    if (!options.keepSaving) state.saving = false;
+    state.error = true;
+    state.pendingContent = content ?? '';
+    if (!options.keepSaving) state.savingContent = null;
+    setLocalDraft(path, state.pendingContent);
+    renderTabs();
+    updateSaveIndicator();
+}
+
+function updateSaveIndicator() {
+    const dot = document.getElementById('save-dot');
+    const retry = document.getElementById('retry-save-btn');
+    if (!dot) return;
+    dot.className = 'w-2 h-2 rounded-full';
+    if (retry) retry.classList.add('hidden');
+    if (!currentFile) return;
+    const state = getFileSaveState(currentFile);
+    if (state.saving) dot.className += ' bg-amber-400';
+    else if (state.error) dot.className += ' bg-red-500';
+    else if (state.dirty) dot.className += ' bg-amber-400';
+    if (retry && state.error) retry.classList.remove('hidden');
 }
 
 document.addEventListener('click', event => {
@@ -1242,7 +1379,13 @@ function enterWorkspace() {
             document.getElementById('editor-pos').textContent = `Ln ${p.line+1}/${total}, Col ${p.ch+1}`;
         });
         editor.on('change', (cm, change) => {
-            if (currentFile) { clearTimeout(saveTimer); saveTimer = setTimeout(autoSave, 800); }
+            if (currentFile && !hydratingEditor) {
+                const file = currentFile;
+                const content = cm.getValue();
+                markFileDirty(file, content);
+                clearTimeout(saveTimer);
+                saveTimer = setTimeout(() => autoSave(file, getFileSaveState(file).pendingContent ?? content), 800);
+            }
             // Trigger autocomplete after typing backslash
             if (change.origin === '+input' && change.text[0] === '\\') {
                 setTimeout(() => cm.showHint({hint: latexHint}), 50);
@@ -1253,8 +1396,8 @@ function enterWorkspace() {
         });
         // Keyboard shortcuts
         editor.setOption('extraKeys', {
-            'Ctrl-S': (cm) => { autoSave(); toast('已保存', 'success', 1500); },
-            'Cmd-S': (cm) => { autoSave(); toast('已保存', 'success', 1500); },
+            'Ctrl-S': () => saveCurrentFile(),
+            'Cmd-S': () => saveCurrentFile(),
             'Ctrl-Shift-R': () => doRecheck(),
             'Cmd-Shift-R': () => doRecheck(),
             'F8': () => jumpToNextIssue(),
@@ -1399,7 +1542,11 @@ async function openFile(path) {
     }
     // Show loading state — temporarily disable auto-save
     currentFile = null;  // prevent auto-save during loading
-    if (editor) editor.setValue('// Loading...');
+    if (editor) {
+        hydratingEditor = true;
+        editor.setValue('// Loading...');
+        hydratingEditor = false;
+    }
     const r = await apiFetch(`/api/files/${jobId}/${String(path).split('/').map(encodeURIComponent).join('/')}`).catch(e => {
         currentFile = prevFile;
         toast('打开文件失败: ' + e.message, 'error');
@@ -1407,13 +1554,38 @@ async function openFile(path) {
     });
     if (!r) return;
     const d = await r.json();
+    const serverContent = d.content ?? '';
+    const serverHash = contentHash(serverContent);
+    const draft = getLocalDraft(path);
+    const hasDifferentDraft = draft !== null && draft.content !== serverContent;
+    const canRestoreDraft = hasDifferentDraft && draft.baseHash === serverHash;
+    const content = canRestoreDraft ? draft.content : serverContent;
     currentFile = path;
-    editor.setValue(d.content);
+    hydratingEditor = true;
+    editor.setValue(content);
     editor.clearHistory();  // don't let user undo back to "Loading..."
+    hydratingEditor = false;
     editor.setOption('mode', path.endsWith('.bib') ? 'text/x-stex' : 'stex');
+    if (canRestoreDraft) {
+        const state = getFileSaveState(path);
+        state.dirty = true;
+        state.saving = false;
+        state.error = false;
+        state.pendingContent = draft.content;
+        state.baseHash = serverHash;
+        toast('已恢复未同步草稿，请重试保存', 'warning', 4000);
+    } else {
+        if (draft !== null && !hasDifferentDraft) {
+            clearLocalDraft(path);
+        } else if (hasDifferentDraft) {
+            toast('存在旧草稿，但服务端内容已变化，未自动恢复以避免覆盖', 'warning', 5000);
+        }
+        resetFileSaveState(path, serverHash);
+    }
     // Manage tabs
     if (!openTabs.includes(path)) openTabs.push(path);
     renderTabs();
+    updateSaveIndicator();
     document.querySelectorAll('.file-item').forEach(el => el.classList.toggle('active', el.dataset.path===path));
     setTimeout(() => { editor.refresh(); highlightErrors(); updateEditorStats(); }, 30);
     renderIssues(path);
@@ -1422,11 +1594,19 @@ async function openFile(path) {
 
 function renderTabs() {
     const container = document.getElementById('editor-tabs');
+    if (!container) return;
     container.innerHTML = openTabs.map(path => {
         const name = path.split('/').pop();
         const active = path === currentFile ? 'active' : '';
+        const state = getFileSaveState(path);
+        const indicator = state.error
+            ? '<span class="tab-indicator error" title="保存失败，本地草稿未同步">●</span>'
+            : state.dirty
+                ? '<span class="tab-indicator dirty" title="未保存更改">•</span>'
+                : '';
         return `<div class="editor-tab ${active}" data-action="open-file" data-path="${esc(path)}">
             <span>${esc(name)}</span>
+            ${indicator}
             <span class="tab-close" data-action="close-tab" data-path="${esc(path)}">✕</span>
         </div>`;
     }).join('');
@@ -1437,9 +1617,15 @@ function closeTab(path) {
     if (currentFile === path && openTabs.length > 0) {
         openFile(openTabs[openTabs.length - 1]);
     } else if (openTabs.length === 0) {
-        editor.setValue('');
+        clearTimeout(saveTimer);
+        saveTimer = null;
         currentFile = null;
+        hydratingEditor = true;
+        editor.setValue('');
+        editor.clearHistory();
+        hydratingEditor = false;
         renderTabs();
+        updateSaveIndicator();
     } else {
         renderTabs();
     }
@@ -1846,16 +2032,47 @@ function completeSubmission() {
 // === Auto-save ===
 async function autoSave(file = currentFile, content = editor?.getValue()) {
     if (!file||!jobId) return false;
+    const state = getFileSaveState(file);
+    const saveContent = content ?? '';
     const dot = document.getElementById('save-dot');
-    dot.className = 'w-2 h-2 rounded-full bg-amber-400';
+    state.saving = true;
+    state.savingContent = saveContent;
+    renderTabs();
+    updateSaveIndicator();
     try {
-        await apiFetch(`/api/files/${jobId}/${String(file).split('/').map(encodeURIComponent).join('/')}`, {method:'PUT', body:content || ''});
-        dot.className = 'w-2 h-2 rounded-full bg-green-400';
-        setTimeout(()=>dot.className='w-2 h-2 rounded-full',1500);
+        await apiFetch(`/api/files/${jobId}/${String(file).split('/').map(encodeURIComponent).join('/')}`, {method:'PUT', body:saveContent});
+        const latestState = getFileSaveState(file);
+        if (latestState.pendingContent === null || latestState.pendingContent === saveContent) {
+            markFileSaved(file, saveContent);
+            if (dot && currentFile === file) {
+                dot.className = 'w-2 h-2 rounded-full bg-green-400';
+                setTimeout(() => {
+                    if (currentFile === file && !getFileSaveState(file).dirty && !getFileSaveState(file).error) {
+                        updateSaveIndicator();
+                    }
+                }, 1500);
+            }
+        } else {
+            if (latestState.savingContent === saveContent) {
+                latestState.saving = false;
+                latestState.savingContent = null;
+            }
+            renderTabs();
+            updateSaveIndicator();
+        }
         return true;
     } catch(e) {
-        dot.className = 'w-2 h-2 rounded-full bg-red-500';
-        toast('保存失败，请检查网络后重试', 'error', 3000);
+        const latestState = getFileSaveState(file);
+        if (latestState.pendingContent === null && latestState.savingContent !== saveContent) {
+            renderTabs();
+            updateSaveIndicator();
+            return false;
+        }
+        const pending = latestState.pendingContent !== null && latestState.pendingContent !== saveContent
+            ? latestState.pendingContent
+            : saveContent;
+        markFileSaveError(file, pending, {keepSaving: latestState.savingContent !== saveContent});
+        toast('保存失败：未同步内容已保存在本地草稿，请点击“重试保存”', 'error', 5000);
         return false;
     }
 }
@@ -1864,7 +2081,30 @@ async function flushAutoSave(file = currentFile) {
     if (!file || !editor) return true;
     clearTimeout(saveTimer);
     saveTimer = null;
-    return await autoSave(file, editor.getValue());
+    const state = getFileSaveState(file);
+    const content = state.pendingContent ?? (file === currentFile ? editor.getValue() : '');
+    if (!state.dirty && state.pendingContent === null) return true;
+    return await autoSave(file, content);
+}
+
+async function retrySave() {
+    if (!currentFile) return false;
+    const state = getFileSaveState(currentFile);
+    const content = state.pendingContent ?? editor?.getValue() ?? '';
+    const ok = await autoSave(currentFile, content);
+    if (ok) toast('已保存', 'success', 1500);
+    return ok;
+}
+
+async function saveCurrentFile() {
+    if (!currentFile) return false;
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    const state = getFileSaveState(currentFile);
+    const content = state.pendingContent ?? editor?.getValue() ?? '';
+    const ok = await autoSave(currentFile, content);
+    if (ok) toast('已保存', 'success', 1500);
+    return ok;
 }
 
 // === Recheck ===
