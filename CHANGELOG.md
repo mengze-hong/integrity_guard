@@ -1,5 +1,9 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.53 (2026-05-30) — Parser Graphicspath Test Coverage
+- 新增 parser 回归测试，确认无扩展名 `\includegraphics{plot}` 与带 optional args 的路径会原样进入 `TexFile.graphics`，注释内图片命令会被忽略
+- 扩展 StructureGate 测试，覆盖 `\graphicspath` 下无扩展名图片匹配 `.png/.pdf/.jpg/.jpeg/.eps`、多目录解析和无支持后缀时的缺图 warning
+
 ## v5.3.52 (2026-05-29) — Upload API Integration Tests
 - 新增 `tests/test_upload_api.py`，用 FastAPI TestClient 挂载真实 upload router，并隔离上传目录与 job 存储到临时目录
 - 上传测试不 mock `_run_checks`，仅 stub `ReferenceAuthenticityGate.check`，避免访问 Crossref/Semantic Scholar/OpenAlex，同时覆盖真实解压、结构 gate 与报告持久化

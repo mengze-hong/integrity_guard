@@ -29,6 +29,26 @@ def _build_test_paper() -> ParsedPaper:
     )
 
 
+def _build_structure_paper(
+    project_dir: Path,
+    tex_file: TexFile,
+    figure_files: list[Path] | None = None,
+) -> ParsedPaper:
+    """Build a minimal ParsedPaper for StructureGate tests."""
+    bib_path = project_dir / "refs.bib"
+    if not bib_path.exists():
+        bib_path.write_text("@article{x,title={X}}", encoding="utf-8")
+
+    return ParsedPaper(
+        project_dir=project_dir,
+        tex_files=[tex_file],
+        bib_entries=[BibEntry(key="x", entry_type="article")],
+        bib_file_path=bib_path,
+        all_files=list(project_dir.rglob("*")),
+        figure_files=figure_files or [],
+    )
+
+
 @pytest.mark.asyncio
 async def test_citation_consistency_detects_undefined():
     """Test that Gate 3 catches undefined citation keys."""
@@ -85,17 +105,17 @@ async def test_structure_gate_warns_missing_graphics():
 
 
 @pytest.mark.asyncio
-async def test_structure_gate_supports_graphicspath_and_addbibresource(tmp_path):
-    """Structure gate should understand common graphicspath and biblatex syntax."""
+@pytest.mark.parametrize("extension", [".png", ".pdf", ".jpg", ".jpeg", ".eps"])
+async def test_structure_gate_resolves_extensionless_graphics_with_graphicspath(tmp_path, extension):
+    """Structure gate resolves extensionless graphics through graphicspath."""
     figures = tmp_path / "figures"
     figures.mkdir()
-    (figures / "plot.pdf").write_text("fake pdf", encoding="utf-8")
+    image_path = figures / f"plot{extension}"
+    image_path.write_text(f"fake image {extension}", encoding="utf-8")
     (tmp_path / "refs.bib").write_text("@article{x,title={X}}", encoding="utf-8")
     tex_path = tmp_path / "main.tex"
-    tex = TexFile(
-        path=tex_path,
-        is_main=True,
-        raw_text=r"""
+    tex_path.write_text(
+        r"""
 \documentclass{article}
 \graphicspath{{figures/}}
 \addbibresource{refs.bib}
@@ -103,22 +123,82 @@ async def test_structure_gate_supports_graphicspath_and_addbibresource(tmp_path)
 \includegraphics{plot}
 \end{document}
 """,
-        citations=[],
-        graphics=["plot"],
+        encoding="utf-8",
     )
-    paper = ParsedPaper(
-        project_dir=tmp_path,
-        tex_files=[tex],
-        bib_entries=[BibEntry(key="x", entry_type="article")],
-        bib_file_path=tmp_path / "refs.bib",
-        all_files=list(tmp_path.rglob("*")),
-        figure_files=[figures / "plot.pdf"],
-    )
+    tex = parse_tex_file(tex_path)
+    paper = _build_structure_paper(tmp_path, tex, figure_files=[image_path])
 
     result = await StructureGate().check(paper)
     messages = [issue.message for issue in result.issues]
     assert not any("图片文件不存在" in m for m in messages)
     assert not any("addbibresource" in m for m in messages)
+
+
+@pytest.mark.asyncio
+async def test_structure_gate_resolves_multiple_graphicspath_dirs(tmp_path):
+    """Multiple graphicspath directories can satisfy different graphics."""
+    figures = tmp_path / "figures"
+    plots = tmp_path / "plots"
+    figures.mkdir()
+    plots.mkdir()
+    plot_path = figures / "plot.png"
+    chart_path = plots / "chart.pdf"
+    plot_path.write_text("fake png", encoding="utf-8")
+    chart_path.write_text("fake pdf", encoding="utf-8")
+    tex_path = tmp_path / "main.tex"
+    tex_path.write_text(
+        r"""
+\documentclass{article}
+\graphicspath{{figures/}{plots/}}
+\begin{document}
+\includegraphics{plot}
+\includegraphics{chart}
+\end{document}
+""",
+        encoding="utf-8",
+    )
+    paper = _build_structure_paper(
+        tmp_path,
+        parse_tex_file(tex_path),
+        figure_files=[plot_path, chart_path],
+    )
+
+    result = await StructureGate().check(paper)
+
+    messages = [issue.message for issue in result.issues]
+    assert not any("图片文件不存在" in m for m in messages)
+
+
+@pytest.mark.asyncio
+async def test_structure_gate_warns_when_graphicspath_has_no_supported_suffix(tmp_path):
+    """Unsupported graphicspath image suffixes should still warn as missing."""
+    figures = tmp_path / "figures"
+    figures.mkdir()
+    unsupported_path = figures / "plot.svg"
+    unsupported_path.write_text("<svg></svg>", encoding="utf-8")
+    tex_path = tmp_path / "main.tex"
+    tex_path.write_text(
+        r"""
+\documentclass{article}
+\graphicspath{{figures/}}
+\begin{document}
+\includegraphics{plot}
+\end{document}
+""",
+        encoding="utf-8",
+    )
+    paper = _build_structure_paper(
+        tmp_path,
+        parse_tex_file(tex_path),
+        figure_files=[unsupported_path],
+    )
+
+    result = await StructureGate().check(paper)
+
+    warning_messages = [
+        issue.message for issue in result.issues if issue.severity == Severity.WARNING
+    ]
+    assert any("图片文件不存在" in m and "plot" in m for m in warning_messages)
 
 
 @pytest.mark.asyncio

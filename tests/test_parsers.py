@@ -110,6 +110,27 @@ def test_parse_tex_inputs_and_graphics():
     assert "figures/architecture.png" in tex.graphics
 
 
+def test_parse_tex_graphics_extensionless_paths_and_comments(tmp_path):
+    """Graphics parser should keep extensionless paths and ignore comments."""
+    tex_path = tmp_path / "main.tex"
+    tex_path.write_text(
+        r"""
+\documentclass{article}
+\begin{document}
+\includegraphics{plot}
+\includegraphics[width=0.8\textwidth]{figures/chart}
+% \includegraphics{ignored}
+\end{document}
+""",
+        encoding="utf-8",
+    )
+
+    tex = parse_tex_file(tex_path)
+
+    assert tex.graphics == ["plot", "figures/chart"]
+    assert "ignored" not in tex.graphics
+
+
 def test_parse_tex_sections():
     """Test section title extraction."""
     tex = parse_tex_file(FIXTURES / "sample_main.tex")

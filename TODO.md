@@ -65,6 +65,7 @@
 - [x] cite parser 支持常见 natbib/biblatex 命令与 optional args
 - [x] ref parser 支持 cleveref/autoref/subref/vref/range 基础命令
 - [x] cite/ref parser 继续补充 `smartcite/supercite/citeyearpar/citeposs` 与 `pageref/nameref/namecref/cpageref`
+- [x] parser/gate 测试覆盖无扩展名 `\includegraphics`、注释忽略与 `\graphicspath` 后缀解析
 
 ### 编辑器功能
 - [x] **鼠标滚动修复验证**（CodeMirror position:absolute + overflow-y:auto）
