@@ -13,6 +13,7 @@ Verifies that the uploaded project has a valid structure:
 
 import hashlib
 import re
+from collections import Counter
 from pathlib import Path
 
 from app.checks.base import BaseGate
@@ -197,6 +198,52 @@ class StructureGate(BaseGate):
                     suggestion="这些图片文件内容完全一样。如果用于不同的 figure，可能是 copy-paste 错误。",
                 ))
                 score -= 5
+
+        # Check 9: Unmatched \begin{} / \end{} environments
+        for tex_file in paper.tex_files:
+            text = tex_file.raw_text
+            # Strip comments
+            clean_lines = []
+            for line in text.split("\n"):
+                # Remove inline comments (but not \%)
+                idx = 0
+                while idx < len(line):
+                    if line[idx] == '%' and (idx == 0 or line[idx-1] != '\\'):
+                        line = line[:idx]
+                        break
+                    idx += 1
+                clean_lines.append(line)
+            clean = "\n".join(clean_lines)
+
+            begins = re.findall(r"\\begin\{(\w+)\}", clean)
+            ends = re.findall(r"\\end\{(\w+)\}", clean)
+
+            begin_counts = Counter(begins)
+            end_counts = Counter(ends)
+
+            for env, count in begin_counts.items():
+                end_count = end_counts.get(env, 0)
+                if count > end_count:
+                    issues.append(Issue(
+                        severity=Severity.ERROR,
+                        message=f"\\begin{{{env}}} 比 \\end{{{env}}} 多 {count - end_count} 个（未关闭的环境）",
+                        location=tex_file.path.name,
+                        file=tex_file.path.name,
+                        suggestion=f"请确保每个 \\begin{{{env}}} 都有对应的 \\end{{{env}}}。未关闭的环境会导致编译失败。",
+                    ))
+                    score -= 15
+
+            for env, count in end_counts.items():
+                begin_count = begin_counts.get(env, 0)
+                if count > begin_count:
+                    issues.append(Issue(
+                        severity=Severity.ERROR,
+                        message=f"\\end{{{env}}} 比 \\begin{{{env}}} 多 {count - begin_count} 个（多余的结束标记）",
+                        location=tex_file.path.name,
+                        file=tex_file.path.name,
+                        suggestion=f"有多余的 \\end{{{env}}}。请检查是否误删了对应的 \\begin{{{env}}}。",
+                    ))
+                    score -= 15
 
         passed = all(i.severity != Severity.ERROR for i in issues)
         error_count = sum(1 for i in issues if i.severity == Severity.ERROR)
