@@ -1,5 +1,10 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.55 (2026-05-30) — Brand Logo Static Asset
+- 新增正式静态品牌资产 `app/static/brand/logo.png`，用于页面内稳定引用，根目录临时 `logo.png` 保持未纳入提交
+- 全局 navbar 改用 34px 品牌 logo，并保留原渐变盾牌作为图片加载失败 fallback，点击回首页行为不变
+- 上传页 hero 左侧品牌图标改用同一 logo 路径，保持原有布局与文案不变
+
 ## v5.3.54 (2026-05-30) — Minimal API E2E Recheck Coverage
 - 新增 `tests/test_e2e_minimal.py`，用 FastAPI TestClient 挂载真实 API router，覆盖上传 ZIP、查看报告、列文件、读取/保存 `main.tex`、重新质检与报告刷新
 - E2E 不 mock `_run_checks`，仅 stub `ReferenceAuthenticityGate.check` 避免外网，确保真实解压、文件保存和 gate 编排参与流程
