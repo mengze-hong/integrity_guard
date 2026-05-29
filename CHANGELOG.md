@@ -1,5 +1,10 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.28 (2026-05-29) — AI Guardrails 服务模块抽取
+- 新增 `app/services/ai_guardrails.py`，集中管理 reference authenticity 判定、not-fixable payload、AI provenance、reference title 提取和候选元数据转换
+- `app/api/routes.py` 删除对应 helper 定义并改为引用服务模块，减少路由文件职责，保持现有 API 和测试导入兼容
+- 为后续继续拆分 AI routes / reference candidate service 打基础
+
 ## v5.3.27 (2026-05-29) — 前端 API 错误处理统一化
 - 新增 `apiFetch()` 前端请求包装器，自动携带 share token、检查 HTTP 状态，并把 401/402/403/404/409 转成明确用户提示
 - 工作台核心 API 调用改用 `apiFetch()`：状态轮询、报告加载、文件树、文件打开/保存、重新质检、忽略问题、导出报告、删除项目、历史列表和 AI 跨文件写入
