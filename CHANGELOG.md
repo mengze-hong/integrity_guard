@@ -1,5 +1,23 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.2.0 (2026-05-29) — 公司内网 LLM 接入 + 修复
+打通 LLM 全流程，改用公司内网 LiteLLM（UXBench）API，并修复阻断质检的 bug。
+
+### LLM 接入（密钥隔离）
+- API key 改为仅从 `.env` / 环境变量读取，`config.py` 不再硬编码任何 key（`config.py` 受 git 跟踪，硬编码会泄露）
+- 新增 `.env`（已 gitignore，永不入库）承载公司 endpoint / key / 默认模型
+- 默认模型切换为 `gpt-5.5`（V2 key + SGP endpoint），V1 key 已过期
+- 启动时通过 `python-dotenv` 自动加载 `.env`；新增 `python-dotenv`、`openai` 显式依赖
+- **兼容推理模型**：`gpt-5.5` 等拒绝非默认 `temperature`，新增统一 LLM 调用层（`llm_check` + `_llm_chat_post` 共享 helper），遇到 `temperature` 报错自动去参重试；空 `content` 回退 `reasoning_content`
+- 全部 6 个 AI 接口（ai-fix / ai-batch-fix / ai-review / ai-polish / ai-abstract / venue-checklist）改走统一 helper，对模型无感
+
+### Bug 修复
+- 修复 `gate_references._check_citation_freshness` 中 `entry.fields` 属性错误（`BibEntry` 无 `fields`），此前会导致引文新鲜度检查抛异常、**整个质检流程 failed**。改用 `entry.year`，回退 `raw_fields`
+
+### 验证
+- 端到端实测：上传 → 6 个 gate 全部完成（score 80）→ AI 审稿模拟返回真实反馈，全程使用公司 API
+- 16 个单元测试通过
+
 ## v5.1.0 (2026-05-29) — 安全加固 Security Hardening
 重点：在不改变任何已有功能/设计的前提下，修复一批安全问题，并补齐加固中遗留的缺陷。
 

@@ -835,7 +835,7 @@ class ReferenceAuthenticityGate(BaseGate):
         years = []
 
         for entry in bib_entries:
-            year = entry.fields.get("year")
+            year = entry.year or entry.raw_fields.get("year")
             if year:
                 try:
                     y = int(year.strip())

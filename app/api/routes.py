@@ -75,6 +75,30 @@ def _check_rate_limit(ip: str) -> bool:
     return True
 
 
+# ─── Shared LLM call helper ───────────────────────────────────
+# Reasoning models (e.g. gpt-5.5) reject a non-default `temperature`; this
+# helper transparently retries without it so all AI features keep working
+# regardless of which model `LLM_MODEL` points to.
+
+async def _llm_chat_post(client, messages, max_tokens, temperature=None):
+    """POST a chat completion to the LiteLLM proxy with graceful fallback."""
+    url = f"{settings.llm_base_url}/chat/completions"
+    headers = {"Authorization": f"Bearer {settings.llm_api_key}"}
+    payload = {"model": settings.llm_model, "messages": messages, "max_tokens": max_tokens}
+    if temperature is not None:
+        payload["temperature"] = temperature
+
+    resp = await client.post(url, headers=headers, json=payload)
+    if (
+        resp.status_code == 400
+        and "temperature" in payload
+        and "temperature" in resp.text.lower()
+    ):
+        payload.pop("temperature", None)
+        resp = await client.post(url, headers=headers, json=payload)
+    return resp
+
+
 # ─── Upload & Check ───────────────────────────────────────────
 
 @router.post("/upload")
@@ -649,18 +673,14 @@ async def ai_fix_suggestion(job_id: str, request: Request):
     import httpx
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(
-                f"{settings.llm_base_url}/chat/completions",
-                headers={"Authorization": f"Bearer {settings.llm_api_key}"},
-                json={
-                    "model": settings.llm_model,
-                    "messages": [
-                        {"role": "system", "content": "你是一个 LaTeX 学术论文修复助手。根据检测到的问题和上下文代码，给出具体的修复建议。只输出修复后的代码片段，不要解释。"},
-                        {"role": "user", "content": f"问题: {issue_message}\n\n相关代码:\n```latex\n{context}\n```\n\n请给出修复后的代码:"},
-                    ],
-                    "max_tokens": 500,
-                    "temperature": 0.3,
-                },
+            resp = await _llm_chat_post(
+                client,
+                [
+                    {"role": "system", "content": "你是一个 LaTeX 学术论文修复助手。根据检测到的问题和上下文代码，给出具体的修复建议。只输出修复后的代码片段，不要解释。"},
+                    {"role": "user", "content": f"问题: {issue_message}\n\n相关代码:\n```latex\n{context}\n```\n\n请给出修复后的代码:"},
+                ],
+                max_tokens=500,
+                temperature=0.3,
             )
             if resp.status_code == 200:
                 data = resp.json()
@@ -720,18 +740,14 @@ async def ai_batch_fix(job_id: str, request: Request):
             context = "\n".join(lines[start:end])
 
             try:
-                resp = await client.post(
-                    f"{settings.llm_base_url}/chat/completions",
-                    headers={"Authorization": f"Bearer {settings.llm_api_key}"},
-                    json={
-                        "model": settings.llm_model,
-                        "messages": [
-                            {"role": "system", "content": "你是 LaTeX 学术论文修复助手。根据问题和上下文，给出修复后的代码片段。只输出修复后的代码，不要解释。"},
-                            {"role": "user", "content": f"问题: {item['message']}\n建议: {item['suggestion']}\n\n代码:\n```latex\n{context}\n```\n\n修复后:"},
-                        ],
-                        "max_tokens": 400,
-                        "temperature": 0.2,
-                    },
+                resp = await _llm_chat_post(
+                    client,
+                    [
+                        {"role": "system", "content": "你是 LaTeX 学术论文修复助手。根据问题和上下文，给出修复后的代码片段。只输出修复后的代码，不要解释。"},
+                        {"role": "user", "content": f"问题: {item['message']}\n建议: {item['suggestion']}\n\n代码:\n```latex\n{context}\n```\n\n修复后:"},
+                    ],
+                    max_tokens=400,
+                    temperature=0.2,
                 )
                 if resp.status_code == 200:
                     data = resp.json()
@@ -771,13 +787,10 @@ async def ai_reviewer_simulation(job_id: str, request: Request):
     import httpx
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
-            resp = await client.post(
-                f"{settings.llm_base_url}/chat/completions",
-                headers={"Authorization": f"Bearer {settings.llm_api_key}"},
-                json={
-                    "model": settings.llm_model,
-                    "messages": [
-                        {"role": "system", "content": """你是一位严格的顶会审稿人（ACL/NeurIPS/ICML level）。
+            resp = await _llm_chat_post(
+                client,
+                [
+                    {"role": "system", "content": """你是一位严格的顶会审稿人（ACL/NeurIPS/ICML level）。
 请阅读以下论文片段，给出：
 1. **Strengths** (2-3 点，简洁)
 2. **Weaknesses** (3-5 点，具体且可操作)
@@ -785,11 +798,10 @@ async def ai_reviewer_simulation(job_id: str, request: Request):
 4. **Overall Score**: Accept / Borderline / Reject
 
 用中文回复，格式清晰。每点用 - 开头。注意：你应该像真正的审稿人一样严格但公正。"""},
-                        {"role": "user", "content": f"请审阅这篇论文:\n\n{main_text}"},
-                    ],
-                    "max_tokens": 1000,
-                    "temperature": 0.7,
-                },
+                    {"role": "user", "content": f"请审阅这篇论文:\n\n{main_text}"},
+                ],
+                max_tokens=1000,
+                temperature=0.7,
             )
             if resp.status_code == 200:
                 data = resp.json()
@@ -827,18 +839,14 @@ async def ai_polish_text(job_id: str, request: Request):
     import httpx
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(
-                f"{settings.llm_base_url}/chat/completions",
-                headers={"Authorization": f"Bearer {settings.llm_api_key}"},
-                json={
-                    "model": settings.llm_model,
-                    "messages": [
-                        {"role": "system", "content": f"你是一位学术论文润色专家。{prompt}\n\n只输出润色后的文本，不要任何解释或标注。保持 LaTeX 命令不变。"},
-                        {"role": "user", "content": text},
-                    ],
-                    "max_tokens": len(text) * 2,
-                    "temperature": 0.4,
-                },
+            resp = await _llm_chat_post(
+                client,
+                [
+                    {"role": "system", "content": f"你是一位学术论文润色专家。{prompt}\n\n只输出润色后的文本，不要任何解释或标注。保持 LaTeX 命令不变。"},
+                    {"role": "user", "content": text},
+                ],
+                max_tokens=max(1024, len(text) * 2),
+                temperature=0.4,
             )
             if resp.status_code == 200:
                 data = resp.json()
@@ -878,13 +886,10 @@ async def ai_optimize_abstract(job_id: str, request: Request):
     import httpx
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(
-                f"{settings.llm_base_url}/chat/completions",
-                headers={"Authorization": f"Bearer {settings.llm_api_key}"},
-                json={
-                    "model": settings.llm_model,
-                    "messages": [
-                        {"role": "system", "content": """你是一位学术写作专家。请优化这篇论文的 Abstract，使其：
+            resp = await _llm_chat_post(
+                client,
+                [
+                    {"role": "system", "content": """你是一位学术写作专家。请优化这篇论文的 Abstract，使其：
 1. 更加简洁有力（控制在 150-250 词）
 2. 结构清晰：问题→方法→结果→结论
 3. 突出贡献和创新点
@@ -896,11 +901,10 @@ async def ai_optimize_abstract(job_id: str, request: Request):
 
 **修改说明:**
 - [每处修改的原因，2-3条]"""},
-                        {"role": "user", "content": f"当前 Abstract:\n{abstract}\n\n论文正文片段:\n{main_text[:3000]}"},
-                    ],
-                    "max_tokens": 800,
-                    "temperature": 0.5,
-                },
+                    {"role": "user", "content": f"当前 Abstract:\n{abstract}\n\n论文正文片段:\n{main_text[:3000]}"},
+                ],
+                max_tokens=800,
+                temperature=0.5,
             )
             if resp.status_code == 200:
                 data = resp.json()
@@ -980,13 +984,10 @@ async def generate_venue_checklist(job_id: str, request: Request):
     import httpx
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
-            resp = await client.post(
-                f"{settings.llm_base_url}/chat/completions",
-                headers={"Authorization": f"Bearer {settings.llm_api_key}"},
-                json={
-                    "model": settings.llm_model,
-                    "messages": [
-                        {"role": "system", "content": f"""You are an academic checklist assistant helping authors fill out venue submission checklists.
+            resp = await _llm_chat_post(
+                client,
+                [
+                    {"role": "system", "content": f"""You are an academic checklist assistant helping authors fill out venue submission checklists.
 
 For each checklist item, determine:
 - "yes": The paper addresses this. Provide the EXACT section/paragraph reference (e.g., "Section 5, paragraph 2")
@@ -1001,11 +1002,10 @@ Examples:
 - {{"id":"B2","answer":"yes","justification":"We discuss dataset licenses in Section 3.1. All datasets used are publicly available under CC-BY-4.0."}}
 
 Output as JSON array."""},
-                        {"role": "user", "content": f"Checklist items:\n{checklist_str}\n\nPaper content:\n{main_text[:6000]}"},
-                    ],
-                    "max_tokens": 3000,
-                    "temperature": 0.2,
-                },
+                    {"role": "user", "content": f"Checklist items:\n{checklist_str}\n\nPaper content:\n{main_text[:6000]}"},
+                ],
+                max_tokens=3000,
+                temperature=0.2,
             )
             if resp.status_code == 200:
                 data = resp.json()

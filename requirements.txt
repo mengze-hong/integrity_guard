@@ -10,3 +10,5 @@ sqlalchemy>=2.0
 aiosqlite>=0.19
 bcrypt>=4.0
 pyjwt>=2.8
+python-dotenv>=1.0
+openai>=1.0.0
