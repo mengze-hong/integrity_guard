@@ -58,7 +58,7 @@ jobs:
 
       - name: Secret scan
         run: |
-          if git grep -n -E 'sk-uin|sk-TpK|woa\.com|sgpolaris|Bearer sk-|LLM_API_KEY=|LLM_BASE_URL=' -- . ':!CHANGELOG.md'; then
+          if git grep -n -E 'sk-uin|sk-TpK|woa\.com|sgpolaris|Bearer sk-|LLM_API_KEY=|LLM_BASE_URL=' -- . ':!CHANGELOG.md' ':!.github/workflows/ci.yml'; then
             echo "Sensitive internal secret or endpoint pattern found"
             exit 1
           fi

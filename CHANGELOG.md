@@ -1,5 +1,9 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.21 (2026-05-29) — Release Checklist 与 CI Secret Scan 修正
+- 新增 `docs/RELEASE_CHECKLIST.md`，固定每次发布/备份前的 changelog、版本、JS、pytest、secret scan、git status、提交推送和本地重启检查步骤
+- 修正 CI secret scan，排除 workflow 文件自身，避免扫描规则中的敏感模式字符串触发自检失败
+
 ## v5.3.20 (2026-05-29) — CI 扩展与 Ruff 清理
 - GitHub Actions CI 增加 Node 环境、前端内联 JavaScript 语法检查、敏感信息扫描和统一 `python -m pytest -q`
 - 本地修复现有 ruff `E/F/W` 问题，清理未使用导入、无占位 f-string、含糊变量名和 docstring 转义警告，确保新增 CI 不会一上线就失败
