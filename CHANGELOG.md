@@ -1,5 +1,10 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.59 (2026-05-30) — Local Docs And Release Checks
+- 新增 `docs/README.md` 作为文档索引，链接本地运行指南与发布清单，并预留测试、禁止事项和安全部署文档入口
+- 新增 `docs/LOCAL_RUN.md`，覆盖本地依赖安装、密钥初始化、uvicorn/Docker Compose 启动、健康检查、数据目录与 localhost 演示边界
+- 扩展 `docs/RELEASE_CHECKLIST.md`，补充 JS helper 测试、ruff、pip-audit、文档索引确认和 `app/main.py` 版本与 changelog 顶部对齐提醒，并将应用版本对齐到 `5.3.59`
+
 ## v5.3.58 (2026-05-30) — Frontend Draft Save Retry
 - 编辑器按文件维护 dirty / saving / error / pendingContent 状态，tab 会显示未保存或保存失败指示
 - 编辑变更会按 job ID 与文件路径写入 localStorage 草稿，auto-save 成功后清除草稿，失败后保留未同步内容并显示明确 toast
