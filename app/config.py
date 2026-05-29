@@ -62,7 +62,7 @@ class Settings(BaseModel):
     # LLM (internal LiteLLM) — keys MUST come from .env / environment, never hardcoded
     llm_api_key: str = os.environ.get("LLM_API_KEY", "")
     llm_base_url: str = os.environ.get("LLM_BASE_URL", "http://REMOVED_HOST")
-    llm_model: str = os.environ.get("LLM_MODEL", "gpt-5.5")
+    llm_model: str = os.environ.get("LLM_MODEL", "gpt-5.2")
 
     # Gate thresholds
     reference_confidence_threshold: float = 60.0  # below this = FAIL
