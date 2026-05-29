@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.17 (2026-05-29) — Job 状态持久化与并发保护
+- 上传/重新质检中的 job 增加内存锁，阻止同一 job 重复触发并发 recheck，避免多个后台任务同时写同一目录和报告
+- 后台检查失败时生成并持久化 failed report，保存脱敏错误摘要、owner/share metadata 和 `status=failed`，服务重启后可恢复失败状态
+- 从磁盘恢复 report 时优先读取 `metadata.status`，不再把所有已落盘 report 都强制视为 completed
+- 新增 job 状态持久化回归测试，覆盖 failed report 的状态、owner metadata 与错误摘要保存
+
 ## v5.3.16 (2026-05-29) — AI 建议应用改为可审计 Diff 视图
 - AI 单条建议弹窗改为原文片段 / AI 建议片段双栏展示，并显示风险等级和 provenance 来源信息
 - 只有后端返回可替换原文时才显示「采用建议并重新质检」按钮，避免无锚点建议被直接应用

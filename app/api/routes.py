@@ -31,6 +31,7 @@ _job_status: dict[str, str] = {}
 _job_dirs: dict[str, Path] = {}  # job_id → extracted project directory
 _job_progress: dict[str, list[str]] = {}  # job_id → list of completed gate names
 _job_owners: dict[str, dict] = {}  # job_id → owner/share metadata while processing
+_job_locks: set[str] = set()  # job_id currently running checks/rechecks
 
 SESSION_COOKIE_NAME = "sl_session"
 SESSION_COOKIE_MAX_AGE = 30 * 86400
@@ -196,7 +197,7 @@ def _get_report(job_id: str) -> FullReport | None:
     report = storage.load_report(job_id)
     if report:
         _jobs[job_id] = report
-        _job_status[job_id] = "completed"
+        _job_status[job_id] = report.metadata.get("status", "completed")
         # Recover project_dir
         if report.project_dir:
             proj = Path(report.project_dir)
@@ -207,6 +208,26 @@ def _get_report(job_id: str) -> FullReport | None:
             _job_owners[job_id] = owner_metadata
         return report
     return None
+
+
+def _save_failed_report(job_id: str, filename: str, error: Exception, owner_metadata: dict | None = None) -> None:
+    """Persist a failed job report so status survives process restarts."""
+    report = FullReport(
+        job_id=job_id,
+        filename=filename,
+        timestamp=datetime.now(timezone.utc).isoformat(),
+        overall_passed=False,
+        overall_score=0.0,
+        metadata={
+            "status": "failed",
+            "error": redact(str(error))[:300],
+            **(owner_metadata or _job_owners.get(job_id, {})),
+        },
+    )
+    _jobs[job_id] = report
+    _job_status[job_id] = "failed"
+    _job_owners[job_id] = _extract_owner_metadata(report)
+    storage.save_report(job_id, report)
 
 
 def _persist(job_id: str):
@@ -517,6 +538,7 @@ async def upload_paper(
         f.write(content)
 
     _job_status[job_id] = "processing"
+    _job_locks.add(job_id)
     _job_owners[job_id] = owner_metadata
     background_tasks.add_task(_run_checks, job_id, upload_path, extract_dir, file.filename, owner_metadata)
 
@@ -649,6 +671,8 @@ async def recheck(request: Request, response: Response, job_id: str, background_
     project_dir = _job_dirs.get(job_id)
     if not project_dir or not project_dir.exists():
         raise HTTPException(status_code=404, detail="Project not found")
+    if job_id in _job_locks or _job_status.get(job_id) == "processing":
+        raise HTTPException(status_code=409, detail="该任务正在处理中，请等待完成后再重新质检")
 
     filename = report.filename if report else "unknown.zip"
 
@@ -657,6 +681,7 @@ async def recheck(request: Request, response: Response, job_id: str, background_
     owner_metadata = _extract_owner_metadata(report) if report else _job_owners.get(job_id, {})
 
     _job_status[job_id] = "processing"
+    _job_locks.add(job_id)
     background_tasks.add_task(_run_checks_from_dir, job_id, project_dir, filename, old_dismissed, owner_metadata)
 
     return {"job_id": job_id, "status": "processing"}
@@ -1810,6 +1835,7 @@ async def delete_job(job_id: str, request: Request, response: Response):
     _job_status.pop(job_id, None)
     _job_dirs.pop(job_id, None)
     _job_owners.pop(job_id, None)
+    _job_locks.discard(job_id)
     # Remove from disk
     deleted = storage.delete_job(job_id)
     if not deleted:
@@ -1837,14 +1863,10 @@ async def _run_checks(job_id: str, zip_path: Path, extract_dir: Path, filename: 
 
         await _run_checks_from_dir(job_id, project_dir, filename, [], owner_metadata)
     except Exception as e:
-        _job_status[job_id] = "failed"
-        _jobs[job_id] = FullReport(
-            job_id=job_id, filename=filename,
-            timestamp=datetime.now(timezone.utc).isoformat(),
-            metadata=owner_metadata,
-        )
+        _save_failed_report(job_id, filename, e, owner_metadata)
         logger.error(f" Job {job_id} failed: {redact(str(e))}")
     finally:
+        _job_locks.discard(job_id)
         if zip_path.exists():
             zip_path.unlink()
 
@@ -1897,6 +1919,7 @@ async def _run_checks_from_dir(
             total_words += len(text.split())
 
         report.metadata = {
+            "status": "completed",
             "word_count": total_words,
             "page_estimate": round(total_words / 500, 1),  # ~500 words/page for ACL format
             "bib_count": len(paper.bib_entries),
@@ -1911,5 +1934,7 @@ async def _run_checks_from_dir(
         _persist(job_id)
 
     except Exception as e:
-        _job_status[job_id] = "failed"
+        _save_failed_report(job_id, filename, e, owner_metadata)
         logger.error(f" Recheck {job_id} failed: {redact(str(e))}")
+    finally:
+        _job_locks.discard(job_id)

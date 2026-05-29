@@ -30,6 +30,7 @@ def ownership_app(tmp_path, monkeypatch):
     routes._job_dirs.clear()
     routes._job_progress.clear()
     routes._job_owners.clear()
+    routes._job_locks.clear()
     routes._rate_limit.clear()
 
     async def fake_run_checks(job_id, zip_path, extract_dir, filename, owner_metadata):
@@ -54,6 +55,7 @@ def ownership_app(tmp_path, monkeypatch):
         routes._job_status[job_id] = "completed"
         routes._job_dirs[job_id] = project_dir
         routes._job_owners[job_id] = routes._extract_owner_metadata(report)
+        routes._job_locks.discard(job_id)
         storage.save_report(job_id, report)
         if zip_path.exists():
             zip_path.unlink()
@@ -69,6 +71,7 @@ def ownership_app(tmp_path, monkeypatch):
     routes._job_dirs.clear()
     routes._job_progress.clear()
     routes._job_owners.clear()
+    routes._job_locks.clear()
     routes._rate_limit.clear()
 
 
@@ -140,3 +143,33 @@ def test_history_only_lists_current_owner_jobs(ownership_app, tmp_path):
     assert second_history.status_code == 200
     assert [job["job_id"] for job in first_history.json()["jobs"]] == [first_upload["job_id"]]
     assert [job["job_id"] for job in second_history.json()["jobs"]] == [second_upload["job_id"]]
+
+
+def test_recheck_rejects_concurrent_processing_job(ownership_app, tmp_path):
+    client = TestClient(ownership_app)
+    upload = _upload(client, tmp_path)
+    routes._job_locks.add(upload["job_id"])
+    routes._job_status[upload["job_id"]] = "processing"
+
+    response = client.post(f"/api/recheck/{upload['job_id']}")
+
+    assert response.status_code == 409
+
+
+def test_failed_status_persists_to_report_storage(ownership_app, tmp_path):
+    job_id = "failedjob"
+    routes._save_failed_report(job_id, "paper.zip", RuntimeError("boom"), {
+        "owner_type": "session",
+        "owner_id": "session-1",
+        "session_id": "session-1",
+        "share_token": "share-1",
+    })
+    routes._jobs.clear()
+    routes._job_status.clear()
+
+    report = routes._get_report(job_id)
+
+    assert report is not None
+    assert routes._job_status[job_id] == "failed"
+    assert report.metadata["status"] == "failed"
+    assert "boom" in report.metadata["error"]
