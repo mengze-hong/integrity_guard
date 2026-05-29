@@ -787,6 +787,24 @@ function apiUrl(path) {
     return `${path}${sep}share=${encodeURIComponent(shareToken)}`;
 }
 
+async function apiFetch(path, options = {}) {
+    const r = await fetch(apiUrl(path), options);
+    if (r.ok) return r;
+    let detail = '';
+    try {
+        const data = await r.clone().json();
+        detail = data.detail || data.message || '';
+    } catch(e) {}
+    const statusHints = {
+        401: '请先登录',
+        402: '积分不足，请充值',
+        403: '没有权限执行此操作',
+        404: '资源不存在或已过期',
+        409: '任务正在处理中，请稍后再试',
+    };
+    throw new Error(detail || statusHints[r.status] || `HTTP ${r.status}`);
+}
+
 function fileApiUrl(path) {
     return apiUrl(`/api/files/${jobId}/${String(path).split('/').map(encodeURIComponent).join('/')}`);
 }
@@ -932,7 +950,7 @@ async function waitForResult() {
 
     return new Promise(resolve => {
         const iv = setInterval(async () => {
-            const r = await fetch(apiUrl(`/api/status/${jobId}`));
+            const r = await apiFetch(`/api/status/${jobId}`);
             const d = await r.json();
             // Update progress display (30-100% range, upload was 0-30%)
             if (d.progress && d.progress.length > 0) {
@@ -961,8 +979,7 @@ async function waitForResult() {
 }
 async function loadReport() {
     try {
-        const r = await fetch(apiUrl(`/api/report/${jobId}`));
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const r = await apiFetch(`/api/report/${jobId}`);
         report = await r.json();
         shareToken = shareToken || report?.metadata?.share_token || null;
     } catch(e) {
@@ -1224,7 +1241,7 @@ function enterWorkspace() {
 }
 
 async function loadFileTree() {
-    const r = await fetch(apiUrl(`/api/files/${jobId}`)); const {files} = await r.json();
+    const r = await apiFetch(`/api/files/${jobId}`); const {files} = await r.json();
 
     // Group files by their containing folder so the real directory
     // structure (e.g. floats/, sections/) is visible.
@@ -1346,12 +1363,12 @@ async function openFile(path) {
     // Show loading state — temporarily disable auto-save
     currentFile = null;  // prevent auto-save during loading
     if (editor) editor.setValue('// Loading...');
-    const r = await fetch(fileApiUrl(path));
-    if (!r.ok) {
+    const r = await apiFetch(`/api/files/${jobId}/${String(path).split('/').map(encodeURIComponent).join('/')}`).catch(e => {
         currentFile = prevFile;
-        toast('打开文件失败', 'error');
-        return;
-    }
+        toast('打开文件失败: ' + e.message, 'error');
+        return null;
+    });
+    if (!r) return;
     const d = await r.json();
     currentFile = path;
     editor.setValue(d.content);
@@ -1659,7 +1676,7 @@ async function gotoIssueFromOverview(gateName, idx) {
     enterWorkspace();
     try {
         if (issue.file) {
-            const r = await fetch(apiUrl(`/api/files/${jobId}`));
+        const r = await apiFetch(`/api/files/${jobId}`);
             const {files} = await r.json();
             const want = issue.file.split('/').pop();
             const match = files.find(f => f.path.split('/').pop() === want);
@@ -1779,8 +1796,7 @@ async function autoSave(file = currentFile, content = editor?.getValue()) {
     const dot = document.getElementById('save-dot');
     dot.className = 'w-2 h-2 rounded-full bg-amber-400';
     try {
-        const r = await fetch(fileApiUrl(file), {method:'PUT', body:content || ''});
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        await apiFetch(`/api/files/${jobId}/${String(file).split('/').map(encodeURIComponent).join('/')}`, {method:'PUT', body:content || ''});
         dot.className = 'w-2 h-2 rounded-full bg-green-400';
         setTimeout(()=>dot.className='w-2 h-2 rounded-full',1500);
         return true;
@@ -1805,12 +1821,18 @@ async function doRecheck() {
     const prevErrors = report ? report.gate_results.reduce((s,g) => s + g.issues.filter(i=>i.severity==='error').length, 0) : 0;
 
     btn.disabled=true; btn.textContent='检查中...';
-    await fetch(`/api/recheck/${jobId}`,{method:'POST'});
-    await waitForResult(); await loadReport();
-    refreshCredits();
-    updateXP(); loadFileTree(); updateCompleteBtn();
-    if(currentFile){highlightErrors();renderIssues(currentFile);}
-    btn.disabled=false; btn.textContent='重新质检';
+    try {
+        await apiFetch(`/api/recheck/${jobId}`,{method:'POST'});
+        await waitForResult(); await loadReport();
+        refreshCredits();
+        updateXP(); loadFileTree(); updateCompleteBtn();
+        if(currentFile){highlightErrors();renderIssues(currentFile);}
+    } catch(e) {
+        toast('重新质检失败: ' + e.message, 'error', 4000);
+        return;
+    } finally {
+        btn.disabled=false; btn.textContent='重新质检';
+    }
 
     // Show improvement diff
     const newScore = report.overall_score;
@@ -1836,7 +1858,7 @@ function closeModal() { document.getElementById('modal').classList.add('hidden')
 async function submitDismiss() {
     const reason = document.getElementById('modal-reason').value.trim();
     if (!reason) { toast('请填写忽略理由', 'warning'); return; }
-    await fetch(`/api/dismiss/${jobId}`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...dismissCtx,reason})});
+    await apiFetch(`/api/dismiss/${jobId}`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...dismissCtx,reason})});
     await loadReport(); updateXP(); loadFileTree(); updateCompleteBtn();
     if(currentFile){highlightErrors();renderIssues(currentFile);}
     closeModal();
@@ -2379,8 +2401,7 @@ async function applyOneFix(fix) {
         content = normEol(editor.getValue());
     } else {
         try {
-            const r = await fetch(fileApiUrl(targetFile));
-            if (!r.ok) return false;
+            const r = await apiFetch(`/api/files/${jobId}/${String(targetFile).split('/').map(encodeURIComponent).join('/')}`);
             content = normEol((await r.json()).content);
         } catch (e) { return false; }
     }
@@ -2391,8 +2412,7 @@ async function applyOneFix(fix) {
 
     if (viaEditor) editor.setValue(updated);
     try {
-        const r = await fetch(fileApiUrl(targetFile), {method: 'PUT', body: updated});
-        if (!r.ok) return false;
+        await apiFetch(`/api/files/${jobId}/${String(targetFile).split('/').map(encodeURIComponent).join('/')}`, {method: 'PUT', body: updated});
     } catch (e) { return false; }
     return true;
 }
@@ -2474,7 +2494,7 @@ async function doBibClean() {
 
 // === Export ===
 async function exportReport() {
-    const r = await fetch(apiUrl(`/api/export/${jobId}`)); const text = await r.text();
+    const r = await apiFetch(`/api/export/${jobId}`); const text = await r.text();
     // Download as .md file
     const blob = new Blob([text], {type:'text/markdown;charset=utf-8'});
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
@@ -2485,7 +2505,7 @@ async function exportReport() {
 async function deleteCurrentJob() {
     if (!jobId) return;
     if (!confirm(`确定删除 "${report?.filename || jobId}" 的检查记录？\n此操作不可撤销。`)) return;
-    await fetch(`/api/job/${jobId}`, {method:'DELETE'});
+    await apiFetch(`/api/job/${jobId}`, {method:'DELETE'});
     jobId = null; report = null;
     showScreen('screen-upload');
     loadHistory();
@@ -2645,7 +2665,7 @@ async function doPolishSelection(mode = 'academic') {
 
 async function deleteJob(id) {
     if (!confirm('确定删除此检查记录？')) return;
-    await fetch(`/api/job/${id}`, {method:'DELETE'});
+    await apiFetch(`/api/job/${id}`, {method:'DELETE'});
     loadHistory();
 }
 
@@ -2754,7 +2774,7 @@ function hideAiLoading() {
 // === History ===
 async function loadHistory() {
     try {
-        const r = await fetch('/api/history');
+        const r = await apiFetch('/api/history');
         const d = await r.json();
         if (!d.jobs || !d.jobs.length) return;
 
@@ -2800,7 +2820,7 @@ async function showAllProjects() {
     document.body.appendChild(modal);
 
     try {
-        const r = await fetch('/api/history');
+        const r = await apiFetch('/api/history');
         const d = await r.json();
         const list = document.getElementById('all-projects-list');
         if (!list) return;
@@ -2833,7 +2853,7 @@ async function showAllProjects() {
 // Delete from within the all-projects modal, then refresh both the modal list and homepage.
 async function deleteJobInModal(id) {
     if (!confirm('确定删除此检查记录？')) return;
-    await fetch(`/api/job/${id}`, {method:'DELETE'});
+    await apiFetch(`/api/job/${id}`, {method:'DELETE'});
     loadHistory();
     const modal = document.getElementById('all-projects-modal');
     if (modal) { modal.remove(); showAllProjects(); }

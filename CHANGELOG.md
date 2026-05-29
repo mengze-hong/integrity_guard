@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.27 (2026-05-29) — 前端 API 错误处理统一化
+- 新增 `apiFetch()` 前端请求包装器，自动携带 share token、检查 HTTP 状态，并把 401/402/403/404/409 转成明确用户提示
+- 工作台核心 API 调用改用 `apiFetch()`：状态轮询、报告加载、文件树、文件打开/保存、重新质检、忽略问题、导出报告、删除项目、历史列表和 AI 跨文件写入
+- 重新质检增加 try/catch/finally，失败时恢复按钮状态并展示错误，不再卡在“检查中...”
+- 文件保存/打开/跨文件 AI 写入失败会保留错误状态并返回失败，减少静默失败和误提示成功
+
 ## v5.3.26 (2026-05-29) — 写作质量检查正文层降噪
 - WritingQualityGate 新增 lightweight text layer，写作启发式分析会排除 LaTeX comments、bibliography/thebibliography、verbatim、lstlisting、minted 等非正文区域
 - AI 痕迹、套话、段落重复、拼写等文本启发式改为基于正文层运行，减少注释、参考文献或代码块触发误报
