@@ -186,6 +186,7 @@
         .toast-warning { background:#d97706; }
         @keyframes slideIn { from { transform:translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }
         @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+        @keyframes aispin { to { transform: rotate(360deg); } }
 
         /* Issue filter buttons */
         .issue-filter-btn {
@@ -292,11 +293,11 @@
     <!-- ====== Global Navbar ====== -->
     <div id="navbar" style="display:flex; align-items:center; justify-content:space-between; padding:0 24px; height:48px; background:rgba(255,255,255,0.9); backdrop-filter:blur(12px); border-bottom:1px solid rgba(226,232,240,0.8); flex-shrink:0; z-index:50;">
         <div style="display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="showScreen('screen-upload');loadHistory();">
-            <div style="width:28px; height:28px; background:linear-gradient(135deg,#3b82f6,#1d4ed8); border-radius:7px; display:flex; align-items:center; justify-content:center;">
-                <span style="font-size:14px; filter:brightness(10);">🛡</span>
+            <div style="width:34px; height:34px; background:linear-gradient(135deg,#3b82f6,#1d4ed8); border-radius:8px; display:flex; align-items:center; justify-content:center;">
+                <span style="font-size:18px; filter:brightness(10);">🛡</span>
             </div>
-            <span style="font-size:14px; font-weight:700; color:#0f172a; letter-spacing:-0.3px;">ScholarLint</span>
-            <span style="font-size:9px; padding:2px 5px; background:#eff6ff; color:#3b82f6; border-radius:4px; font-weight:600;">投稿通</span>
+            <span style="font-size:20px; font-weight:800; color:#0f172a; letter-spacing:-0.3px;">ScholarLint</span>
+            <span style="font-size:11px; padding:2px 6px; background:#eff6ff; color:#3b82f6; border-radius:4px; font-weight:600;">投稿通</span>
         </div>
         <div id="nav-auth" style="display:flex; align-items:center; gap:12px;">
             <button onclick="showAuthModal('login')" id="nav-login-btn" style="font-size:12px; padding:6px 16px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; color:#334155; cursor:pointer; font-weight:500; transition:all 0.15s;" onmouseover="this.style.background='#f8fafc';this.style.borderColor='#cbd5e1'" onmouseout="this.style.background='#fff';this.style.borderColor='#e2e8f0'">登录</button>
@@ -312,8 +313,8 @@
                 <div style="display:flex; align-items:center; gap:14px; margin-bottom:28px;">
                     <div style="font-size:42px;">🛡️</div>
                     <div>
-                        <h1 style="font-size:28px; font-weight:800; margin:0; letter-spacing:-0.5px; color:#0f172a;">ScholarLint</h1>
-                        <p style="font-size:13px; color:#3b82f6; margin:4px 0 0; font-weight:500;">投稿通 · Academic Paper Pre-submission Checker</p>
+                        <h1 style="font-size:28px; font-weight:800; margin:0; letter-spacing:-0.5px; color:#0f172a;">投稿通</h1>
+                        <p style="font-size:13px; color:#3b82f6; margin:4px 0 0; font-weight:500;">ScholarLint · 为你的投稿保驾护航</p>
                     </div>
                 </div>
                 <p style="color:#475569; font-size:15px; line-height:1.7; margin-bottom:32px;">
@@ -384,6 +385,7 @@
                         <div style="font-size:28px; margin-bottom:8px;">📦</div>
                         <p style="font-size:14px; margin:0;"><span style="color:#3b82f6; font-weight:600;">点击上传</span> 或拖拽文件到此处</p>
                         <p style="font-size:12px; color:#94a3b8; margin:4px 0 0;">.zip 格式（含 .tex + .bib + figures）</p>
+                        <p style="font-size:11px; color:#94a3b8; margin:10px 0 0;">🔒 文件加密保留 7 天，到期自动清理</p>
                         <input id="file-input" type="file" accept=".zip" style="display:none;" onchange="handleUpload(this)">
                     </div>
                     <div id="file-info" class="hidden" style="margin-top:12px; font-size:13px; color:#64748b; text-align:center;"></div>
@@ -399,13 +401,13 @@
                         </div>
                     </div>
                 </form>
-                <div style="margin-top:20px; padding-top:16px; border-top:1px solid #f1f5f9; text-align:center;">
-                    <p style="font-size:10px; color:#94a3b8; line-height:1.6;">上传后自动执行 6 项检查：文件结构 → 引用匹配 → 引文真实性 → 图表引用 → 数据完整 → 写作质量<br>文件加密保留 7 天，到期自动清理</p>
-                </div>
                 <!-- History section -->
                 <div id="history-section" style="margin-top:20px; display:none;">
                     <div style="padding-top:16px; border-top:1px solid #f1f5f9;">
-                        <p style="font-size:12px; font-weight:600; color:#64748b; margin:0 0 10px;">📂 最近的检查</p>
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin:0 0 10px;">
+                            <p style="font-size:12px; font-weight:600; color:#64748b; margin:0;">📂 最近的检查</p>
+                            <button onclick="showAllProjects()" style="font-size:12px; font-weight:600; color:#3b82f6; background:none; border:none; cursor:pointer; padding:2px 4px; border-radius:4px;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='none'">所有项目 →</button>
+                        </div>
                         <div id="history-list" style="max-height:200px; overflow-y:auto;"></div>
                     </div>
                 </div>
@@ -415,8 +417,7 @@
         <!-- Feature Modules Showcase -->
         <div style="max-width:1100px; width:100%; margin:0 auto; padding:40px 40px 48px;">
             <div style="text-align:center; margin-bottom:32px;">
-                <h2 style="font-size:22px; font-weight:700; color:#0f172a; margin:0; letter-spacing:-0.3px;">模块化检查能力</h2>
-                <p style="font-size:13px; color:#64748b; margin:8px 0 0;">每个模块独立运行，精准定位论文问题</p>
+                <h2 style="font-size:22px; font-weight:700; color:#0f172a; margin:0; letter-spacing:-0.3px;">模块化检查，精准定位文章问题</h2>
             </div>
             <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:16px;">
                 <div class="module-card" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
@@ -748,6 +749,25 @@ const GATE_INFO = {
 };
 
 // === Screen management ===
+// Persist current job + view in the URL (shareable) and localStorage (fallback)
+// so a browser refresh restores the same report/screen instead of the upload page.
+function persistState(view) {
+    try {
+        if (!jobId) return;
+        const url = `${window.location.pathname}?job=${encodeURIComponent(jobId)}&view=${view}`;
+        history.replaceState({jobId, view}, '', url);
+        localStorage.setItem('sl_lastJob', jobId);
+        localStorage.setItem('sl_lastView', view);
+    } catch(e) {}
+}
+function clearPersistedState() {
+    try {
+        history.replaceState({}, '', window.location.pathname);
+        localStorage.removeItem('sl_lastJob');
+        localStorage.removeItem('sl_lastView');
+    } catch(e) {}
+}
+
 function showScreen(id) {
     ['screen-upload','screen-overview','screen-workspace'].forEach(s => {
         document.getElementById(s).classList.add('hidden');
@@ -756,6 +776,9 @@ function showScreen(id) {
     const el = document.getElementById(id);
     el.classList.remove('hidden');
     el.style.display = id === 'screen-workspace' ? 'flex' : 'flex';
+    // Returning to the upload/home screen clears persisted state so a later
+    // refresh stays on the upload page (covers 返回首页 / brand click / delete).
+    if (id === 'screen-upload') clearPersistedState();
 }
 
 // === Upload ===
@@ -921,6 +944,7 @@ async function loadReport() {
 // === Overview Screen ===
 function showOverview() {
     showScreen('screen-overview');
+    persistState('overview');
     // Reset upload UI
     const progressDiv = document.getElementById('check-progress');
     if (progressDiv) progressDiv.style.display = 'none';
@@ -999,14 +1023,18 @@ function showOverview() {
             </div>
             <p class="text-xs text-slate-500 mt-1">${g.summary}</p>`;
 
-        // Show issue preview for failed gates
+        // Show issue preview for failed gates — each issue is clickable and
+        // jumps to its location in the workspace editor.
         if (!g.passed && g.issues.length > 0) {
-            const previewIssues = g.issues.filter(i=>i.severity==='error').slice(0, 3);
             cardsHtml += `<div class="mt-2 space-y-1 border-t border-slate-200 pt-2">`;
-            for (const issue of previewIssues) {
-                cardsHtml += `<p class="text-[11px] text-red-700 leading-snug"><span style="color:#dc2626;font-weight:700;">·</span> ${esc(issue.message).slice(0,80)}${issue.message.length>80?'...':''}</p>`;
-            }
-            if (errCount > 3) cardsHtml += `<p class="text-[10px] text-slate-400">... 还有 ${errCount-3} 个错误</p>`;
+            let shown = 0;
+            g.issues.forEach((issue, idx) => {
+                if (issue.severity !== 'error' || shown >= 3) return;
+                shown++;
+                const loc = issue.line ? ` <span style="color:#94a3b8;">(行 ${issue.line})</span>` : '';
+                cardsHtml += `<p class="text-[11px] text-red-700 leading-snug cursor-pointer hover:bg-red-100 rounded px-1 -mx-1" onclick="event.stopPropagation();gotoIssueFromOverview('${g.gate_name}', ${idx})" title="点击跳转到此问题"><span style="color:#dc2626;font-weight:700;">·</span> ${esc(issue.message).slice(0,80)}${issue.message.length>80?'...':''}${loc}</p>`;
+            });
+            if (errCount > 3) cardsHtml += `<p class="text-[10px] text-blue-600 cursor-pointer hover:underline" onclick="event.stopPropagation();enterWorkspace()">... 还有 ${errCount-3} 个错误，进入工作台查看 →</p>`;
             cardsHtml += `</div>`;
         }
 
@@ -1049,7 +1077,8 @@ function showOverview() {
 
         cardsHtml += `</div>`;
     });
-    document.getElementById('overview-gates').innerHTML = statsHtml + cardsHtml;
+    document.getElementById('overview-gates').innerHTML = statsHtml +
+        `<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:12px; align-items:start;">${cardsHtml}</div>`;
 
     // Submission verdict
     const verdictEl = document.getElementById('overview-verdict');
@@ -1122,6 +1151,7 @@ async function loadComparison() {
 async function doAiReview() {
     const btn = document.getElementById('ai-review-btn');
     btn.disabled = true; btn.textContent = '🎓 分析中...';
+    showAiLoading('🎓 AI 审稿人正在通读全文…');
 
     try {
         const r = await fetch(`/api/ai-review/${jobId}`, {method: 'POST'});
@@ -1137,13 +1167,16 @@ async function doAiReview() {
     } catch(e) {
         toast('请求失败', 'error');
         btn.textContent = '🎓 模拟审稿人反馈';
+    } finally {
+        hideAiLoading();
+        btn.disabled = false;
     }
-    btn.disabled = false;
 }
 
 // === Workspace ===
 function enterWorkspace() {
     showScreen('screen-workspace');
+    persistState('workspace');
     document.getElementById('ws-filename').textContent = report.filename;
 
     if (!editor) {
@@ -1596,6 +1629,24 @@ function renderIssues(path) {
     }
 }
 
+// Jump to an issue from the overview screen: enter the workspace, open the
+// issue's file if needed, then focus the line.
+async function gotoIssueFromOverview(gateName, idx) {
+    const gate = report?.gate_results.find(g=>g.gate_name===gateName);
+    const issue = gate?.issues[idx]; if (!issue) return;
+    enterWorkspace();
+    try {
+        if (issue.file) {
+            const r = await fetch(`/api/files/${jobId}`);
+            const {files} = await r.json();
+            const want = issue.file.split('/').pop();
+            const match = files.find(f => f.path.split('/').pop() === want);
+            if (match && match.path !== currentFile) await openFile(match.path);
+        }
+    } catch(e) { /* fall through to focus on current file */ }
+    setTimeout(() => focusIssue(gateName, idx), 200);
+}
+
 function focusIssue(gateName, idx) {
     const gate = report.gate_results.find(g=>g.gate_name===gateName);
     const issue = gate?.issues[idx]; if (!issue) return;
@@ -1982,7 +2033,7 @@ async function showVenueChecklist() {
 }
 
 async function generateVenueChecklist(venue) {
-    toast(`📝 AI 正在分析论文并填写 ${venue.toUpperCase()} checklist...`, 'info', 5000);
+    showAiLoading(`📝 AI 正在分析论文并填写 ${venue.toUpperCase()} checklist…`);
     try {
         const r = await fetch(`/api/venue-checklist/${jobId}`, {
             method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -2025,6 +2076,8 @@ async function generateVenueChecklist(venue) {
         }
     } catch(e) {
         toast('请求失败: ' + e.message, 'error');
+    } finally {
+        hideAiLoading();
     }
 }
 
@@ -2163,7 +2216,7 @@ async function executeTidyUp(btn) {
 // === AI Batch Fix ===
 async function doBatchFix() {
     if (!jobId) return;
-    toast('🤖 正在批量分析所有问题...', 'info', 5000);
+    showAiLoading('🤖 AI 正在批量分析所有问题…');
 
     try {
         const r = await fetch(`/api/ai-batch-fix/${jobId}`, {method: 'POST'});
@@ -2206,6 +2259,8 @@ async function doBatchFix() {
         }
     } catch(e) {
         toast('批量修复请求失败: ' + e.message, 'error');
+    } finally {
+        hideAiLoading();
     }
 }
 
@@ -2343,7 +2398,7 @@ function copyShareLink() {
 }
 
 async function aiFixIssue(message, file, line) {
-    toast('🤖 正在生成修复建议...', 'info', 3000);
+    showAiLoading('🤖 AI 正在生成修复建议…');
     try {
         const r = await fetch(`/api/ai-fix/${jobId}`, {
             method:'POST', headers:{'Content-Type':'application/json'},
@@ -2371,6 +2426,8 @@ async function aiFixIssue(message, file, line) {
         }
     } catch(e) {
         toast('AI 修复请求失败', 'error');
+    } finally {
+        hideAiLoading();
     }
 }
 
@@ -2400,7 +2457,7 @@ async function doPolishSelection(mode = 'academic') {
     }
 
     const modeNames = {academic: '学术润色', concise: '精简', formal: '正式化'};
-    toast(`✨ 正在${modeNames[mode] || '润色'}...`, 'info', 3000);
+    showAiLoading(`✨ AI 正在${modeNames[mode] || '润色'}选中文本…`);
 
     try {
         const r = await fetch(`/api/ai-polish/${jobId}`, {
@@ -2437,6 +2494,8 @@ async function doPolishSelection(mode = 'academic') {
         }
     } catch(e) {
         toast('润色请求失败: ' + e.message, 'error');
+    } finally {
+        hideAiLoading();
     }
 }
 
@@ -2498,6 +2557,32 @@ function toast(message, type='info', duration=4000) {
     setTimeout(() => { el.style.opacity='0'; el.style.transform='translateX(100%)'; setTimeout(()=>el.remove(), 300); }, duration);
 }
 
+// Persistent AI loading overlay — stays until hideAiLoading() is called,
+// so users get a clear "working…" expectation for the whole AI call.
+function showAiLoading(message) {
+    hideAiLoading();
+    const el = document.createElement('div');
+    el.id = 'ai-loading-overlay';
+    el.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.18);';
+    el.innerHTML = `<div style="background:#fff;border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,0.25);padding:20px 26px;display:flex;align-items:center;gap:14px;min-width:240px;max-width:80%;">
+        <div style="width:22px;height:22px;border:3px solid #e2e8f0;border-top-color:#6366f1;border-radius:50%;animation:aispin 0.8s linear infinite;flex-shrink:0;"></div>
+        <div style="min-width:0;">
+            <p id="ai-loading-msg" style="margin:0;font-size:14px;font-weight:600;color:#1e293b;">${esc(message||'AI 处理中…')}</p>
+            <p style="margin:3px 0 0;font-size:11px;color:#94a3b8;">正在调用 AI，请稍候（通常几秒到几十秒）…</p>
+        </div>
+    </div>`;
+    document.body.appendChild(el);
+    return el;
+}
+function setAiLoadingMsg(message) {
+    const m = document.getElementById('ai-loading-msg');
+    if (m) m.textContent = message;
+}
+function hideAiLoading() {
+    const ex = document.getElementById('ai-loading-overlay');
+    if (ex) ex.remove();
+}
+
 // === History ===
 async function loadHistory() {
     try {
@@ -2509,11 +2594,12 @@ async function loadHistory() {
         const list = document.getElementById('history-list');
         section.style.display = 'block';
 
-        list.innerHTML = d.jobs.slice(0, 5).map(j => {
-            const date = new Date(j.timestamp);
-            const timeStr = date.toLocaleDateString('zh-CN', {month:'short', day:'numeric'}) + ' ' + date.toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
-            const scoreColor = j.score >= 90 ? '#22c55e' : j.score >= 60 ? '#f59e0b' : '#ef4444';
-            return `<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px; margin-bottom:6px; background:#f8fafc; border-radius:8px; border:1px solid #f1f5f9; cursor:pointer; transition:all 0.15s;" onmouseover="this.style.background='#eff6ff';this.style.borderColor='#bfdbfe'" onmouseout="this.style.background='#f8fafc';this.style.borderColor='#f1f5f9'" onclick="resumeJob('${j.job_id}')">
+        // Homepage shows only the single most recent check; "所有项目" opens the full list.
+        const j = d.jobs[0];
+        const date = new Date(j.timestamp);
+        const timeStr = date.toLocaleDateString('zh-CN', {month:'short', day:'numeric'}) + ' ' + date.toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
+        const scoreColor = j.score >= 90 ? '#22c55e' : j.score >= 60 ? '#f59e0b' : '#ef4444';
+        list.innerHTML = `<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px; background:#f8fafc; border-radius:8px; border:1px solid #f1f5f9; cursor:pointer; transition:all 0.15s;" onmouseover="this.style.background='#eff6ff';this.style.borderColor='#bfdbfe'" onmouseout="this.style.background='#f8fafc';this.style.borderColor='#f1f5f9'" onclick="resumeJob('${j.job_id}')">
                 <div style="flex:1; min-width:0;">
                     <p style="font-size:13px; font-weight:500; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#334155;">${esc(j.filename)}</p>
                     <p style="font-size:11px; color:#94a3b8; margin:2px 0 0;">${timeStr} · <span style="color:${j.gates_passed===j.gates_total?'#059669':'#64748b'}">${j.gates_passed}/${j.gates_total} 通过</span></p>
@@ -2524,8 +2610,65 @@ async function loadHistory() {
                     <span onclick="event.stopPropagation();deleteJob('${j.job_id}')" style="font-size:14px; color:#94a3b8; padding:2px 6px; border-radius:4px; cursor:pointer;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#94a3b8'" title="删除">🗑</span>
                 </div>
             </div>`;
-        }).join('');
     } catch(e) { /* silent fail */ }
+}
+
+// === All Projects modal ===
+async function showAllProjects() {
+    const modal = document.createElement('div');
+    modal.className = 'modal-bg';
+    modal.id = 'all-projects-modal';
+    modal.onclick = e => { if(e.target===modal) modal.remove(); };
+    modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:24px; max-width:560px; width:92%; max-height:82vh; display:flex; flex-direction:column;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin:0 0 4px;">
+            <h3 style="font-size:16px; font-weight:700; margin:0; color:#0f172a;">📂 所有项目</h3>
+            <button onclick="this.closest('.modal-bg').remove()" style="font-size:20px; line-height:1; color:#94a3b8; background:none; border:none; cursor:pointer; padding:0 4px;" onmouseover="this.style.color='#475569'" onmouseout="this.style.color='#94a3b8'">×</button>
+        </div>
+        <p style="font-size:11px; color:#64748b; margin:0 0 16px;">点击任意项目可恢复查看其检查报告</p>
+        <div id="all-projects-list" style="flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;">
+            <p style="font-size:12px; color:#94a3b8; text-align:center; padding:24px 0;">加载中…</p>
+        </div>
+    </div>`;
+    document.body.appendChild(modal);
+
+    try {
+        const r = await fetch('/api/history');
+        const d = await r.json();
+        const list = document.getElementById('all-projects-list');
+        if (!list) return;
+        if (!d.jobs || !d.jobs.length) {
+            list.innerHTML = `<p style="font-size:12px; color:#94a3b8; text-align:center; padding:24px 0;">暂无项目记录</p>`;
+            return;
+        }
+        list.innerHTML = d.jobs.map(j => {
+            const date = new Date(j.timestamp);
+            const timeStr = date.toLocaleDateString('zh-CN', {year:'numeric', month:'short', day:'numeric'}) + ' ' + date.toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
+            const scoreColor = j.score >= 90 ? '#22c55e' : j.score >= 60 ? '#f59e0b' : '#ef4444';
+            return `<div style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; margin-bottom:8px; background:#f8fafc; border-radius:10px; border:1px solid #f1f5f9; cursor:pointer; transition:all 0.15s;" onmouseover="this.style.background='#eff6ff';this.style.borderColor='#bfdbfe'" onmouseout="this.style.background='#f8fafc';this.style.borderColor='#f1f5f9'" onclick="this.closest('.modal-bg').remove();resumeJob('${j.job_id}')">
+                <div style="flex:1; min-width:0;">
+                    <p style="font-size:13px; font-weight:500; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#334155;">${esc(j.filename)}</p>
+                    <p style="font-size:11px; color:#94a3b8; margin:2px 0 0;">${timeStr} · <span style="color:${j.gates_passed===j.gates_total?'#059669':'#64748b'}">${j.gates_passed}/${j.gates_total} 通过</span></p>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; flex-shrink:0; margin-left:12px;">
+                    <span style="font-size:15px; font-weight:700; color:${scoreColor};">${j.score.toFixed(0)}</span>
+                    <span style="font-size:10px; color:#94a3b8;">分</span>
+                    <span onclick="event.stopPropagation();deleteJobInModal('${j.job_id}')" style="font-size:15px; color:#94a3b8; padding:2px 6px; border-radius:4px; cursor:pointer;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#94a3b8'" title="删除">🗑</span>
+                </div>
+            </div>`;
+        }).join('');
+    } catch(e) {
+        const list = document.getElementById('all-projects-list');
+        if (list) list.innerHTML = `<p style="font-size:12px; color:#ef4444; text-align:center; padding:24px 0;">加载失败，请重试</p>`;
+    }
+}
+
+// Delete from within the all-projects modal, then refresh both the modal list and homepage.
+async function deleteJobInModal(id) {
+    if (!confirm('确定删除此检查记录？')) return;
+    await fetch(`/api/job/${id}`, {method:'DELETE'});
+    loadHistory();
+    const modal = document.getElementById('all-projects-modal');
+    if (modal) { modal.remove(); showAllProjects(); }
 }
 
 async function resumeJob(id) {
@@ -2790,13 +2933,35 @@ checkAuthState();
 // Load history on page load
 loadHistory();
 
-// Check for share link: ?job=xxx
-const urlParams = new URLSearchParams(window.location.search);
-const sharedJobId = urlParams.get('job');
-if (sharedJobId) {
-    jobId = sharedJobId;
-    loadReport().then(() => { if (report) showOverview(); });
-}
+// Restore state on load: prefer URL (?job=&view=, shareable), fall back to
+// localStorage. This makes a browser refresh keep the user on the same
+// report/screen instead of resetting to the upload page.
+(function restoreStateOnLoad() {
+    const urlParams = new URLSearchParams(window.location.search);
+    let restoreJob = urlParams.get('job');
+    let restoreView = urlParams.get('view');
+    if (!restoreJob) {
+        try {
+            restoreJob = localStorage.getItem('sl_lastJob');
+            restoreView = restoreView || localStorage.getItem('sl_lastView');
+        } catch(e) {}
+    }
+    if (!restoreJob) return;
+    jobId = restoreJob;
+    loadReport().then(() => {
+        if (report) {
+            // showOverview populates the overview screen; for a workspace
+            // refresh we then switch into the workspace on top of it.
+            showOverview();
+            if (restoreView === 'workspace') enterWorkspace();
+        } else {
+            // Stale/deleted job (e.g. 404): clear state and go home.
+            jobId = null;
+            clearPersistedState();
+            showScreen('screen-upload');
+        }
+    });
+})();
 
 // Request notification permission
 if ('Notification' in window && Notification.permission === 'default') {
