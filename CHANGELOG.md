@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.6 (2026-05-29) — 官方 ARR / NeurIPS Checklist 对齐
+- **ARR Responsible NLP Research Checklist**：按官方页面 `https://aclrollingreview.org/responsibleNLPresearch/` 对齐 A-E 维度与 A1-E1 问题，包括 limitations、risks、scientific artifacts、computational experiments、human annotators/participants、AI assistants
+- **NeurIPS Paper Checklist**：按官方页面 `https://neurips.cc/public/guides/PaperChecklist` 对齐 1-16 项，包括 claims、limitations、theory/proofs、reproducibility、code/data、experimental details、statistics、compute、ethics、broader impacts、safeguards、licenses、assets、human subjects、IRB、LLM usage
+- 前端「复现清单」改为先选择 ARR 或 NeurIPS；生成结果显示官方 checklist 名称、来源链接、section 分组和 yes/no/n/a 统计
+- 后端 `/api/venue-checklist/{job_id}` 支持 `venue=arr` / `venue=neurips`，不再使用旧的自定义 C/D/E/T 泛化清单
+
 ## v5.3.5 (2026-05-29) — 文献真实性问题不再提供 AI 建议
 - **彻底禁用文献错误的 AI 建议修复**：`reference_authenticity` gate 以及「缺少 DOI / 无可信来源 / 标题搜索未找到 / Unverified reference / source not found」等文献真实性问题不再显示「AI 建议修复」按钮，改为「需人工核实文献」
 - **后端双重防护**：即使直接调用 `/api/ai-fix`，上述问题也返回 `not_fixable`，不会生成 BibTeX 或任何替换片段；`/api/ai-batch-fix` 也跳过这些问题

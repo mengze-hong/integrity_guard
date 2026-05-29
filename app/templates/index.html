@@ -2017,9 +2017,26 @@ function saveChecklistItem(idx, checked) {
 }
 
 // === Reproducibility Checklist ===
-// Single checklist (no venue chooser) — directly run the AI auto-fill.
 async function showVenueChecklist() {
-    generateVenueChecklist('reproducibility');
+    const modal = document.createElement('div');
+    modal.className = 'modal-bg';
+    modal.onclick = e => { if(e.target===modal) modal.remove(); };
+    modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:24px; max-width:520px; width:90%;">
+        <h3 style="font-size:17px; font-weight:700; margin:0 0 8px;">📝 选择官方复现清单</h3>
+        <p style="font-size:12px; color:#64748b; margin:0 0 16px;">按投稿 venue 使用官方维度自动检查。ARR 对齐 Responsible NLP Research Checklist A-E；NeurIPS 对齐 Paper Checklist 1-16。</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <button onclick="this.closest('.modal-bg').remove();generateVenueChecklist('arr')" style="text-align:left; padding:14px; border:1px solid #c7d2fe; background:#eef2ff; border-radius:12px; cursor:pointer;">
+                <div style="font-size:14px; font-weight:700; color:#3730a3;">ARR</div>
+                <div style="font-size:11px; color:#475569; margin-top:4px;">Responsible NLP Research Checklist<br>A1-E1 官方维度</div>
+            </button>
+            <button onclick="this.closest('.modal-bg').remove();generateVenueChecklist('neurips')" style="text-align:left; padding:14px; border:1px solid #bfdbfe; background:#eff6ff; border-radius:12px; cursor:pointer;">
+                <div style="font-size:14px; font-weight:700; color:#1d4ed8;">NeurIPS</div>
+                <div style="font-size:11px; color:#475569; margin-top:4px;">Paper Checklist<br>1-16 官方问题</div>
+            </button>
+        </div>
+        <button onclick="this.closest('.modal-bg').remove()" style="margin-top:16px; width:100%; padding:9px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:13px; color:#64748b;">取消</button>
+    </div>`;
+    document.body.appendChild(modal);
 }
 
 async function generateVenueChecklist(venue) {
@@ -2036,10 +2053,13 @@ async function generateVenueChecklist(venue) {
             const noCount = d.checklist.filter(i => i.answer === 'no').length;
             const naCount = d.checklist.filter(i => i.answer === 'na').length;
 
+            let lastSection = '';
             let html = d.checklist.map(item => {
                 const icon = item.answer === 'yes' ? '<span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:#dcfce7;color:#166534;text-align:center;line-height:18px;font-size:11px;font-weight:700;">✓</span>' : item.answer === 'no' ? '<span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:#fef2f2;color:#991b1b;text-align:center;line-height:18px;font-size:11px;font-weight:700;">✗</span>' : '<span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:#f1f5f9;color:#64748b;text-align:center;line-height:18px;font-size:11px;">—</span>';
                 const bg = item.answer === 'no' ? 'background:#fef2f2;' : '';
-                return `<div style="padding:8px 10px; border-radius:6px; margin-bottom:4px; ${bg} display:flex; gap:8px; align-items:flex-start;">
+                const sectionHeader = item.section && item.section !== lastSection ? `<div style="font-size:11px; color:#475569; font-weight:700; margin:12px 0 6px;">${esc(item.section)}</div>` : '';
+                lastSection = item.section || lastSection;
+                return `${sectionHeader}<div style="padding:8px 10px; border-radius:6px; margin-bottom:4px; ${bg} display:flex; gap:8px; align-items:flex-start;">
                     <span style="flex-shrink:0;">${icon}</span>
                     <div>
                         <p style="font-size:12px; color:#1e293b; margin:0; font-weight:500;">[${item.id}] ${item.text}</p>
@@ -2053,7 +2073,10 @@ async function generateVenueChecklist(venue) {
             modal.onclick = e => { if(e.target===modal) modal.remove(); };
             modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:24px; max-width:600px; width:90%; max-height:80vh; overflow-y:auto;">
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
-                    <h3 style="font-size:16px; font-weight:700; margin:0;">📝 Reproducibility Checklist</h3>
+                    <div>
+                        <h3 style="font-size:16px; font-weight:700; margin:0;">📝 ${esc(d.name || 'Reproducibility Checklist')}</h3>
+                        ${d.source ? `<a href="${esc(d.source)}" target="_blank" rel="noopener" style="font-size:11px; color:#2563eb;">官方 checklist 来源</a>` : ''}
+                    </div>
                     <div style="font-size:11px; color:#64748b; display:flex; gap:8px;"><span style="color:#166534;">${yesCount} passed</span><span style="color:#991b1b;">${noCount} missing</span><span style="color:#94a3b8;">${naCount} n/a</span></div>
                 </div>
                 ${noCount > 0 ? `<div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:10px; margin-bottom:12px; font-size:12px; color:#991b1b;">⚠️ ${noCount} 项需要补充，请在论文中添加相关内容后重新提交。</div>` : '<div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px; margin-bottom:12px; font-size:12px; color:#166534;">✅ 所有必填项已满足！</div>'}
