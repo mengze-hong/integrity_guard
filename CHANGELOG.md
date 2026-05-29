@@ -1,5 +1,10 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.52 (2026-05-29) — Upload API Integration Tests
+- 新增 `tests/test_upload_api.py`，用 FastAPI TestClient 挂载真实 upload router，并隔离上传目录与 job 存储到临时目录
+- 上传测试不 mock `_run_checks`，仅 stub `ReferenceAuthenticityGate.check`，避免访问 Crossref/Semantic Scholar/OpenAlex，同时覆盖真实解压、结构 gate 与报告持久化
+- 覆盖有效 ZIP、非 `.zip` 后缀、损坏 ZIP、Zip Slip、危险文件清理、缺 `.tex` 与缺 `.bib` 等 API 行为
+
 ## v5.3.51 (2026-05-29) — Frontend Helper Tests
 - 新增 `app/static/js/helpers.js`，把 inline script 中可复用的纯前端 helper 抽为非 module 全局脚本，保留现有 onclick/inline 调用方式
 - 批量 AI 修复前端改用 `groupFixesByGate()`、`indexesForGate()`、`prepareFixText()` 与 `$` 安全的 `replaceOnce()`，减少模板内重复逻辑
