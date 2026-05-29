@@ -162,7 +162,7 @@
 - [ ] CI/CD（GitHub Actions: lint + test + deploy）
 - [x] CI 检查扩展：前端 inline JS 语法检查抽成本地脚本，加入临时隧道 provider policy scan，并扩展 secret scan 覆盖 LLM、隧道平台、JWT、admin 与支付密钥模式
 - [x] 前端纯 helper 抽到全局脚本，并用 Node 内置测试覆盖 inline handler 参数、HTML escape、AI fix 文本替换与批量分组逻辑
-- [x] 本地运行与发布文档补齐：新增 docs 索引、本地启动指南，并扩展 release checklist 覆盖 JS 测试、ruff、pip-audit 与版本对齐提醒
+- [x] 本地运行、测试与发布文档补齐：新增 docs 索引、本地启动指南、按改动类型组织的测试指南，并让 release checklist 引用统一测试命令集
 - [x] 日志系统（structured logging with timestamp, level, module）
 - [ ] 监控（uptime check、API 延迟、错误率）
 - [x] Rate limiting（IP 级别，每小时 10 次上传）

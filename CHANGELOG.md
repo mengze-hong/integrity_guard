@@ -1,5 +1,10 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.60 (2026-05-30) — Testing Guide Docs
+- 新增 `docs/TESTING_GUIDE.md`，按全量提交前、前端 JS、AI routes/integrity、upload/file security、parser/gates、auth/payment、export/brand、minimal E2E、dependency audit/coverage 分类整理当前测试命令
+- `docs/README.md` 增加 Testing Guide 入口，`docs/RELEASE_CHECKLIST.md` 改为引用统一测试指南，减少发布检查命令重复
+- `TODO.md` 同步记录本地运行、测试与发布文档已补齐
+
 ## v5.3.59 (2026-05-30) — Local Docs And Release Checks
 - 新增 `docs/README.md` 作为文档索引，链接本地运行指南与发布清单，并预留测试、禁止事项和安全部署文档入口
 - 新增 `docs/LOCAL_RUN.md`，覆盖本地依赖安装、密钥初始化、uvicorn/Docker Compose 启动、健康检查、数据目录与 localhost 演示边界
