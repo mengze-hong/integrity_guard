@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.39 (2026-05-29) — Toast 去重与队列上限
+- 前端 toast 增加 1.5 秒重复消息去重，避免网络错误、AI 请求失败或连续点击时刷屏
+- 同屏最多保留 4 条 toast，新消息出现时会移除最旧提示，保持界面可读
+- 保持原有 `toast(message, type, duration)` 调用方式不变，不影响现有上传、保存、AI 和报告流程
+- 本地验证通过：前端 inline JavaScript 语法检查、全量 pytest 58 项
+
 ## v5.3.38 (2026-05-29) — LaTeX Cite/Ref 解析覆盖增强
 - TeX parser 继续扩展真实论文常见引用命令：`smartcite`、`supercite`、`citeyearpar`、`citeposs`
 - Ref parser 新增 `pageref`、`nameref`、`namecref`、`nameCref`、`cpageref`、`Cpageref` 覆盖，减少 cleveref/hyperref 论文误报

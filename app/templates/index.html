@@ -3115,13 +3115,32 @@ function normEol(s){return (s||'').replace(/\r\n?/g,'\n');}
 function stripFences(s){let t=(s||'').trim();if(t.startsWith('```')){t=t.replace(/^```[^\n]*\n/,'').replace(/\n?```\s*$/,'');}return t;}
 function linkify(s){return esc(s).replace(/(https?:\/\/[^\s&<]+)/g,function(url){try{const u=new URL(url);if(u.protocol==='http:'||u.protocol==='https:')return'<a href="'+u.href+'" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline hover:text-blue-800">'+u.href+'</a>';} catch(e){}return url;}).replace(/\n/g,'<br>');}
 
+const TOAST_MAX_VISIBLE = 4;
+const TOAST_DEDUPE_MS = 1500;
+const toastSeen = new Map();
+
 function toast(message, type='info', duration=4000) {
     const container = document.getElementById('toast-container');
+    if (!container) return;
+    const key = `${type}:${message}`;
+    const now = Date.now();
+    if ((toastSeen.get(key) || 0) + TOAST_DEDUPE_MS > now) return;
+    toastSeen.set(key, now);
+    while (container.children.length >= TOAST_MAX_VISIBLE) {
+        container.firstElementChild?.remove();
+    }
     const el = document.createElement('div');
     el.className = `toast toast-${type}`;
     el.textContent = message;
     container.appendChild(el);
-    setTimeout(() => { el.style.opacity='0'; el.style.transform='translateX(100%)'; setTimeout(()=>el.remove(), 300); }, duration);
+    setTimeout(() => {
+        el.style.opacity='0';
+        el.style.transform='translateX(100%)';
+        setTimeout(() => {
+            el.remove();
+            if ((toastSeen.get(key) || 0) <= now) toastSeen.delete(key);
+        }, 300);
+    }, duration);
 }
 
 // Persistent AI loading indicator — stays until hideAiLoading() is called.
