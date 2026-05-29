@@ -48,3 +48,21 @@ class Transaction(Base):
     created_at = Column(String, default=_now)
 
     user = relationship("User", back_populates="transactions")
+
+
+class PaymentOrder(Base):
+    __tablename__ = "payment_orders"
+
+    id = Column(String, primary_key=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    package_id = Column(String, nullable=False)
+    credits = Column(Integer, nullable=False)
+    price = Column(Float, nullable=False)
+    status = Column(String, default="pending", index=True)  # pending|paid|credited|failed
+    sandbox = Column(Boolean, default=False)
+    payment_url = Column(Text, nullable=True)
+    created_at = Column(String, default=_now)
+    paid_at = Column(String, nullable=True)
+    credited_at = Column(String, nullable=True)
+
+    user = relationship("User")

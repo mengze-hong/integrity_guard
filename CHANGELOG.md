@@ -1,5 +1,12 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.13 (2026-05-29) — Auth 与支付安全补强
+- 登录/注册实际接入 IP+邮箱维度限流，防止暴力尝试；认证 cookie 会在 HTTPS/生产环境自动启用 `Secure`
+- 新增 `payment_orders` 数据库表，支付订单不再只依赖内存；订单状态查询优先读取数据库
+- 支付回调增加幂等入账、金额校验和 Alipay `app_id` 校验，同一订单重复回调不会重复加积分
+- 管理员充值改为 `Authorization: Bearer ...` 或 `X-Admin-Key` header 鉴权，并增加基础限流；不再接受 body 中的 `admin_key`
+- 新增 auth/payment 安全测试，覆盖登录限流、HTTPS cookie、管理员 header key、支付回调幂等
+
 ## v5.3.12 (2026-05-29) — ZIP 上传安全强化
 - ZIP 解压前新增 metadata 预扫描，限制成员数量、总未压缩大小、单文件大小、目录深度和异常压缩比，阻断 zip bomb / zip flood / 极深路径滥用
 - 拒绝 ZIP 内 symlink 条目和规范化后重复路径，继续保留 Zip Slip 防护与危险可执行文件跳过逻辑

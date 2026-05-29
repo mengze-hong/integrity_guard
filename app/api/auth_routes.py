@@ -1,5 +1,6 @@
 """Authentication API routes: register, login, profile, OAuth."""
 
+import os
 import time
 from collections import defaultdict
 from fastapi import APIRouter, HTTPException, Depends, Response, Request
@@ -50,9 +51,38 @@ class LoginRequest(BaseModel):
     password: str
 
 
+def _client_ip(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _secure_cookie(request: Request) -> bool:
+    """Use secure cookies automatically behind HTTPS / production deployments."""
+    if os.environ.get("APP_ENV", "").lower() in {"prod", "production"}:
+        return True
+    return (
+        request.url.scheme == "https"
+        or request.headers.get("x-forwarded-proto", "").lower() == "https"
+    )
+
+
+def _set_auth_cookie(response: Response, request: Request, token: str) -> None:
+    response.set_cookie(
+        "token",
+        token,
+        httponly=True,
+        secure=_secure_cookie(request),
+        max_age=7 * 86400,
+        samesite="lax",
+    )
+
+
 @router.post("/register")
-async def register(body: RegisterRequest, response: Response, db: Session = Depends(get_db)):
+async def register(body: RegisterRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     """Register a new user with email + password."""
+    _check_rate_limit(f"register:{_client_ip(request)}:{body.email.lower().strip()}")
     # Check if email already exists
     existing = db.query(User).filter(User.email == body.email.lower().strip()).first()
     if existing:
@@ -64,8 +94,7 @@ async def register(body: RegisterRequest, response: Response, db: Session = Depe
     user = register_user(db, body.email, body.password, body.name)
     token = create_token(user.id)
 
-    # Set cookie
-    response.set_cookie("token", token, httponly=True, secure=False, max_age=7*86400, samesite="lax")  # secure=True in production with HTTPS
+    _set_auth_cookie(response, request, token)
 
     return {
         "status": "ok",
@@ -75,14 +104,15 @@ async def register(body: RegisterRequest, response: Response, db: Session = Depe
 
 
 @router.post("/login")
-async def login(body: LoginRequest, response: Response, db: Session = Depends(get_db)):
+async def login(body: LoginRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     """Login with email + password."""
+    _check_rate_limit(f"login:{_client_ip(request)}:{body.email.lower().strip()}")
     user = authenticate_user(db, body.email, body.password)
     if not user:
         raise HTTPException(status_code=401, detail="邮箱或密码错误")
 
     token = create_token(user.id)
-    response.set_cookie("token", token, httponly=True, secure=False, max_age=7*86400, samesite="lax")  # secure=True in production with HTTPS
+    _set_auth_cookie(response, request, token)
 
     return {
         "status": "ok",
