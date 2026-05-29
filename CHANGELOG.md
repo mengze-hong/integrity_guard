@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.31 (2026-05-29) — 上传 ZIP 签名与宏文件防护
+- 上传接口在写入磁盘前校验 ZIP magic bytes，即使文件名是 `.zip`，内容不是有效 ZIP 也会拒绝
+- ZIP 解压危险扩展名列表扩展到 `.jar/.vbs/.js/.scr/.com` 与 Office macro 文件 `.docm/.xlsm/.pptm`
+- 新增上传内容签名回归测试，确认伪装成 ZIP 的非 ZIP 内容被拒绝
+- 扩展 ZIP 安全测试，确认宏文件会被跳过，不会落入解压目录
+
 ## v5.3.30 (2026-05-29) — 安全响应头与兼容 CSP
 - 新增 FastAPI security headers middleware，所有响应默认带 `X-Content-Type-Options: nosniff`、`X-Frame-Options: DENY`、`Referrer-Policy` 和基础 `Permissions-Policy`
 - 新增兼容当前单页应用的 Content-Security-Policy：限制 `object-src`、`base-uri`、`frame-ancestors`、`form-action`，同时允许现有 Tailwind/CodeMirror CDN 与 inline 脚本样式

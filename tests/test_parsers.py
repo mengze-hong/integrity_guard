@@ -168,6 +168,7 @@ def test_extract_zip_skips_dangerous_files(tmp_path):
         zf.writestr("paper/main.tex", "\\documentclass{article}")
         zf.writestr("paper/evil.exe", "MZ binary")
         zf.writestr("paper/run.sh", "#!/bin/sh\nrm -rf /")
+        zf.writestr("paper/macro.docm", "macro payload")
 
     dest = tmp_path / "out"
     root = extract_zip(zip_path, dest)
@@ -175,6 +176,7 @@ def test_extract_zip_skips_dangerous_files(tmp_path):
     assert (root / "main.tex").exists()
     assert not (root / "evil.exe").exists()
     assert not (root / "run.sh").exists()
+    assert not (root / "macro.docm").exists()
 
 
 def test_extract_zip_blocks_path_traversal(tmp_path):

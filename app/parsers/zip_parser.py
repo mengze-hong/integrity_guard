@@ -9,7 +9,10 @@ from pathlib import Path
 from app.models import ParsedPaper
 
 
-DANGEROUS_EXTENSIONS = (".exe", ".sh", ".bat", ".cmd", ".ps1", ".dll", ".so", ".bin", ".msi")
+DANGEROUS_EXTENSIONS = (
+    ".exe", ".sh", ".bat", ".cmd", ".ps1", ".dll", ".so", ".bin", ".msi",
+    ".jar", ".vbs", ".js", ".scr", ".com", ".docm", ".xlsm", ".pptm",
+)
 MAX_ZIP_MEMBERS = 2_000
 MAX_UNCOMPRESSED_TOTAL = 200 * 1024 * 1024
 MAX_UNCOMPRESSED_FILE = 50 * 1024 * 1024

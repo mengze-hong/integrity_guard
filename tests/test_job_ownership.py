@@ -103,6 +103,18 @@ def test_anonymous_upload_sets_session_and_owner_can_read(ownership_app, tmp_pat
     assert response.json()["job_id"] == upload["job_id"]
 
 
+def test_upload_rejects_non_zip_content_even_with_zip_extension(ownership_app):
+    client = TestClient(ownership_app)
+
+    response = client.post(
+        "/api/upload",
+        files={"file": ("paper.zip", b"not really a zip", "application/zip")},
+    )
+
+    assert response.status_code == 400
+    assert "ZIP" in response.json()["detail"]
+
+
 def test_different_anonymous_session_cannot_read_report(ownership_app, tmp_path):
     owner = TestClient(ownership_app)
     upload = _upload(owner, tmp_path)

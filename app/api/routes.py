@@ -259,6 +259,7 @@ def _persist(job_id: str):
 _rate_limit: dict[str, list[float]] = {}  # ip → [timestamps]
 RATE_LIMIT_MAX = 10  # max uploads per window
 RATE_LIMIT_WINDOW = 3600  # 1 hour
+_ZIP_MAGIC_PREFIXES = (b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08")
 
 
 def _check_rate_limit(ip: str) -> bool:
@@ -272,6 +273,11 @@ def _check_rate_limit(ip: str) -> bool:
         return False
     _rate_limit[ip].append(now)
     return True
+
+
+def _looks_like_zip(content: bytes) -> bool:
+    """Validate ZIP local/central directory magic before writing upload to disk."""
+    return any(content.startswith(prefix) for prefix in _ZIP_MAGIC_PREFIXES)
 
 
 # ─── LLM usage caps (anti-abuse / cost control) ───────────────
@@ -404,6 +410,8 @@ async def upload_paper(
     # Security: file size check (max 100MB)
     if len(content) > 100 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="文件过大（最大 100MB）")
+    if not _looks_like_zip(content):
+        raise HTTPException(status_code=400, detail="文件内容不是有效 ZIP（签名校验失败）")
 
     job_id = uuid.uuid4().hex[:12]  # 12 hex chars = 48 bits entropy
     upload_path = settings.upload_dir / f"{job_id}.zip"
