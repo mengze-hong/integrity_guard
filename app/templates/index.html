@@ -2459,18 +2459,33 @@ async function aiFixIssue(message, file, line, gate) {
             // find-and-replace instead of blindly overwriting lines by number.
             window._singleFix = { original: d.original || '', fixed: d.suggestion, file: d.file || file };
             const suggestionEncoded = btoa(encodeURIComponent(d.suggestion));
+            const canApply = d.can_apply !== false && !!(d.original || '').trim();
+            const riskLabel = d.risk ? `风险: ${d.risk}` : '风险: medium';
+            const prov = d.provenance || {};
+            const provText = [prov.source, prov.model, prov.gate, prov.file ? `${prov.file}:${prov.line || '?'}` : '']
+                .filter(Boolean).join(' · ');
             const modal = document.createElement('div');
             modal.className = 'modal-bg';
             modal.onclick = e => { if(e.target===modal) modal.remove(); };
-            modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:24px; max-width:600px; width:90%; max-height:70vh; overflow-y:auto;">
+            modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:24px; max-width:860px; width:92%; max-height:80vh; overflow-y:auto;">
                 <h3 style="font-size:16px; font-weight:700; margin:0 0 8px;">AI 建议修复</h3>
                 <p style="font-size:12px; color:#64748b; margin:0 0 12px;">问题: ${esc(message).slice(0,80)}</p>
-                <pre style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; font-size:12px; overflow-x:auto; white-space:pre-wrap; font-family:var(--font-mono);">${esc(d.suggestion)}</pre>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div>
+                        <p style="font-size:10px; font-weight:700; color:#64748b; margin:0 0 4px;">原文片段</p>
+                        <pre style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:12px; font-size:12px; overflow:auto; white-space:pre-wrap; font-family:var(--font-mono); max-height:320px;">${esc(d.original || '(无可替换原文，不能自动采用)')}</pre>
+                    </div>
+                    <div>
+                        <p style="font-size:10px; font-weight:700; color:#16a34a; margin:0 0 4px;">AI 建议片段</p>
+                        <pre style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px; font-size:12px; overflow:auto; white-space:pre-wrap; font-family:var(--font-mono); max-height:320px;">${esc(d.suggestion)}</pre>
+                    </div>
+                </div>
+                <p style="font-size:11px; color:#475569; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:7px 10px; margin:12px 0 0;">${esc(riskLabel)}${provText ? ' · 来源: ' + esc(provText) : ''}</p>
                 <p style="font-size:11px; color:#b45309; background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:8px 10px; margin:12px 0 0;">⚠️ 这是 AI 的修改<b>建议</b>，可能有误，请人工核实后再采用。应用后会自动重新质检。</p>
                 <div style="display:flex; gap:8px; margin-top:16px; justify-content:flex-end;">
                     <button onclick="this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-size:13px;">关闭</button>
                     <button onclick="navigator.clipboard.writeText(decodeURIComponent(atob('${suggestionEncoded}')));toast('已复制','success',1500);this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:none; background:#64748b; color:#fff; cursor:pointer; font-size:13px;">复制</button>
-                    <button onclick="applySingleFix();this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:none; background:#22c55e; color:#fff; cursor:pointer; font-size:13px; font-weight:600;">✅ 采用建议并重新质检</button>
+                    ${canApply ? `<button onclick="applySingleFix();this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:none; background:#22c55e; color:#fff; cursor:pointer; font-size:13px; font-weight:600;">✅ 采用建议并重新质检</button>` : ''}
                 </div>
             </div>`;
             document.body.appendChild(modal);
@@ -2497,9 +2512,10 @@ async function applySingleFix() {
             return;
         }
         // Exact match failed (file changed since suggestion) — do NOT clobber.
-        toast('⚠️ 未能精确定位原文，已在光标处插入，请手动核对位置', 'warning', 3500);
+        toast('⚠️ 未能精确定位原文，未自动插入。请复制建议后手动核对。', 'warning', 4500);
+        return;
     }
-    editor.replaceSelection(stripFences(fix.fixed));
+    toast('⚠️ 缺少可替换原文，不能自动采用。请复制建议后手动核对。', 'warning', 4500);
 }
 
 // === AI Polish (integrated into right-click) ===

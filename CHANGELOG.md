@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.16 (2026-05-29) — AI 建议应用改为可审计 Diff 视图
+- AI 单条建议弹窗改为原文片段 / AI 建议片段双栏展示，并显示风险等级和 provenance 来源信息
+- 只有后端返回可替换原文时才显示「采用建议并重新质检」按钮，避免无锚点建议被直接应用
+- 精确匹配失败时不再把建议插入光标处，改为提示用户复制后人工核对，避免“瞎替换”或插错位置
+- 补充 AI integrity 测试，确认文献真实性问题不返回 suggestion，普通非文献问题仍可走 AI 建议
+
 ## v5.3.15 (2026-05-29) — LaTeX/BibTeX 解析准确性增强
 - LaTeX citation parser 支持更多 natbib/biblatex 命令与 optional args，包括 `citealt/citealp/citeauthor/citeyear/parencite/textcite/autocite/footcite/nocite`
 - reference parser 支持 `subref/vref/Vref/crefrange/Crefrange` 和 comma-separated cleveref 引用，减少真实论文中的漏检

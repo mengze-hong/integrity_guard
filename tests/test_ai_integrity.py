@@ -18,7 +18,15 @@ def test_reference_authenticity_issue_is_not_fixable_payload():
     assert payload["status"] == "not_fixable"
     assert payload["not_fixable"] is True
     assert payload["candidate_search_available"] is True
+    assert "suggestion" not in payload
     assert payload["provenance"]["source"] == "rule"
+
+
+def test_non_reference_issue_is_ai_fixable():
+    assert not _is_reference_authenticity_issue(
+        "figure_table_crossref",
+        "Figure 1 is never referenced in text",
+    )
 
 
 def test_extract_reference_title_from_evidence():
