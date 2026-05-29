@@ -51,6 +51,9 @@ _job_progress: dict[str, list[str]] = {}  # job_id → list of completed gate na
 _job_owners: dict[str, dict] = {}  # job_id → owner/share metadata while processing
 _job_locks: set[str] = set()  # job_id currently running checks/rechecks
 
+BATCH_FIX_LIMIT = 5
+BATCH_FIX_ALLOWED_SUFFIXES = (".tex", ".bib")
+
 SESSION_COOKIE_NAME = "sl_session"
 SESSION_COOKIE_MAX_AGE = 30 * 86400
 
@@ -1117,9 +1120,138 @@ async def ai_fix_suggestion(job_id: str, request: Request, response: Response):
         return {"status": "error", "detail": redact(str(e))[:100]}
 
 
+def _new_batch_summary(limit: int) -> dict:
+    """Create a machine-readable dry-run summary for AI batch suggestions."""
+    return {
+        "limit": limit,
+        "total_error_issues": 0,
+        "total_fixable": 0,
+        "selected_for_generation": 0,
+        "generated": 0,
+        "skipped": defaultdict(int),
+        "by_gate": defaultdict(lambda: {
+            "total_error_issues": 0,
+            "fixable": 0,
+            "selected_for_generation": 0,
+            "generated": 0,
+            "skipped": 0,
+        }),
+    }
+
+
+def _batch_summary_plain(summary: dict) -> dict:
+    """Convert defaultdict-backed summary into JSON-stable plain dicts."""
+    plain = dict(summary)
+    plain["skipped"] = dict(summary["skipped"])
+    plain["by_gate"] = {
+        gate: dict(values)
+        for gate, values in summary["by_gate"].items()
+    }
+    return plain
+
+
+def _record_batch_skip(
+    summary: dict,
+    skipped: list[dict],
+    gate_name: str,
+    issue_index: int,
+    issue,
+    reason: str,
+) -> None:
+    summary["skipped"][reason] += 1
+    summary["by_gate"][gate_name]["skipped"] += 1
+    skipped.append({
+        "gate_name": gate_name,
+        "issue_index": issue_index,
+        "reason": reason,
+        "message": issue.message,
+        "file": issue.file,
+        "line": issue.line,
+    })
+
+
+def _collect_batch_fix_candidates(report: FullReport, project_dir: Path, limit: int = BATCH_FIX_LIMIT) -> tuple[list[dict], dict, list[dict]]:
+    """Dry-run batch fix candidates without invoking the LLM.
+
+    This keeps the safety policy testable: reference authenticity issues,
+    dismissed issues, missing anchors, unreadable files, and over-limit items
+    are reported explicitly instead of silently disappearing.
+    """
+    summary = _new_batch_summary(limit)
+    skipped: list[dict] = []
+    candidates: list[dict] = []
+    dismissed = {
+        (d.gate_name, d.issue_index)
+        for d in report.dismissed_issues
+    }
+
+    for gate in report.gate_results:
+        gate_name = gate.gate_name
+        for issue_index, issue in enumerate(gate.issues):
+            if issue.severity != Severity.ERROR:
+                continue
+
+            summary["total_error_issues"] += 1
+            summary["by_gate"][gate_name]["total_error_issues"] += 1
+
+            if (gate_name, issue_index) in dismissed:
+                _record_batch_skip(summary, skipped, gate_name, issue_index, issue, "dismissed")
+                continue
+
+            if gate_name == "reference_authenticity" or _is_reference_authenticity_issue(gate_name, issue.message):
+                _record_batch_skip(summary, skipped, gate_name, issue_index, issue, "reference_authenticity")
+                continue
+
+            if not issue.file:
+                _record_batch_skip(summary, skipped, gate_name, issue_index, issue, "missing_file")
+                continue
+
+            if not issue.line:
+                _record_batch_skip(summary, skipped, gate_name, issue_index, issue, "missing_line")
+                continue
+
+            try:
+                target = safe_project_file(project_dir, issue.file, allowed_suffixes=BATCH_FIX_ALLOWED_SUFFIXES)
+            except HTTPException:
+                _record_batch_skip(summary, skipped, gate_name, issue_index, issue, "unsupported_file")
+                continue
+
+            if not target.exists():
+                _record_batch_skip(summary, skipped, gate_name, issue_index, issue, "missing_file")
+                continue
+
+            lines = target.read_text(encoding="utf-8", errors="replace").split("\n")
+            start = max(0, issue.line - 4)
+            end = min(len(lines), issue.line + 4)
+            context = "\n".join(lines[start:end]).strip("\n")
+            if not context.strip():
+                _record_batch_skip(summary, skipped, gate_name, issue_index, issue, "empty_context")
+                continue
+
+            summary["total_fixable"] += 1
+            summary["by_gate"][gate_name]["fixable"] += 1
+            candidate = {
+                "gate_name": gate_name,
+                "issue_index": issue_index,
+                "message": issue.message,
+                "file": issue.file,
+                "line": issue.line,
+                "suggestion": issue.suggestion or "",
+                "context": context,
+            }
+            if len(candidates) < limit:
+                summary["selected_for_generation"] += 1
+                summary["by_gate"][gate_name]["selected_for_generation"] += 1
+                candidates.append(candidate)
+            else:
+                _record_batch_skip(summary, skipped, gate_name, issue_index, issue, "over_limit")
+
+    return candidates, _batch_summary_plain(summary), skipped
+
+
 @router.post("/ai-batch-fix/{job_id}")
 async def ai_batch_fix(job_id: str, request: Request, response: Response):
-    """Batch AI fix: attempt to fix all auto-fixable issues at once."""
+    """Batch AI fix: generate auditable suggestions for fixable issues."""
     await _require_job_access(job_id, request, response, write=True)
     _llm_usage_guard(request)
     if job_id not in _job_dirs:
@@ -1132,46 +1264,23 @@ async def ai_batch_fix(job_id: str, request: Request, response: Response):
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
 
-    # Collect fixable issues (errors with file+line info)
-    fixable = []
-    for gate in report.gate_results:
-        # Integrity guardrail: never auto-fix reference authenticity issues —
-        # the LLM would fabricate a replacement (another fake citation).
-        if gate.gate_name == "reference_authenticity":
-            continue
-        for idx, issue in enumerate(gate.issues):
-            if issue.severity != Severity.ERROR:
-                continue
-            if _is_reference_authenticity_issue(gate.gate_name, issue.message):
-                continue
-            # Skip if dismissed
-            if any(d.gate_name == gate.gate_name and d.issue_index == idx
-                   for d in report.dismissed_issues):
-                continue
-            if issue.file and issue.line:
-                fixable.append({
-                    "message": issue.message,
-                    "file": issue.file,
-                    "line": issue.line,
-                    "suggestion": issue.suggestion or "",
-                })
+    candidates, summary, skipped = _collect_batch_fix_candidates(report, project_dir)
 
-    if not fixable:
-        return {"status": "ok", "fixes": [], "message": "没有可自动修复的问题"}
+    if not candidates:
+        return {
+            "status": "ok",
+            "fixes": [],
+            "summary": summary,
+            "skipped": skipped,
+            "message": "没有可自动修复的问题",
+        }
 
     # Batch: get context for each fixable issue and call LLM
     import httpx
     fixes = []
     async with httpx.AsyncClient(timeout=30.0) as client:
-        for item in fixable[:5]:  # Limit to 5 at a time to avoid timeout
-            target = safe_project_file(project_dir, item["file"], allowed_suffixes=(".tex", ".bib"))
-            if not target.exists():
-                continue
-            lines = target.read_text(encoding="utf-8", errors="replace").split("\n")
-            start = max(0, item["line"] - 4)
-            end = min(len(lines), item["line"] + 4)
-            context = "\n".join(lines[start:end])
-
+        for item in candidates:
+            context = item["context"]
             lang = _detect_lang(context, item["message"])
             if lang == "zh":
                 sys_prompt = (
@@ -1206,20 +1315,51 @@ async def ai_batch_fix(job_id: str, request: Request, response: Response):
                 if resp.status_code == 200:
                     data = resp.json()
                     fix_text = _strip_code_fence(data["choices"][0]["message"]["content"])
+                    gate_name = item["gate_name"]
+                    summary["generated"] += 1
+                    summary["by_gate"].setdefault(gate_name, {})
+                    summary["by_gate"][gate_name]["generated"] = summary["by_gate"][gate_name].get("generated", 0) + 1
                     fixes.append({
+                        "gate_name": item["gate_name"],
+                        "issue_index": item["issue_index"],
                         "file": item["file"],
                         "line": item["line"],
                         "message": item["message"],
                         "original": context,
                         "fixed": fix_text,
+                        "can_apply": bool(context.strip() and fix_text.strip()),
                         "risk": "medium",
                         "requires_manual_review": True,
-                        "provenance": _ai_fix_provenance("", item["file"], item["line"], context),
+                        "provenance": _ai_fix_provenance(item["gate_name"], item["file"], item["line"], context),
+                    })
+                else:
+                    summary["skipped"]["llm_error"] = summary["skipped"].get("llm_error", 0) + 1
+                    skipped.append({
+                        "gate_name": item["gate_name"],
+                        "issue_index": item["issue_index"],
+                        "reason": "llm_error",
+                        "message": item["message"],
+                        "file": item["file"],
+                        "line": item["line"],
                     })
             except Exception:
-                continue
+                summary["skipped"]["llm_exception"] = summary["skipped"].get("llm_exception", 0) + 1
+                skipped.append({
+                    "gate_name": item["gate_name"],
+                    "issue_index": item["issue_index"],
+                    "reason": "llm_exception",
+                    "message": item["message"],
+                    "file": item["file"],
+                    "line": item["line"],
+                })
 
-    return {"status": "ok", "fixes": fixes, "total_fixable": len(fixable)}
+    return {
+        "status": "ok",
+        "fixes": fixes,
+        "total_fixable": summary["total_fixable"],
+        "summary": summary,
+        "skipped": skipped,
+    }
 
 
 @router.post("/ai-review/{job_id}")

@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.33 (2026-05-29) — AI 批量建议 Dry-Run 摘要
+- `/api/ai-batch-fix/{job_id}` 新增 dry-run `summary`，返回可修复总数、本次生成数、批量上限、按 gate 分组统计和跳过原因
+- 批量建议候选收集改为可测试 helper，文献真实性、已忽略、缺文件、缺行号、空上下文、超出上限等情况不再静默跳过
+- 每条批量建议补充 `gate_name`、`issue_index`、`can_apply`、`risk` 和 provenance，方便前端后续分组展示和审计
+- 新增 AI integrity 回归测试，确认文献真实性问题不会进入 LLM 批量修复、已忽略问题会跳过、普通问题会保留 gate/issue/context 信息
+
 ## v5.3.32 (2026-05-29) — AI 助手前端入口补齐
 - 总览页操作区新增「🤖 模拟审稿」按钮，可直接调用 AI 审稿接口查看结构化反馈
 - 工作台工具栏新增「🤖 AI 助手」下拉菜单，统一收纳「模拟审稿 / 优化 Abstract / AI 批量建议」入口
