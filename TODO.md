@@ -143,6 +143,7 @@
 - [x] AI fix/batch-fix routes 迁入 `app/api/ai_routes.py`，所有 `/api/ai-*` 路径集中到 AI router
 - [x] 测试覆盖：7 个单元测试（citations, structure, writing, data gates）
 - [x] Error handling：全局异常处理中间件（返回 JSON 错误）
+- [x] AI router API mock 测试覆盖 reference authenticity 单条/批量修复 guardrail
 
 ### 部署 & 运维
 - [x] Docker 化（Dockerfile + docker-compose.yml + requirements.txt）

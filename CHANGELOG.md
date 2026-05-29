@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.46 (2026-05-29) — AI Router Guardrail API Tests
+- 新增 `tests/test_ai_routes.py`，用 FastAPI TestClient 直接覆盖新 `ai_routes.py`
+- 验证 `POST /api/ai-fix/{job_id}` 遇到 reference authenticity 问题时返回 `not_fixable`，且不会调用 LLM
+- 验证 `POST /api/ai-batch-fix/{job_id}` 对 reference authenticity 问题只返回 dry-run skipped summary，不生成 AI 修复
+- 本地验证通过：AI focused tests 12 项；全量 pytest 60 项
+
 ## v5.3.45 (2026-05-29) — AI Fix 路由完成迁移
 - `POST /api/ai-fix/{job_id}` 与 `POST /api/ai-batch-fix/{job_id}` 已迁入 `app/api/ai_routes.py`
 - 当前所有 `/api/ai-*` 路径集中到 AI router，旧 `routes.py` 仅保留 batch candidate helper 等迁移期共享逻辑
