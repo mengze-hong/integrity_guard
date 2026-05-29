@@ -17,7 +17,7 @@ from collections import Counter
 from pathlib import Path
 
 from app.checks.base import BaseGate
-from app.models import CheckResult, Issue, ParsedPaper, Severity, TexFile
+from app.models import CheckResult, Issue, ParsedPaper, Severity
 
 _BIBLIOGRAPHY_PATTERN = re.compile(r"\\bibliography\{([^}]+)\}")
 _ADDBIBRESOURCE_PATTERN = re.compile(r"\\addbibresource(?:\[[^\]]*\])?\{([^}]+)\}")

@@ -1,7 +1,6 @@
 """Shared FastAPI dependencies."""
 
 from fastapi import Request, HTTPException
-from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
 from app.auth import decode_token

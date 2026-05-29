@@ -5,7 +5,6 @@ In production, connects to Alipay SDK for real QR code payments.
 """
 
 import uuid
-import hashlib
 import time
 from datetime import datetime, timezone
 

@@ -1,5 +1,13 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.20 (2026-05-29) — CI 扩展与 Ruff 清理
+- GitHub Actions CI 增加 Node 环境、前端内联 JavaScript 语法检查、敏感信息扫描和统一 `python -m pytest -q`
+- 本地修复现有 ruff `E/F/W` 问题，清理未使用导入、无占位 f-string、含糊变量名和 docstring 转义警告，确保新增 CI 不会一上线就失败
+- CI 增加 `pytest-cov` coverage 门槛和 `pip-audit` 依赖审计；secret scan 扩展覆盖 `Bearer sk-`、`LLM_API_KEY=`、`LLM_BASE_URL=` 等高风险模式
+- `pyproject.toml` 与运行依赖对齐，补入 SQLAlchemy、aiosqlite、bcrypt、PyJWT，并将 pytest-cov / pip-audit 加入 dev 依赖
+- 新增 `docs/RELEASE_CHECKLIST.md`，固化每次更新前的 changelog、版本号、测试、secret scan、提交和 push 备份流程
+- 本地验证通过：ruff、JS syntax check、pytest 41 项
+
 ## v5.3.19 (2026-05-29) — 只读分享链接与修复包下载
 - 工具栏新增「分享」按钮，复制包含 `share_token` 的导师只读链接；通过分享链接打开页面时会自动携带 token 加载报告、状态、文件树和导出
 - 新增 `/api/download/{job_id}`，可下载当前编辑后的项目 ZIP，保留目录结构，供作者提交或备份修复版本

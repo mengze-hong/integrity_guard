@@ -9,9 +9,8 @@ Features:
 """
 
 import re
-from pathlib import Path
 
-from app.models import BibEntry, TexFile
+from app.models import TexFile
 
 
 # Fields to remove during cleaning

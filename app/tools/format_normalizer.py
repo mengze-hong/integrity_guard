@@ -1,4 +1,4 @@
-"""LaTeX format normalization tool.
+r"""LaTeX format normalization tool.
 
 Automatically fixes common formatting inconsistencies:
 1. Unify citation commands (\cite vs \citep)
@@ -29,7 +29,7 @@ def normalize_format(text: str, rules: list[str] | None = None) -> tuple[str, li
         # Table 1 → Table~1, Figure 2 → Figure~2, Section 3 → Section~3
         for word in ("Table", "Figure", "Fig\\.", "Section", "Equation", "Eq\\.", "Chapter", "Algorithm"):
             pattern = rf"({word})\s+(\d)"
-            replacement = rf"\1~\2"
+            replacement = r"\1~\2"
             new_text = re.sub(pattern, replacement, text)
             if new_text != text:
                 count = len(re.findall(pattern, text))

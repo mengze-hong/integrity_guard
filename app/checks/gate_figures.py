@@ -11,7 +11,6 @@ Verifies:
 """
 
 import re
-from pathlib import Path
 
 from app.checks.base import BaseGate
 from app.models import CheckResult, Issue, ParsedPaper, Severity, TexFile
@@ -192,12 +191,12 @@ class FigureTableGate(BaseGate):
         dangling_refs = fig_tab_ref_keys - float_labels
         for key in sorted(dangling_refs):
             locs = ref_locations[key]
-            loc_str = ", ".join(f"{l['section']}" for l in locs[:3])
+            loc_str = ", ".join(f"{loc['section']}" for loc in locs[:3])
             issues.append(Issue(
                 severity=Severity.ERROR,
                 message=f"\\ref{{{key}}} points to non-existent figure/table",
                 location=loc_str,
-                evidence=f"Referenced in: {', '.join(l['file'] + ':' + str(l['line']) for l in locs[:3])}",
+                evidence=f"Referenced in: {', '.join(loc['file'] + ':' + str(loc['line']) for loc in locs[:3])}",
                 suggestion=f"Either create a figure/table with \\label{{{key}}} or fix the \\ref.",
             ))
 

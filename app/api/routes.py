@@ -1,8 +1,10 @@
 """API routes for integrity checks + file editor + human-in-the-loop."""
 
 import secrets
+import time
 import uuid
 import zipfile
+from collections import defaultdict
 from io import BytesIO
 from datetime import datetime, timezone
 from pathlib import Path
@@ -13,7 +15,7 @@ from fastapi.responses import PlainTextResponse, StreamingResponse
 from app.config import settings, LLM_RATE_PER_IP, LLM_RATE_WINDOW, LLM_GLOBAL_HOURLY_CAP
 from app.secrets_manager import redact
 from app.models import FullReport, DismissedIssue, Severity
-from app.parsers.zip_parser import extract_zip, identify_project_structure
+from app.parsers.zip_parser import extract_zip
 from app.parsers.tex_parser import parse_all_tex_files
 from app.parsers.bib_parser import parse_all_bib_files
 from app.checks.gate_structure import StructureGate
@@ -240,7 +242,6 @@ def _persist(job_id: str):
 
 
 # ─── Rate Limiting ────────────────────────────────────────────
-import time
 _rate_limit: dict[str, list[float]] = {}  # ip → [timestamps]
 RATE_LIMIT_MAX = 10  # max uploads per window
 RATE_LIMIT_WINDOW = 3600  # 1 hour
@@ -260,7 +261,6 @@ def _check_rate_limit(ip: str) -> bool:
 
 
 # ─── LLM usage caps (anti-abuse / cost control) ───────────────
-from collections import defaultdict
 _llm_calls_by_ip: dict[str, list[float]] = defaultdict(list)
 _llm_calls_global: list[float] = []
 
@@ -743,15 +743,15 @@ async def export_report(job_id: str, request: Request, response: Response):
     lines = []
     lines.append("# IntegrityGuard — 论文完整性检查报告")
     lines.append("")
-    lines.append(f"| 项目 | 详情 |")
-    lines.append(f"|------|------|")
+    lines.append("| 项目 | 详情 |")
+    lines.append("|------|------|")
     lines.append(f"| 📁 文件 | {report.filename} |")
     lines.append(f"| 📅 日期 | {report.timestamp[:10]} {report.timestamp[11:16]} UTC |")
     lines.append(f"| 📊 得分 | **{report.overall_score:.0f}/100** |")
 
     dismissed_count = len(report.dismissed_issues)
     if report.overall_passed and dismissed_count == 0:
-        lines.append(f"| 🏆 总评 | 全部通过 — 可安全提交 |")
+        lines.append("| 🏆 总评 | 全部通过 — 可安全提交 |")
     elif report.overall_passed and dismissed_count > 0:
         lines.append(f"| ⚠️ 总评 | 通过（{dismissed_count} 项被学生标记为非问题，需导师确认）|")
     else:
@@ -776,20 +776,20 @@ async def export_report(job_id: str, request: Request, response: Response):
         }
         name = gate_info.get(gate.gate_name, gate.gate_name)
         lines.append(f"## {icon} 关卡 {i+1}: {name}")
-        lines.append(f"")
+        lines.append("")
         lines.append(f"- 得分: **{gate.score:.0f}/100**")
         lines.append(f"- 摘要: {gate.summary}")
 
         # Show dismissed issues for this gate
         gate_dismissed = [d for d in report.dismissed_issues if d.gate_name == gate.gate_name]
         if gate_dismissed:
-            lines.append(f"")
+            lines.append("")
             lines.append(f"### ⚠️ 学生标记为非问题（{len(gate_dismissed)} 项）")
-            lines.append(f"")
+            lines.append("")
             for d in gate_dismissed:
                 lines.append(f"- ❓ {d.original_message}")
                 lines.append(f"  - 💬 学生理由: \"{d.reason}\"")
-                lines.append(f"  - 👉 **导师请核实**")
+                lines.append("  - 👉 **导师请核实**")
 
         # Show unresolved errors
         unresolved = [
@@ -799,9 +799,9 @@ async def export_report(job_id: str, request: Request, response: Response):
                        for d in report.dismissed_issues)
         ]
         if unresolved:
-            lines.append(f"")
+            lines.append("")
             lines.append(f"### ❌ 未解决的问题 ({len(unresolved)} 个)")
-            lines.append(f"")
+            lines.append("")
             for issue in unresolved[:10]:
                 lines.append(f"- {issue.message}")
             if len(unresolved) > 10:

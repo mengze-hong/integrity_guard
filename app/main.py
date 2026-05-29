@@ -1,15 +1,12 @@
 """FastAPI application entry point."""
 
-import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime
 from pathlib import Path
 
-from fastapi import FastAPI, UploadFile, File, Request
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from starlette.requests import Request
 
 from app.config import settings
 from app.api.routes import router as api_router
@@ -34,7 +31,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="ScholarLint",
     description="投稿通 — Academic paper pre-submission integrity checker",
-    version="5.3.19",
+    version="5.3.20",
     lifespan=lifespan,
 )
 

@@ -82,7 +82,7 @@ class CitationConsistencyGate(BaseGate):
                     severity=Severity.WARNING,
                     message=f"[{entry.key}] 缺少必要字段: {', '.join(missing)}",
                     location=f"bib:{entry.key}",
-                    suggestion=f"完整的 bib 条目至少需要 title、author、year。缺少字段可能导致参考文献列表显示不完整。",
+                    suggestion="完整的 bib 条目至少需要 title、author、year。缺少字段可能导致参考文献列表显示不完整。",
                 ))
 
         # Score and pass/fail

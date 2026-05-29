@@ -18,13 +18,53 @@ jobs:
           python-version: "3.12"
           cache: pip
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install ruff pytest
+          pip install ruff pytest pytest-cov pip-audit
 
       - name: Lint with ruff
         run: ruff check app/ tests/ --select E,F,W --ignore E501
 
+      - name: Check frontend JavaScript syntax
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const vm = require('vm');
+          const html = fs.readFileSync('app/templates/index.html', 'utf8');
+          const re = /<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi;
+          let match;
+          let index = 0;
+          let errors = 0;
+          while ((match = re.exec(html)) !== null) {
+            index += 1;
+            const code = match[1];
+            if (!code.trim()) continue;
+            try {
+              new vm.Script(code);
+            } catch (err) {
+              errors += 1;
+              console.error(`#${index} ERROR: ${err.message}`);
+            }
+          }
+          if (errors) process.exit(1);
+          console.log('ALL JS OK');
+          NODE
+
+      - name: Secret scan
+        run: |
+          if git grep -n -E 'sk-uin|sk-TpK|woa\.com|sgpolaris|Bearer sk-|LLM_API_KEY=|LLM_BASE_URL=' -- . ':!CHANGELOG.md'; then
+            echo "Sensitive internal secret or endpoint pattern found"
+            exit 1
+          fi
+
+      - name: Dependency audit
+        run: pip-audit -r requirements.txt
+
       - name: Run tests
-        run: pytest tests/ -v --tb=short
+        run: python -m pytest -q --cov=app --cov-report=term-missing --cov-fail-under=20

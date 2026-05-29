@@ -13,8 +13,8 @@ from app.auth import (
 )
 from app.models_db import User
 from app.dependencies import get_current_user, get_current_user_optional
-from app.credits import get_balance, get_transactions
-from app.models_db import User, Transaction
+from app.credits import get_transactions
+from app.models_db import Transaction
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

@@ -30,7 +30,7 @@ def analyze_tidyup(project_dir: Path, tex_files: list[TexFile]) -> list[dict]:
         if not tex_file.is_main:
             continue
         text = tex_file.raw_text
-        lines = text.split("\n")
+        text.split("\n")
 
         # 1. Find long table environments (>10 lines)
         table_pattern = re.compile(
@@ -42,7 +42,7 @@ def analyze_tidyup(project_dir: Path, tex_files: list[TexFile]) -> list[dict]:
             if table_lines >= 10:
                 # Extract a name from caption or label
                 label_match = re.search(r"\\label\{([^}]+)\}", table_content)
-                caption_match = re.search(r"\\caption\{(.+?)\}", table_content)
+                re.search(r"\\caption\{(.+?)\}", table_content)
 
                 if label_match:
                     name = label_match.group(1).replace("tab:", "").replace(":", "_")
@@ -112,7 +112,7 @@ def execute_changes(project_dir: Path, changes: list[dict]) -> list[str]:
                     shutil.move(str(source_path), str(target_path))
                     executed.append(change["description"])
 
-        except Exception as e:
+        except Exception:
             continue
 
     return executed

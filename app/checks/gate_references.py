@@ -314,7 +314,7 @@ class ReferenceAuthenticityGate(BaseGate):
                 severity=Severity.ERROR,
                 message=f"[{entry.key}] DOI 格式非法: {doi}",
                 location=location, file=issue_file, line=issue_line,
-                evidence=f"合法 DOI 格式应为 10.XXXX/... (如 10.1145/3491102.3517582)",
+                evidence="合法 DOI 格式应为 10.XXXX/... (如 10.1145/3491102.3517582)",
                 suggestion="请检查 DOI 是否正确输入。合法 DOI 以 '10.' 开头。",
             ))
             meta["status"] = "doi_invalid_format"
@@ -329,7 +329,7 @@ class ReferenceAuthenticityGate(BaseGate):
                 severity=Severity.ERROR,
                 message=f"[{entry.key}] DOI 无法解析: {doi}",
                 location=location, file=issue_file, line=issue_line,
-                evidence=f"在 Crossref 和 DataCite 均无法找到此 DOI",
+                evidence="在 Crossref 和 DataCite 均无法找到此 DOI",
                 suggestion=f"请确认 DOI 是否正确。验证链接: https://doi.org/{doi}",
             ))
             meta["status"] = "doi_invalid"

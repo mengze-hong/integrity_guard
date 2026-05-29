@@ -8,11 +8,10 @@
 """
 
 import re
-from collections import Counter
 from difflib import SequenceMatcher
 
 from app.checks.base import BaseGate
-from app.models import CheckResult, Issue, ParsedPaper, Severity, TexFile
+from app.models import CheckResult, Issue, ParsedPaper, Severity
 
 
 # AI signature words/phrases
@@ -182,7 +181,7 @@ class WritingQualityGate(BaseGate):
                 line_num = text[:final_match.start()].count("\n") + 1
                 issues.append(Issue(
                     severity=Severity.WARNING,
-                    message=f"投稿模式为 [final]，double-blind 应使用 [review]",
+                    message="投稿模式为 [final]，double-blind 应使用 [review]",
                     location=f"{tex_file.path.name}:{line_num}",
                     file=tex_file.path.name,
                     line=line_num,
@@ -493,7 +492,7 @@ class WritingQualityGate(BaseGate):
                     if etal_issues <= 1:  # Only report first instance
                         issues.append(Issue(
                             severity=Severity.WARNING,
-                            message=f"\"et al\" 格式不规范（应为 \"et al.\" 带句点）",
+                            message="\"et al\" 格式不规范（应为 \"et al.\" 带句点）",
                             location=f"{tex_file.path.name}:{i}",
                             file=tex_file.path.name,
                             line=i,
