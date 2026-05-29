@@ -1,5 +1,10 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.5 (2026-05-29) — 文献真实性问题不再提供 AI 建议
+- **彻底禁用文献错误的 AI 建议修复**：`reference_authenticity` gate 以及「缺少 DOI / 无可信来源 / 标题搜索未找到 / Unverified reference / source not found」等文献真实性问题不再显示「AI 建议修复」按钮，改为「需人工核实文献」
+- **后端双重防护**：即使直接调用 `/api/ai-fix`，上述问题也返回 `not_fixable`，不会生成 BibTeX 或任何替换片段；`/api/ai-batch-fix` 也跳过这些问题
+- 目标：避免 AI 为假文献、缺失 DOI、无法验证来源的文献编造另一个看似真实的假引用。后续如做推荐，只能基于 Crossref / Semantic Scholar / OpenAlex 等权威候选结果，再让 AI 判断相似度，不能凭空生成
+
 ## v5.3.4 (2026-05-29) — AI 进度提示改为右下角非阻塞浮窗
 - **AI 建议修复/AI 功能进度不再阻塞页面**：将原先全屏 loading overlay 改为右下角浮动进度卡片（`pointer-events:none`），用户等待 AI 返回时仍可正常浏览、编辑、点击页面
 - 进度文案调整为「后台处理中，可继续浏览和编辑…」，降低等待焦虑，同时不打断工作流

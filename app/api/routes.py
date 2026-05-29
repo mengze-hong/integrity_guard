@@ -150,6 +150,8 @@ def _strip_code_fence(text: str) -> str:
 _REF_ISSUE_KEYWORDS = (
     "DOI 无法解析", "无法解析", "fabricat", "伪造", "retract", "撤稿",
     "无法验证", "未找到该文献", "不存在的文献", "虚构",
+    "缺少 DOI", "无可信来源", "标题搜索未找到", "source not found",
+    "Unverified reference", "official URL/DOI", "DOI/source not found",
 )
 
 
@@ -743,19 +745,15 @@ async def ai_fix_suggestion(job_id: str, request: Request):
         raise HTTPException(status_code=400, detail="Missing issue message")
 
     # Integrity guardrail: never let the LLM "fix" a fabricated/unverifiable
-    # reference — it would just hallucinate another fake citation. Return
-    # human-actionable advice instead of a generated replacement.
+    # reference — it would just hallucinate another fake citation. Do not
+    # generate any AI suggestion for these issues.
     if _is_reference_authenticity_issue(gate_name, issue_message):
         return {
-            "status": "ok",
-            "advice": True,
-            "suggestion": (
-                "该引文可能是伪造或无法验证的，AI 不会自动编造替换文献"
-                "（那只会生成另一个看似真实的假引用）。请：\n"
-                "1) 删除这条引用，或\n"
-                "2) 用真实、可在 Crossref / Semantic Scholar / OpenAlex 等数据库中查到的文献替换，"
-                "并核对作者、标题、年份、DOI 是否一致。\n"
-                "提示：可用问题旁的『📥 获取官方 Bib』按钮拉取真实的 BibTeX 条目。"
+            "status": "not_fixable",
+            "detail": (
+                "文献真实性/缺少可信来源的问题不提供 AI 建议修复。"
+                "请删除该引用，或替换为可在 Crossref / Semantic Scholar / OpenAlex "
+                "等权威来源核实的真实文献；不要使用 AI 编造 BibTeX。"
             ),
         }
 
@@ -843,6 +841,8 @@ async def ai_batch_fix(job_id: str, request: Request):
             continue
         for idx, issue in enumerate(gate.issues):
             if issue.severity != Severity.ERROR:
+                continue
+            if _is_reference_authenticity_issue(gate.gate_name, issue.message):
                 continue
             # Skip if dismissed
             if any(d.gate_name == gate.gate_name and d.issue_index == idx
