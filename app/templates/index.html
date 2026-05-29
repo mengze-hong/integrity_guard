@@ -539,7 +539,7 @@
                 <button onclick="doTidyUp()" class="toolbar-btn">🗂️ 整理结构</button>
                 <button onclick="showAnalysis()" class="toolbar-btn">📊 分析</button>
                 <button onclick="showChecklist()" class="toolbar-btn">✅ 清单</button>
-                <button onclick="showVenueChecklist()" class="toolbar-btn">📝 ARR/NeurIPS</button>
+                <button onclick="showVenueChecklist()" class="toolbar-btn">📝 复现清单</button>
                 <span style="width:1px; height:20px; background:#e2e8f0; margin:0 4px;"></span>
                 <button onclick="doRecheck()" id="recheck-btn" class="toolbar-btn-primary" title="重新运行质检 (Ctrl+Shift+R)">重新质检</button>
                 <button onclick="exportReport()" class="toolbar-btn">📄 导出</button>
@@ -2009,31 +2009,14 @@ function saveChecklistItem(idx, checked) {
     localStorage.setItem(`checklist-${jobId}`, JSON.stringify(saved));
 }
 
-// === Venue-Specific Checklist (ARR / NeurIPS) ===
+// === Reproducibility Checklist ===
+// Single checklist (no venue chooser) — directly run the AI auto-fill.
 async function showVenueChecklist() {
-    // Ask which venue
-    const modal = document.createElement('div');
-    modal.className = 'modal-bg';
-    modal.onclick = e => { if(e.target===modal) modal.remove(); };
-    modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:28px; max-width:400px; width:90%;">
-        <h3 style="font-size:16px; font-weight:700; margin:0 0 8px;">📝 Venue Checklist</h3>
-        <p style="font-size:12px; color:#64748b; margin:0 0 20px;">AI 根据论文内容自动填写会议 checklist</p>
-        <div style="display:flex; gap:12px;">
-            <button onclick="this.closest('.modal-bg').remove();generateVenueChecklist('arr')" style="flex:1; padding:16px; border-radius:12px; border:2px solid #e2e8f0; background:#fff; cursor:pointer; text-align:center; transition:all 0.15s;" onmouseover="this.style.borderColor='#3b82f6';this.style.background='#eff6ff'" onmouseout="this.style.borderColor='#e2e8f0';this.style.background='#fff'">
-                <p style="font-size:16px; font-weight:700; margin:0;">ACL ARR</p>
-                <p style="font-size:11px; color:#64748b; margin:4px 0 0;">Responsible NLP<br>18 items</p>
-            </button>
-            <button onclick="this.closest('.modal-bg').remove();generateVenueChecklist('neurips')" style="flex:1; padding:16px; border-radius:12px; border:2px solid #e2e8f0; background:#fff; cursor:pointer; text-align:center; transition:all 0.15s;" onmouseover="this.style.borderColor='#3b82f6';this.style.background='#eff6ff'" onmouseout="this.style.borderColor='#e2e8f0';this.style.background='#fff'">
-                <p style="font-size:16px; font-weight:700; margin:0;">NeurIPS</p>
-                <p style="font-size:11px; color:#64748b; margin:4px 0 0;">Paper Checklist<br>10 items</p>
-            </button>
-        </div>
-    </div>`;
-    document.body.appendChild(modal);
+    generateVenueChecklist('reproducibility');
 }
 
 async function generateVenueChecklist(venue) {
-    showAiLoading(`📝 AI 正在分析论文并填写 ${venue.toUpperCase()} checklist…`);
+    showAiLoading('📝 AI 正在分析论文并填写复现清单…');
     try {
         const r = await fetch(`/api/venue-checklist/${jobId}`, {
             method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -2063,7 +2046,7 @@ async function generateVenueChecklist(venue) {
             modal.onclick = e => { if(e.target===modal) modal.remove(); };
             modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:24px; max-width:600px; width:90%; max-height:80vh; overflow-y:auto;">
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
-                    <h3 style="font-size:16px; font-weight:700; margin:0;">📝 ${venue.toUpperCase()} Checklist</h3>
+                    <h3 style="font-size:16px; font-weight:700; margin:0;">📝 Reproducibility Checklist</h3>
                     <div style="font-size:11px; color:#64748b; display:flex; gap:8px;"><span style="color:#166534;">${yesCount} passed</span><span style="color:#991b1b;">${noCount} missing</span><span style="color:#94a3b8;">${naCount} n/a</span></div>
                 </div>
                 ${noCount > 0 ? `<div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:10px; margin-bottom:12px; font-size:12px; color:#991b1b;">⚠️ ${noCount} 项需要补充，请在论文中添加相关内容后重新提交。</div>` : '<div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px; margin-bottom:12px; font-size:12px; color:#166534;">✅ 所有必填项已满足！</div>'}

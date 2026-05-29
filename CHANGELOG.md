@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.2.12 (2026-05-29) — 投稿清单改为 Reproducibility Checklist
+- **ARR/NeurIPS → Reproducibility Checklist**：将原会议清单（ACL ARR / NeurIPS 二选一）替换为统一的「复现性清单」，更聚焦论文可复现性
+- **后端**：用 `REPRODUCIBILITY_CHECKLIST`（15 项，分 Code & Models / Datasets / Experimental Results / Theoretical Claims 四类）替换 `ARR_CHECKLIST`、`NEURIPS_CHECKLIST`；`/api/venue-checklist` 不再需要 venue 参数，system prompt 改为复现性助手并更新示例
+- **前端**：工具栏按钮由「ARR/NeurIPS」改为「复现清单」，去掉会议二选一弹窗、直接生成；结果弹窗标题固定为「Reproducibility Checklist」
+- 实测：上传 → 完成质检 → 生成复现清单，AI 正确返回 15 项 yes/no/na + 可粘贴理由
+
 ## v5.2.11 (2026-05-29) — AI 加载遮罩 + 总览交互/文案优化
 - **AI 加载遮罩**：调用任意 AI 功能（ai-fix / batch-fix / review / polish / abstract / venue-checklist）时显示一个持续的加载遮罩（带转圈动画），直到 AI 返回（成功或失败）才消失，给用户明确预期；统一 `showAiLoading()` / `hideAiLoading()`，各 AI 函数以 try/finally 包裹确保关闭
 - **总览问题可点击跳转**：质检结果总览中每条错误预览均可点击，点击后进入工作台、自动打开对应文件并跳转高亮到对应行（新增 `gotoIssueFromOverview()`）；"还有 N 个错误"也可点击进入工作台

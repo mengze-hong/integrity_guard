@@ -984,56 +984,37 @@ async def ai_optimize_abstract(job_id: str, request: Request):
         return {"status": "error", "detail": str(e)[:100]}
 
 
-# ─── Venue Checklist (ARR / NeurIPS) ─────────────────────────
+# ─── Reproducibility Checklist ───────────────────────────────
 
-ARR_CHECKLIST = [
-    {"id": "A1", "section": "Every Submission", "text": "Did you describe the limitations of your work?"},
-    {"id": "A2", "section": "Every Submission", "text": "Did you discuss any potential risks of your work?"},
-    {"id": "B1", "section": "Scientific Artifacts", "text": "Did you cite the creators of artifacts you used?"},
-    {"id": "B2", "section": "Scientific Artifacts", "text": "Did you discuss the license or terms for artifacts?"},
-    {"id": "B3", "section": "Scientific Artifacts", "text": "Did you discuss if your use is consistent with intended use?"},
-    {"id": "B4", "section": "Scientific Artifacts", "text": "Did you check for offensive content or identifying info in data?"},
-    {"id": "B5", "section": "Scientific Artifacts", "text": "Did you document your artifacts (e.g., data card)?"},
-    {"id": "B6", "section": "Scientific Artifacts", "text": "Did you report relevant statistics about your data?"},
-    {"id": "C1", "section": "Computational Experiments", "text": "Did you report model size, compute budget, and infrastructure?"},
-    {"id": "C2", "section": "Computational Experiments", "text": "Did you discuss experimental setup and hyperparameter search?"},
-    {"id": "C3", "section": "Computational Experiments", "text": "Did you report descriptive statistics (mean, variance, etc.)?"},
-    {"id": "C4", "section": "Computational Experiments", "text": "Did you report implementation details for reproducibility?"},
-    {"id": "D1", "section": "Human Annotators", "text": "Did you report full text of instructions given to annotators?"},
-    {"id": "D2", "section": "Human Annotators", "text": "Did you report info about recruitment and payment?"},
-    {"id": "D3", "section": "Human Annotators", "text": "Did you discuss consent from data subjects?"},
-    {"id": "D4", "section": "Human Annotators", "text": "Did you get ethics board approval or confirm exemption?"},
-    {"id": "D5", "section": "Human Annotators", "text": "Did you report annotator demographics?"},
-    {"id": "E1", "section": "AI Assistants", "text": "Did you disclose AI assistant use in research/coding/writing?"},
-]
-
-NEURIPS_CHECKLIST = [
-    {"id": "N1", "section": "Claims", "text": "Do the main claims match the paper's theoretical/experimental results?"},
-    {"id": "N2", "section": "Limitations", "text": "Does the paper discuss limitations of the work?"},
-    {"id": "N3", "section": "Theory", "text": "Are all theoretical claims supported by formal proofs?"},
-    {"id": "N4", "section": "Experiments", "text": "Are all experimental results reproducible?"},
-    {"id": "N5", "section": "Experiments", "text": "Are error bars and statistical tests reported?"},
-    {"id": "N6", "section": "Compute", "text": "Is the computational cost and resource usage reported?"},
-    {"id": "N7", "section": "Code", "text": "Is code submitted or will be released for reproducibility?"},
-    {"id": "N8", "section": "Data", "text": "Are datasets clearly described with access instructions?"},
-    {"id": "N9", "section": "Ethics", "text": "Are there potential negative societal impacts discussed?"},
-    {"id": "N10", "section": "Ethics", "text": "Are safeguards discussed if the work has dual-use potential?"},
+REPRODUCIBILITY_CHECKLIST = [
+    {"id": "C1", "section": "Code & Models", "text": "Is the source code provided, or will it be released, with instructions to reproduce the main results?"},
+    {"id": "C2", "section": "Code & Models", "text": "Are software dependencies and the run environment (library versions, hardware) specified?"},
+    {"id": "C3", "section": "Code & Models", "text": "Is the model architecture and all of its components clearly described?"},
+    {"id": "C4", "section": "Code & Models", "text": "Are pretrained models or checkpoints made available where applicable?"},
+    {"id": "D1", "section": "Datasets", "text": "Are all datasets described (source, size, and license)?"},
+    {"id": "D2", "section": "Datasets", "text": "Are data preprocessing, filtering, and cleaning steps described?"},
+    {"id": "D3", "section": "Datasets", "text": "Are dataset access instructions or download links provided?"},
+    {"id": "D4", "section": "Datasets", "text": "Are train/validation/test splits clearly defined?"},
+    {"id": "E1", "section": "Experimental Results", "text": "Are all hyperparameters and how they were selected reported?"},
+    {"id": "E2", "section": "Experimental Results", "text": "Is the computing infrastructure (hardware, memory, runtime) reported?"},
+    {"id": "E3", "section": "Experimental Results", "text": "Are results reported with both central tendency and variation (e.g., mean ± std over multiple runs)?"},
+    {"id": "E4", "section": "Experimental Results", "text": "Is the number of runs and/or random seeds reported?"},
+    {"id": "E5", "section": "Experimental Results", "text": "Are all evaluation metrics clearly defined?"},
+    {"id": "E6", "section": "Experimental Results", "text": "Are statistical significance tests reported where appropriate?"},
+    {"id": "T1", "section": "Theoretical Claims", "text": "Are all assumptions stated and complete proofs provided for any theoretical claims?"},
 ]
 
 
 @router.post("/venue-checklist/{job_id}")
 async def generate_venue_checklist(job_id: str, request: Request):
-    """AI auto-fill venue-specific checklist (ARR or NeurIPS) based on paper content."""
+    """AI auto-fill the Reproducibility Checklist based on paper content."""
     if job_id not in _job_dirs:
         _get_report(job_id)
     project_dir = _job_dirs.get(job_id)
     if not project_dir:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    body = await request.json()
-    venue = body.get("venue", "arr")  # 'arr' | 'neurips'
-
-    checklist = ARR_CHECKLIST if venue == "arr" else NEURIPS_CHECKLIST
+    checklist = REPRODUCIBILITY_CHECKLIST
 
     # Get paper content
     main_text = ""
@@ -1055,19 +1036,19 @@ async def generate_venue_checklist(job_id: str, request: Request):
             resp = await _llm_chat_post(
                 client,
                 [
-                    {"role": "system", "content": f"""You are an academic checklist assistant helping authors fill out venue submission checklists.
+                    {"role": "system", "content": f"""You are an academic reproducibility assistant helping authors fill out a Reproducibility Checklist for their paper.
 
 For each checklist item, determine:
 - "yes": The paper addresses this. Provide the EXACT section/paragraph reference (e.g., "Section 5, paragraph 2")
-- "no": The paper does NOT address this. Write a brief justification that the author can paste directly into the checklist form.
+- "no": The paper does NOT address this. Write a brief justification the author can paste directly into the checklist.
 - "na": Not applicable. Explain why in one sentence.
 
 IMPORTANT: The justification must be a complete sentence that can be directly pasted into the submission form. Write in English (this is for conference submission).
 
 Examples:
-- {{"id":"A1","answer":"yes","justification":"We discuss limitations in Section 6, including the limited domain coverage and reliance on English-only data."}}
-- {{"id":"D1","answer":"no","justification":"Our work does not involve human annotators or participants."}}
-- {{"id":"B2","answer":"yes","justification":"We discuss dataset licenses in Section 3.1. All datasets used are publicly available under CC-BY-4.0."}}
+- {{"id":"C1","answer":"yes","justification":"We release our source code at the anonymized repository linked in Section 1, with a README describing how to reproduce all results."}}
+- {{"id":"E3","answer":"no","justification":"We report only single-run results; we will add mean and standard deviation over multiple seeds."}}
+- {{"id":"T1","answer":"na","justification":"Our work is empirical and contains no theoretical claims requiring proofs."}}
 
 Output as JSON array."""},
                     {"role": "user", "content": f"Checklist items:\n{checklist_str}\n\nPaper content:\n{main_text[:6000]}"},
@@ -1099,7 +1080,7 @@ Output as JSON array."""},
                         "justification": answer_data.get("justification", answer_data.get("reason", "")) if answer_data else "",
                     })
 
-                return {"status": "ok", "venue": venue, "checklist": result}
+                return {"status": "ok", "venue": "reproducibility", "checklist": result}
             else:
                 return {"status": "error", "detail": f"LLM returned {resp.status_code}"}
     except Exception as e:
