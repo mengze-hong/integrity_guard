@@ -1,5 +1,8 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.7 (2026-05-29) — 顶部品牌中文标识放大
+- 左上角 logo 旁的「投稿通」从小徽标调整为更醒目的 16px 加粗中文品牌标识，与 `ScholarLint` 并列时更容易被注意到
+
 ## v5.3.6 (2026-05-29) — 官方 ARR / NeurIPS Checklist 对齐
 - **ARR Responsible NLP Research Checklist**：按官方页面 `https://aclrollingreview.org/responsibleNLPresearch/` 对齐 A-E 维度与 A1-E1 问题，包括 limitations、risks、scientific artifacts、computational experiments、human annotators/participants、AI assistants
 - **NeurIPS Paper Checklist**：按官方页面 `https://neurips.cc/public/guides/PaperChecklist` 对齐 1-16 项，包括 claims、limitations、theory/proofs、reproducibility、code/data、experimental details、statistics、compute、ethics、broader impacts、safeguards、licenses、assets、human subjects、IRB、LLM usage
