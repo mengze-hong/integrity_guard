@@ -1200,34 +1200,47 @@ function enterWorkspace() {
 async function loadFileTree() {
     const r = await fetch(`/api/files/${jobId}`); const {files} = await r.json();
 
-    // Group files by type
-    const texFiles = files.filter(f => f.type === 'tex');
-    const bibFiles = files.filter(f => f.type === 'bib');
-    const otherFiles = files.filter(f => f.type !== 'tex' && f.type !== 'bib');
+    // Group files by their containing folder so the real directory
+    // structure (e.g. floats/, sections/) is visible.
+    const byDir = {};
+    for (const f of files) {
+        const slash = f.path.lastIndexOf('/');
+        const dir = slash >= 0 ? f.path.slice(0, slash) : '';
+        (byDir[dir] = byDir[dir] || []).push(f);
+    }
+    // Root folder first, then subfolders alphabetically.
+    const dirs = Object.keys(byDir).sort((a, b) => {
+        if (a === '') return -1;
+        if (b === '') return 1;
+        return a.localeCompare(b);
+    });
 
     let html = '';
-
-    if (texFiles.length) {
-        html += `<div class="file-section">LaTeX 源文件</div>`;
-        html += texFiles.map(f => renderFileItem(f)).join('');
-    }
-    if (bibFiles.length) {
-        html += `<div class="file-section">参考文献</div>`;
-        html += bibFiles.map(f => renderFileItem(f)).join('');
-    }
-    if (otherFiles.length) {
-        html += `<div class="file-section">其他文件</div>`;
-        html += otherFiles.map(f => renderFileItem(f)).join('');
+    for (const dir of dirs) {
+        const indent = dir === '' ? '' : ' style="padding-left:18px;"';
+        if (dir === '') {
+            html += `<div class="file-section">根目录</div>`;
+        } else {
+            const depth = dir.split('/').length;
+            html += `<div class="file-section" style="padding-left:${(depth-1)*12}px;">📁 ${esc(dir)}/</div>`;
+        }
+        const items = byDir[dir].slice().sort((a, b) => {
+            // .tex before .bib, then by name
+            if (a.type !== b.type) return a.type === 'tex' ? -1 : 1;
+            return a.name.localeCompare(b.name);
+        });
+        html += items.map(f => renderFileItem(f, dir !== '')).join('');
     }
 
     document.getElementById('file-tree').innerHTML = html;
     if (files.length && !currentFile) openFile(files[0].path);
 }
 
-function renderFileItem(f) {
+function renderFileItem(f, indented) {
     const st = getFileStatus(f.path);
     const statusCls = st==='ok'?'file-status-ok':st==='warn'?'file-status-warn':'file-status-err';
     const icon = f.type==='bib' ? '📚' : f.type==='tex' ? '📄' : '📎';
+    const indentStyle = indented ? ' style="padding-left:24px;"' : '';
     // Count errors for this file
     let errCount = 0;
     if (report) {
@@ -1241,7 +1254,7 @@ function renderFileItem(f) {
         }
     }
     const badge = errCount > 0 ? `<span style="background:#ef4444;color:#fff;font-size:10px;padding:1px 5px;border-radius:8px;font-weight:600;">${errCount}</span>` : '';
-    return `<div class="file-item" data-path="${f.path}" onclick="openFile('${f.path}')">
+    return `<div class="file-item" data-path="${f.path}" onclick="openFile('${f.path}')"${indentStyle}>
         <span class="file-icon">${icon}</span>
         <span class="file-name">${f.name}</span>
         ${badge}

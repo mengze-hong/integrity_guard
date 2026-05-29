@@ -1,9 +1,10 @@
 """Project structure tidying tool.
 
 Reorganizes LaTeX project files:
-1. Extract long tables from main .tex into floats/tab_*.tex with input
-2. Extract long figures from main .tex into floats/fig_*.tex with input
-3. Move scattered image files (pdf/png/jpg) into figures/ with clean naming
+1. Extract long tables from main .tex into floats/tab_*.tex with \\input
+
+Note: by design we only extract TABLE environments. Figure environments and
+scattered image files are intentionally left untouched.
 """
 
 import re
@@ -64,67 +65,8 @@ def analyze_tidyup(project_dir: Path, tex_files: list[TexFile]) -> list[dict]:
                     "file": str(tex_file.path),
                 })
 
-        # 2. Find long figure environments (>5 lines)
-        figure_pattern = re.compile(
-            r"(\\begin\{figure\*?\}.*?\\end\{figure\*?\})", re.DOTALL
-        )
-        for i, match in enumerate(figure_pattern.finditer(text)):
-            fig_content = match.group(1)
-            fig_lines = fig_content.count("\n") + 1
-            if fig_lines >= 5:
-                label_match = re.search(r"\\label\{([^}]+)\}", fig_content)
-
-                if label_match:
-                    name = label_match.group(1).replace("fig:", "").replace(":", "_")
-                else:
-                    name = f"figure_{i+1}"
-
-                name = re.sub(r"[^\w]", "_", name)[:30]
-                target_file = f"floats/fig_{name}.tex"
-
-                start_line = text[:match.start()].count("\n") + 1
-
-                changes.append({
-                    "type": "extract_figure",
-                    "description": f"提取图片环境到 {target_file}（{fig_lines} 行）",
-                    "source": f"{tex_file.path.name}:{start_line}",
-                    "target": target_file,
-                    "content": fig_content,
-                    "original_text": fig_content,
-                    "replacement": f"\\input{{{target_file}}}",
-                    "file": str(tex_file.path),
-                })
-
-    # 3. Find scattered image files that should be in figures/
-    image_exts = {".png", ".jpg", ".jpeg", ".pdf", ".eps", ".svg"}
-    figures_dir = project_dir / "figures"
-
-    for img_file in project_dir.rglob("*"):
-        if not img_file.is_file():
-            continue
-        if img_file.suffix.lower() not in image_exts:
-            continue
-        # Skip if already in figures/ or floats/
-        rel = img_file.relative_to(project_dir)
-        rel_parts = rel.parts
-        if rel_parts[0] in ("figures", "floats", "images", "img", "figs"):
-            continue
-        # Skip if in a hidden directory
-        if any(p.startswith(".") for p in rel_parts):
-            continue
-
-        # Propose moving to figures/
-        clean_name = re.sub(r"[^\w.]", "_", img_file.name).lower()
-        target = f"figures/{clean_name}"
-
-        changes.append({
-            "type": "move_image",
-            "description": f"移动图片 {rel} → {target}",
-            "source": str(rel),
-            "target": target,
-            "file": str(img_file),
-        })
-
+    # By design: only tables are extracted. Figure environments and image
+    # files are intentionally left in place.
     return changes
 
 
