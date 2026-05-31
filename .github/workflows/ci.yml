@@ -42,7 +42,7 @@ jobs:
       - name: Forbidden tunnel provider policy scan
         run: |
           FORBIDDEN_TUNNEL_PATTERN="$(printf '%s' 'cloud' 'flared|try' 'cloud' 'flare|' 'cloud' 'flare')"
-          if git grep --untracked -n -i -E "$FORBIDDEN_TUNNEL_PATTERN" -- . ':!.cursor/**' ':!.git/**' ':!CHANGELOG.md' ':!data/**' ':!uploads/**' ':!screenshots/**' ':!screenshots_new/**' ':!.playwright-mcp/**'; then
+          if git grep --untracked -n -i -E "$FORBIDDEN_TUNNEL_PATTERN" -- . ':!.cursor/**' ':!.workbuddy/**' ':!.git/**' ':!CHANGELOG.md' ':!data/**' ':!uploads/**' ':!screenshots/**' ':!screenshots_new/**' ':!.playwright-mcp/**'; then
             echo "Forbidden tunnel provider pattern found"
             exit 1
           else

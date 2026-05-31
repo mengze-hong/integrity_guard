@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.83 (2026-05-31) — Root README
+- 新增根目录 `README.md`，提供项目定位、能力概览、目录结构、请求流程、快速启动、健康检查、测试验证、文档索引和操作红线
+- README 对齐当前实际代码：六类 gate、AI 路由拆分现状、`/healthz` `/readyz` `/metrics` 探针和统一验证命令集，改善 GitHub onboarding
+- `.gitignore` 忽略 `.workbuddy/`（agent 工作区数据），并在 secret scan 与禁用隧道策略扫描中同步排除，避免本地工作区笔记触发误报
+- 纯文档与工程卫生改动，不引入新依赖或运行时行为变化
+
 ## v5.3.82 (2026-05-31) — AI Handover Document
 - 新增根目录 `HANDOVER.md`，为后续 AI/agent 接手提供当前版本、项目目标、操作规则、架构概览和安全注意事项
 - 记录近期商业化与工程基线提交、验证命令、重点风险、推荐下一步和禁止事项

@@ -6,6 +6,7 @@ const excludedPaths = new Set([selfPath]);
 
 const excludedPrefixes = [
   ".cursor/",
+  ".workbuddy/",
   ".git/",
   "uploads/",
   "screenshots/",

@@ -171,6 +171,7 @@
 - [x] 前端纯 helper 抽到全局脚本，并用 Node 内置测试覆盖 inline handler 参数、HTML escape、AI fix 文本替换与批量分组逻辑
 - [x] 本地运行、测试与发布文档补齐：新增 docs 索引、本地启动指南、按改动类型组织的测试指南，并让 release checklist 引用统一测试命令集
 - [x] AI 交接文档补齐：新增 `HANDOVER.md`，记录当前状态、风险、验证命令与下一步优先级
+- [x] 根目录 `README.md` 补齐：项目定位、能力概览、目录结构、请求流程、快速启动、健康检查、测试验证与文档索引，改善 GitHub onboarding
 - [x] 禁止事项文档补齐：新增 `docs/DO_NOT_DO.md`，覆盖研究真实性、AI 修复验证、敏感文件/密钥提交边界、无关文件混入与未加固 dev server 公网暴露禁令
 - [x] 安全部署文档补齐：新增 `docs/DEPLOY_SAFE.md`，覆盖 Docker、反向代理、HTTPS、生产开关、密钥注入、上传 ZIP 安全、健康检查、备份与公网暴露检查
 - [x] 日志系统（structured logging with timestamp, level, module）
