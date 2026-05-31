@@ -250,6 +250,74 @@ async def test_structure_gate_warns_low_resolution_and_large_images(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_structure_gate_detects_duplicate_images(tmp_path):
+    """Identical image content (same bytes) is flagged as duplicate, distinct content is not."""
+    figures = tmp_path / "figures"
+    figures.mkdir()
+    payload = b"\x89PNG\r\n\x1a\n" + b"DUPLICATE-IMAGE-CONTENT" * 64
+    (figures / "a.png").write_bytes(payload)
+    (figures / "b.png").write_bytes(payload)  # same bytes -> duplicate
+    (figures / "c.png").write_bytes(payload + b"different-tail")  # different content/size
+
+    tex_path = tmp_path / "main.tex"
+    tex_path.write_text(
+        r"""
+\documentclass{article}
+\graphicspath{{figures/}}
+\begin{document}
+\includegraphics{a.png}
+\includegraphics{b.png}
+\includegraphics{c.png}
+\end{document}
+""",
+        encoding="utf-8",
+    )
+    paper = _build_structure_paper(
+        tmp_path,
+        parse_tex_file(tex_path),
+        figure_files=[figures / "a.png", figures / "b.png", figures / "c.png"],
+    )
+
+    result = await StructureGate().check(paper)
+
+    dup_messages = [i for i in result.issues if "重复图片文件" in i.message]
+    assert len(dup_messages) == 1
+    evidence = dup_messages[0].evidence
+    assert "a.png" in evidence and "b.png" in evidence
+    assert "c.png" not in evidence
+
+
+@pytest.mark.asyncio
+async def test_structure_gate_unique_sizes_skip_duplicate_warning(tmp_path):
+    """Images with distinct byte sizes never trigger a duplicate warning."""
+    figures = tmp_path / "figures"
+    figures.mkdir()
+    (figures / "x.png").write_bytes(b"\x89PNG\r\n\x1a\n" + b"X" * 100)
+    (figures / "y.png").write_bytes(b"\x89PNG\r\n\x1a\n" + b"Y" * 200)
+
+    tex_path = tmp_path / "main.tex"
+    tex_path.write_text(
+        r"""
+\documentclass{article}
+\graphicspath{{figures/}}
+\begin{document}
+\includegraphics{x.png}
+\includegraphics{y.png}
+\end{document}
+""",
+        encoding="utf-8",
+    )
+    paper = _build_structure_paper(
+        tmp_path,
+        parse_tex_file(tex_path),
+        figure_files=[figures / "x.png", figures / "y.png"],
+    )
+
+    result = await StructureGate().check(paper)
+    assert not any("重复图片文件" in i.message for i in result.issues)
+
+
+@pytest.mark.asyncio
 async def test_writing_quality_detects_ai_markers():
     """Test that Gate 6 detects AI-generated text markers."""
     tex = TexFile(

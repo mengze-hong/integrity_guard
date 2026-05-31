@@ -37,38 +37,72 @@ def _graphicspath_dirs(raw_text: str, base_dir: Path) -> list[Path]:
 
 
 def _raster_dimensions(path: Path) -> tuple[int, int] | None:
-    """Read PNG/JPEG dimensions without pulling in image-processing dependencies."""
+    """Read PNG/JPEG dimensions without loading the whole image into memory.
+
+    Only the file header (PNG) or the bytes up to the SOF marker (JPEG) are
+    read, so large figures do not get fully read just to learn their size.
+    """
     suffix = path.suffix.lower()
+    if suffix not in {".png", ".jpg", ".jpeg"}:
+        return None
+
     try:
-        data = path.read_bytes()
+        with path.open("rb") as fh:
+            if suffix == ".png":
+                head = fh.read(24)
+                if head.startswith(b"\x89PNG\r\n\x1a\n") and len(head) >= 24:
+                    return struct.unpack(">II", head[16:24])
+                return None
+
+            # JPEG: scan segment headers, reading only each segment's length
+            # bytes (and the few SOF payload bytes) instead of the whole file.
+            if fh.read(2) != b"\xff\xd8":
+                return None
+            while True:
+                byte = fh.read(1)
+                if not byte:
+                    return None
+                if byte != b"\xff":
+                    continue
+                marker = fh.read(1)
+                if not marker:
+                    return None
+                marker_val = marker[0]
+                if marker_val in {0xD8, 0xD9}:
+                    continue
+                length_bytes = fh.read(2)
+                if len(length_bytes) < 2:
+                    return None
+                segment_len = int.from_bytes(length_bytes, "big")
+                if segment_len < 2:
+                    return None
+                if marker_val in {0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF}:
+                    sof = fh.read(5)
+                    if len(sof) < 5:
+                        return None
+                    height = int.from_bytes(sof[1:3], "big")
+                    width = int.from_bytes(sof[3:5], "big")
+                    return width, height
+                fh.seek(segment_len - 2, 1)
     except Exception:
         return None
 
-    if suffix == ".png" and data.startswith(b"\x89PNG\r\n\x1a\n") and len(data) >= 24:
-        return struct.unpack(">II", data[16:24])
-
-    if suffix in {".jpg", ".jpeg"} and data.startswith(b"\xff\xd8"):
-        idx = 2
-        while idx + 9 < len(data):
-            if data[idx] != 0xFF:
-                idx += 1
-                continue
-            marker = data[idx + 1]
-            idx += 2
-            if marker in {0xD8, 0xD9}:
-                continue
-            if idx + 2 > len(data):
-                return None
-            segment_len = int.from_bytes(data[idx:idx + 2], "big")
-            if segment_len < 2 or idx + segment_len > len(data):
-                return None
-            if marker in {0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF}:
-                height = int.from_bytes(data[idx + 3:idx + 5], "big")
-                width = int.from_bytes(data[idx + 5:idx + 7], "big")
-                return width, height
-            idx += segment_len
-
     return None
+
+
+def _file_md5(path: Path, *, chunk: int = 1024 * 1024) -> str | None:
+    """Full MD5 of a file, streamed in chunks to avoid loading it all at once."""
+    h = hashlib.md5()
+    try:
+        with path.open("rb") as fh:
+            while True:
+                block = fh.read(chunk)
+                if not block:
+                    break
+                h.update(block)
+    except Exception:
+        return None
+    return h.hexdigest()
 
 
 class StructureGate(BaseGate):
@@ -231,19 +265,36 @@ class StructureGate(BaseGate):
                 ))
                 score -= 10
 
-        # Check 8: Duplicate images (same file content, different name)
+        # Check 8 + 8.5: Duplicate images and image quality hints.
+        # Single directory walk; collect (rel, size) once and reuse it for both
+        # the duplicate scan and the quality hints to avoid re-reading files.
         image_exts = {".png", ".jpg", ".jpeg", ".pdf", ".eps", ".svg"}
-        image_hashes: dict[str, list[str]] = {}  # hash → [file paths]
+        image_files: list[tuple[Path, str, int]] = []  # (path, rel, size_bytes)
+        size_groups: dict[int, list[Path]] = {}
         for img_file in paper.project_dir.rglob("*"):
-            if img_file.is_file() and img_file.suffix.lower() in image_exts:
-                try:
-                    h = hashlib.md5(img_file.read_bytes()).hexdigest()
-                    rel = str(img_file.relative_to(paper.project_dir))
-                    if h not in image_hashes:
-                        image_hashes[h] = []
-                    image_hashes[h].append(rel)
-                except Exception:
-                    pass
+            if not img_file.is_file() or img_file.suffix.lower() not in image_exts:
+                continue
+            try:
+                rel = str(img_file.relative_to(paper.project_dir))
+                size_bytes = img_file.stat().st_size
+            except Exception:
+                continue
+            image_files.append((img_file, rel, size_bytes))
+            size_groups.setdefault(size_bytes, []).append(img_file)
+
+        # Duplicate detection: only files sharing an identical byte size can be
+        # identical, so MD5 is computed only within same-size groups. Unique
+        # sizes (the common case) skip hashing entirely.
+        image_hashes: dict[str, list[str]] = {}
+        for candidates in size_groups.values():
+            if len(candidates) < 2:
+                continue
+            for candidate in candidates:
+                h = _file_md5(candidate)
+                if h is None:
+                    continue
+                rel = str(candidate.relative_to(paper.project_dir))
+                image_hashes.setdefault(h, []).append(rel)
 
         for h, paths in image_hashes.items():
             if len(paths) > 1:
@@ -256,16 +307,8 @@ class StructureGate(BaseGate):
                 ))
                 score -= 5
 
-        # Check 8.5: Basic image quality / optimization hints
-        for img_file in paper.project_dir.rglob("*"):
-            if not img_file.is_file() or img_file.suffix.lower() not in image_exts:
-                continue
-            try:
-                rel = str(img_file.relative_to(paper.project_dir))
-                size_bytes = img_file.stat().st_size
-            except Exception:
-                continue
-
+        # Image quality / optimization hints, reusing the collected file list.
+        for img_file, rel, size_bytes in image_files:
             if size_bytes > _LARGE_IMAGE_BYTES:
                 issues.append(Issue(
                     severity=Severity.WARNING,

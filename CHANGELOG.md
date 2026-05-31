@@ -1,5 +1,13 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.86 (2026-05-31) — Image-Heavy Project Performance
+- 修复含大量图表的项目质检卡顿：StructureGate 重复图检测与图片质量检测原本各自全目录遍历一次（两次 rglob），且对每张图 `read_bytes()` 整图入内存算 MD5
+- 合并为单次目录遍历，复用同一份图片清单做重复检测与质量提示
+- 重复图检测改为先按文件大小分组，仅对大小相同的候选才计算 MD5（绝大多数图大小唯一，直接跳过昂贵 hash），语义仍为“内容完全相同”
+- MD5 改为分块流式计算，`_raster_dimensions` 改为只读 PNG 头 24 字节 / JPEG 到 SOF marker，不再整图读入内存；实测单张 12MB 图峰值内存 12MB → 2.1MB，MD5 与尺寸结果一致
+- 前端 issue 列表渲染预建 dismissed_issues 的 Map，按 `gate::index` O(1) 查询，替换原先每条 issue 对整个 dismissed 数组的 some/find 扫描（大量问题时减少 O(m×n)）
+- 新增重复图检测测试（相同内容报重复、不同大小不报），pytest 101 → 103；通过 ruff、JS 语法检查、JS helper 测试 7 项
+
 ## v5.3.85 (2026-05-31) — Diagnosis Report Layout Polish
 - 修复 AI 论文诊断报告弹窗排版错位：优先级列表改用 flex 布局，编号徽章与多行文本左缘严格对齐，标题/原因/行动/位置不再随换行飘移
 - 重排弹窗结构：「先改哪三处」升为整行展示（信息密度最高），不再与「预计时间」并排导致左右卡片高度悬殊；其余分区改为协调的 2×2 等宽网格

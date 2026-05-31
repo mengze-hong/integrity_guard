@@ -1947,6 +1947,13 @@ function renderIssues(path) {
     let issueCount = 0;
     let totalShown = 0;
 
+    // Pre-index dismissed issues so per-issue lookups are O(1) instead of
+    // scanning the whole dismissed_issues array for every rendered issue.
+    const dismissedMap = new Map();
+    (report.dismissed_issues || []).forEach(d => {
+        dismissedMap.set(`${d.gate_name}::${d.issue_index}`, d);
+    });
+
     for (const gate of report.gate_results) {
         const fileIssues = [];
         gate.issues.forEach((issue,idx) => { if(issueMatchesFile(issue,path)) fileIssues.push({issue,idx}); });
@@ -1954,7 +1961,7 @@ function renderIssues(path) {
 
         // Apply filter
         const filteredIssues = fileIssues.filter(({issue, idx}) => {
-            const isDismissed = report.dismissed_issues?.some(d=>d.gate_name===gate.gate_name&&d.issue_index===idx);
+            const isDismissed = dismissedMap.has(`${gate.gate_name}::${idx}`);
             if (issueFilter === 'error') return !isDismissed && issue.severity === 'error';
             if (issueFilter === 'warning') return !isDismissed && issue.severity === 'warning';
             if (issueFilter === 'dismissed') return isDismissed;
@@ -1977,8 +1984,8 @@ function renderIssues(path) {
         <div id="${gateId}">`;
 
         for (const {issue,idx} of filteredIssues) {
-            const isDismissed = report.dismissed_issues?.some(d=>d.gate_name===gate.gate_name&&d.issue_index===idx);
-            const dismissInfo = report.dismissed_issues?.find(d=>d.gate_name===gate.gate_name&&d.issue_index===idx);
+            const dismissInfo = dismissedMap.get(`${gate.gate_name}::${idx}`);
+            const isDismissed = !!dismissInfo;
             const cls = isDismissed ? 'dismissed' : issue.severity;
             if (!isDismissed && issue.severity==='error') issueCount++;
             totalShown++;
