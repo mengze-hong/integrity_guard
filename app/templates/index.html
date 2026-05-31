@@ -3122,17 +3122,29 @@ function diagnosisToMarkdown(diagnosis, provenance, fallback) {
 
 function renderDiagnosisList(items, {ordered=false} = {}) {
     if (!items || !items.length) return '<p style="font-size:12px; color:#94a3b8; margin:0;">暂无</p>';
-    const tag = ordered ? 'ol' : 'ul';
+    if (ordered) {
+        const body = items.map((item, i) => {
+            const obj = typeof item === 'string' ? {title: item} : item;
+            return `<li style="display:flex; gap:10px; align-items:flex-start;">
+                <span style="flex:0 0 22px; width:22px; height:22px; border-radius:50%; background:#2563eb; color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; margin-top:1px;">${i + 1}</span>
+                <div style="flex:1; min-width:0;">
+                    <p style="font-size:13px; font-weight:700; color:#1e293b; margin:0; line-height:1.5;">${esc(obj.title || obj.action || '建议')}</p>
+                    ${obj.reason ? `<p style="font-size:12px; color:#64748b; margin:2px 0 0; line-height:1.5;">原因：${esc(obj.reason)}</p>` : ''}
+                    ${(obj.action && obj.title) ? `<p style="font-size:12px; color:#334155; margin:2px 0 0; line-height:1.5;">行动：${esc(obj.action)}</p>` : ''}
+                    ${obj.target ? `<p style="font-size:11px; color:#94a3b8; margin:2px 0 0; line-height:1.5;">位置：${esc(obj.target)}</p>` : ''}
+                </div>
+            </li>`;
+        }).join('');
+        return `<ul style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:12px;">${body}</ul>`;
+    }
     const body = items.map(item => {
-        if (typeof item === 'string') return `<li style="margin-bottom:6px;">${esc(item)}</li>`;
-        return `<li style="margin-bottom:10px;">
-            <p style="font-size:13px; font-weight:700; color:#1e293b; margin:0;">${esc(item.title || item.action || '建议')}</p>
-            ${item.reason ? `<p style="font-size:12px; color:#64748b; margin:3px 0 0;">原因：${esc(item.reason)}</p>` : ''}
-            ${item.action ? `<p style="font-size:12px; color:#334155; margin:3px 0 0;">行动：${esc(item.action)}</p>` : ''}
-            ${item.target ? `<p style="font-size:11px; color:#94a3b8; margin:3px 0 0;">位置：${esc(item.target)}</p>` : ''}
+        const text = typeof item === 'string' ? item : (item.title || item.action || JSON.stringify(item));
+        return `<li style="display:flex; gap:8px; align-items:flex-start;">
+            <span style="flex:0 0 auto; color:#2563eb; font-weight:700; line-height:1.5;">•</span>
+            <span style="flex:1; min-width:0; font-size:12.5px; color:#334155; line-height:1.5;">${esc(text)}</span>
         </li>`;
     }).join('');
-    return `<${tag} style="margin:0; padding-left:18px; color:#334155;">${body}</${tag}>`;
+    return `<ul style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:7px;">${body}</ul>`;
 }
 
 async function runAiDiagnosis() {
@@ -3147,41 +3159,57 @@ async function runAiDiagnosis() {
             const modal = document.createElement('div');
             modal.className = 'modal-bg';
             modal.onclick = e => { if (e.target === modal) modal.remove(); };
-            modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:24px; max-width:780px; width:92%; max-height:84vh; overflow-y:auto;">
-                <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:12px;">
+            modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:24px; max-width:760px; width:92%; max-height:84vh; overflow-y:auto;">
+                <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:14px;">
                     <div>
                         <h3 style="font-size:17px; font-weight:800; margin:0 0 4px; color:#0f172a;">📋 AI 论文诊断报告</h3>
                         <p style="font-size:12px; color:#64748b; margin:0;">面向投稿前修改优先级的摘要，需作者人工核实。</p>
                     </div>
                     ${d.fallback ? '<span style="font-size:10px; color:#92400e; background:#fffbeb; border:1px solid #fde68a; border-radius:999px; padding:3px 8px; white-space:nowrap;">Fallback</span>' : '<span style="font-size:10px; color:#166534; background:#dcfce7; border:1px solid #bbf7d0; border-radius:999px; padding:3px 8px; white-space:nowrap;">AI Generated</span>'}
                 </div>
-                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; margin-bottom:14px;">
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px 16px; margin-bottom:14px;">
+                    <p style="font-size:11px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; color:#64748b; margin:0 0 6px;">核心摘要</p>
                     <p style="font-size:13px; line-height:1.7; color:#1e293b; margin:0;">${esc(diagnosis.summary || '')}</p>
                 </div>
-                <div style="display:grid; grid-template-columns:1.2fr 0.8fr; gap:14px;">
-                    <section style="border:1px solid #e2e8f0; border-radius:10px; padding:14px;">
-                        <h4 style="font-size:13px; font-weight:800; margin:0 0 10px; color:#0f172a;">先改哪三处</h4>
-                        ${renderDiagnosisList((diagnosis.top_priorities || []).slice(0, 3), {ordered:true})}
-                    </section>
-                    <section style="border:1px solid #e2e8f0; border-radius:10px; padding:14px;">
-                        <h4 style="font-size:13px; font-weight:800; margin:0 0 10px; color:#0f172a;">预计修改时间</h4>
-                        <p style="font-size:13px; color:#334155; line-height:1.6; margin:0;">${esc(diagnosis.estimated_time || 'N/A')}</p>
-                    </section>
-                </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px;">
-                    <section style="border:1px solid #e2e8f0; border-radius:10px; padding:14px;">
-                        <h4 style="font-size:13px; font-weight:800; margin:0 0 10px; color:#0f172a;">快速收益</h4>
+                <section style="border:1px solid #e2e8f0; border-radius:10px; padding:16px; margin-bottom:14px;">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+                        <span style="font-size:14px;">🎯</span>
+                        <h4 style="font-size:13px; font-weight:800; margin:0; color:#0f172a;">先改哪三处</h4>
+                    </div>
+                    ${renderDiagnosisList((diagnosis.top_priorities || []).slice(0, 3), {ordered:true})}
+                </section>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+                    <section style="border:1px solid #e2e8f0; border-radius:10px; padding:16px;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                            <span style="font-size:14px;">⚡</span>
+                            <h4 style="font-size:13px; font-weight:800; margin:0; color:#0f172a;">快速收益</h4>
+                        </div>
                         ${renderDiagnosisList(diagnosis.quick_wins || [])}
                     </section>
-                    <section style="border:1px solid #e2e8f0; border-radius:10px; padding:14px;">
-                        <h4 style="font-size:13px; font-weight:800; margin:0 0 10px; color:#0f172a;">风险提示</h4>
+                    <section style="border:1px solid #e2e8f0; border-radius:10px; padding:16px;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                            <span style="font-size:14px;">⚠️</span>
+                            <h4 style="font-size:13px; font-weight:800; margin:0; color:#0f172a;">风险提示</h4>
+                        </div>
                         ${renderDiagnosisList(diagnosis.risk_notes || [])}
                     </section>
                 </div>
-                <section style="border:1px solid #e2e8f0; border-radius:10px; padding:14px; margin-top:14px;">
-                    <h4 style="font-size:13px; font-weight:800; margin:0 0 10px; color:#0f172a;">下一步行动</h4>
-                    ${renderDiagnosisList(diagnosis.next_actions || [])}
-                </section>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px;">
+                    <section style="border:1px solid #e2e8f0; border-radius:10px; padding:16px;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                            <span style="font-size:14px;">⏱️</span>
+                            <h4 style="font-size:13px; font-weight:800; margin:0; color:#0f172a;">预计修改时间</h4>
+                        </div>
+                        <p style="font-size:13px; color:#334155; line-height:1.6; margin:0;">${esc(diagnosis.estimated_time || 'N/A')}</p>
+                    </section>
+                    <section style="border:1px solid #e2e8f0; border-radius:10px; padding:16px;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                            <span style="font-size:14px;">➡️</span>
+                            <h4 style="font-size:13px; font-weight:800; margin:0; color:#0f172a;">下一步行动</h4>
+                        </div>
+                        ${renderDiagnosisList(diagnosis.next_actions || [])}
+                    </section>
+                </div>
                 <p style="font-size:11px; color:#b45309; background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:8px 10px; margin:14px 0 0;">⚠️ 诊断报告只基于质检摘要与 AI 建议生成，不代表真实审稿结论。请人工核实所有科学结论、数字和引用。</p>
                 <div style="display:flex; gap:8px; margin-top:16px; justify-content:flex-end;">
                     <button onclick="this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-size:13px;">关闭</button>
