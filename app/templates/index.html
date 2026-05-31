@@ -1632,6 +1632,22 @@ function renderFileTree() {
     document.getElementById('file-tree').innerHTML = html;
 }
 
+// Shared dismissed-issue lookup. Builds a Set keyed by `gate::index` once per
+// report and reuses it, so callers avoid scanning the whole dismissed_issues
+// array for every issue (which was O(files x gates x issues x dismissed)).
+let _dismissedCacheReport = null;
+let _dismissedCacheSet = new Set();
+function isDismissed(gateName, idx) {
+    if (!report) return false;
+    if (_dismissedCacheReport !== report) {
+        _dismissedCacheSet = new Set(
+            (report.dismissed_issues || []).map(d => `${d.gate_name}::${d.issue_index}`)
+        );
+        _dismissedCacheReport = report;
+    }
+    return _dismissedCacheSet.has(`${gateName}::${idx}`);
+}
+
 function renderFileItem(f, indented) {
     const st = getFileStatus(f.path);
     const statusCls = st==='ok'?'file-status-ok':st==='warn'?'file-status-warn':'file-status-err';
@@ -1643,7 +1659,7 @@ function renderFileItem(f, indented) {
         for (const gate of report.gate_results) {
             gate.issues.forEach((issue, idx) => {
                 if (issueMatchesFile(issue, f.path) && issue.severity === 'error') {
-                    const dismissed = report.dismissed_issues?.some(d=>d.gate_name===gate.gate_name&&d.issue_index===idx);
+                    const dismissed = isDismissed(gate.gate_name, idx);
                     if (!dismissed) errCount++;
                 }
             });
@@ -1664,7 +1680,7 @@ function getFileStatus(path) {
     for (const gate of report.gate_results) {
         gate.issues.forEach((issue,idx) => {
             if (!issueMatchesFile(issue,path)) return;
-            const dismissed = report.dismissed_issues?.some(d=>d.gate_name===gate.gate_name&&d.issue_index===idx);
+            const dismissed = isDismissed(gate.gate_name, idx);
             if (dismissed) hasDismissed=true;
             else if (issue.severity==='error') hasErr=true;
         });
@@ -1805,8 +1821,8 @@ function highlightErrors() {
     for (const gate of report.gate_results) {
         gate.issues.forEach((issue, idx) => {
             if (!issueMatchesFile(issue, currentFile)) return;
-            const isDismissed = report.dismissed_issues?.some(d=>d.gate_name===gate.gate_name&&d.issue_index===idx);
-            if (isDismissed) return;
+            const dismissed = isDismissed(gate.gate_name, idx);
+            if (dismissed) return;
 
             let lineNum = issue.line ? issue.line-1 : null;
             if (lineNum===null && issue.location?.startsWith('bib:')) {
@@ -1902,7 +1918,7 @@ function copyIssueList() {
     for (const gate of report.gate_results) {
         const info = GATE_INFO[gate.gate_name]||{name:gate.gate_name};
         const issues = gate.issues.filter((iss, idx) => {
-            return !report.dismissed_issues?.some(d=>d.gate_name===gate.gate_name&&d.issue_index===idx);
+            return !isDismissed(gate.gate_name, idx);
         });
         if (!issues.length) continue;
         text += `── ${info.icon||''} ${info.name} ──\n`;
@@ -2128,8 +2144,8 @@ function jumpToNextIssue() {
     for (const gate of report.gate_results) {
         gate.issues.forEach((issue, idx) => {
             if (!issueMatchesFile(issue, currentFile)) return;
-            const isDismissed = report.dismissed_issues?.some(d=>d.gate_name===gate.gate_name&&d.issue_index===idx);
-            if (isDismissed) return;
+            const dismissed = isDismissed(gate.gate_name, idx);
+            if (dismissed) return;
             allIssues.push({issue, gateName: gate.gate_name, idx});
         });
     }
@@ -2164,7 +2180,7 @@ function updateCompleteBtn() {
     for (const gate of report.gate_results) {
         gate.issues.forEach((issue, idx) => {
             if (issue.severity !== 'error') return;
-            const dismissed = report.dismissed_issues?.some(d=>d.gate_name===gate.gate_name&&d.issue_index===idx);
+            const dismissed = isDismissed(gate.gate_name, idx);
             if (!gate.passed && !dismissed) allHandled = false;
         });
     }

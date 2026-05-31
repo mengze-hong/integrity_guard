@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.89 (2026-05-31) — Dismissed-Issue Lookup Perf
+- 前端新增共享 `isDismissed(gateName, idx)` helper：按 report 缓存一个 `gate::index` 的 Set，复用查询，report 变化时自动重建
+- 文件树徽章（`renderFileItem`）、文件状态（`getFileStatus`）、编辑器标记（`markIssuesInEditor`）、问题收集与复制清单等 6 处原本对每个 issue 都扫描整个 `dismissed_issues` 数组（O(文件×gate×issue×dismissed)），改为 O(1) 查询，文件/问题多时文件树渲染更顺畅
+- 纯前端性能与可维护性优化，统一 dismissed 判定入口；保留 `renderIssues` 内需要取 dismiss 理由的本地 Map（用途不同）
+- 通过 JS 语法检查、JS helper 测试 7 项、pytest 108 项
+
 ## v5.3.88 (2026-05-31) — Edit History & Revert
 - 新增编辑修改历史功能：用户每次保存文件都会记录一条历史（时间、文件、行数增减、改动前后内容）
 - 新增 `app/services/edit_history.py`：历史加密存储于 `data/jobs/{job_id}.history.enc`（与报告同等保护，含论文内容必须加密），最多保留 100 条，超大快照（>512KB）仅存摘要不可回退，避免历史无限膨胀；内容未变化的保存不记录

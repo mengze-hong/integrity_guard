@@ -191,6 +191,7 @@
 - [ ] 用户表、Job 表、Issue 表关系设计
 - [x] 数据备份策略（`scripts/backup_data.py` + `docs/BACKUP.md`，默认备份 data，可选 uploads）
 - [x] 大图项目质检性能优化：StructureGate 单次遍历 + 按大小分组算 MD5 + 流式 hash/尺寸读取（内存 12MB→2MB）；前端 issue 列表 dismissed Map 化（O(m×n)→O(1)）
+- [x] 前端 dismissed 判定统一为共享 `isDismissed()`（按 report 缓存 Set）：文件树徽章/文件状态/编辑器标记等 6 处由全数组扫描改为 O(1) 查询
 
 ---
 
