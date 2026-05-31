@@ -1,5 +1,12 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.80 (2026-05-31) — Hardened CI Safety Checks
+- GitHub Actions 安装流程补齐 `python -m pip` 与 `npm ci`，确保 JS helper 测试和 secret scan 在干净环境可复现
+- CI ruff 命令与本地验证对齐，纳入 `scripts/backup_data.py`
+- 禁用隧道 provider policy scan 改为运行时拼接 pattern，不再排除 workflow 文件自身，避免 CI 配置成为扫描盲区
+- 前端 JS 语法检查改为调用 `npm run check:js`，和本地命令保持一致
+- `TODO.md` 新增并完成 CI 安全测试闭环子项，deploy 仍保留为后续独立事项
+
 ## v5.3.79 (2026-05-31) — Team Mentor Dashboard
 - `/auth/dashboard` 对 Team tier 用户新增 `team_dashboard`，基于最近 50 次检查计算平均分、通过率、待关注数量和低分论文列表
 - 账户弹窗新增导师 Dashboard 品牌卡片，展示 Team 视角核心指标并支持直接打开待关注论文

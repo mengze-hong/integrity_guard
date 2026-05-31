@@ -25,21 +25,24 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
-          pip install ruff pytest pytest-cov pip-audit
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install ruff pytest pytest-cov pip-audit
+          npm ci
 
       - name: Lint with ruff
-        run: ruff check app/ tests/ --select E,F,W --ignore E501
+        run: python -m ruff check app/ tests/ scripts/backup_data.py --select E,F,W --ignore E501
 
       - name: Check frontend JavaScript syntax
-        run: node scripts/check-inline-js.mjs
+        run: npm run check:js
 
       - name: Test frontend helpers
         run: npm run test:js
 
-      - name: No Cloudflare policy scan
+      - name: Forbidden tunnel provider policy scan
         run: |
-          if git grep --untracked -n -i -E 'cloudflared|trycloudflare|cloudflare' -- . ':!.cursor/**' ':!.git/**' ':!.github/workflows/ci.yml' ':!CHANGELOG.md' ':!data/**' ':!uploads/**' ':!screenshots/**' ':!screenshots_new/**' ':!.playwright-mcp/**'; then
+          FORBIDDEN_TUNNEL_PATTERN="$(printf '%s' 'cloud' 'flared|try' 'cloud' 'flare|' 'cloud' 'flare')"
+          if git grep --untracked -n -i -E "$FORBIDDEN_TUNNEL_PATTERN" -- . ':!.cursor/**' ':!.git/**' ':!CHANGELOG.md' ':!data/**' ':!uploads/**' ':!screenshots/**' ':!screenshots_new/**' ':!.playwright-mcp/**'; then
             echo "Forbidden tunnel provider pattern found"
             exit 1
           else

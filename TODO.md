@@ -165,6 +165,7 @@
 ### 部署 & 运维
 - [x] Docker 化（Dockerfile + docker-compose.yml + requirements.txt）
 - [ ] CI/CD（GitHub Actions: lint + test + deploy）
+- [x] CI 安全测试闭环：GitHub Actions 跑 ruff、JS 检查、secret scan、禁用隧道策略扫描和 pytest
 - [x] CI 检查扩展：前端 inline JS 语法检查抽成本地脚本，加入临时隧道 provider policy scan，并扩展 secret scan 覆盖 LLM、隧道平台、JWT、admin 与支付密钥模式
 - [x] 前端纯 helper 抽到全局脚本，并用 Node 内置测试覆盖 inline handler 参数、HTML escape、AI fix 文本替换与批量分组逻辑
 - [x] 本地运行、测试与发布文档补齐：新增 docs 索引、本地启动指南、按改动类型组织的测试指南，并让 release checklist 引用统一测试命令集
