@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.62 (2026-05-30) — Safe Deployment Docs
+- 新增 `docs/DEPLOY_SAFE.md`，覆盖 Docker + 反向代理 + HTTPS 的生产部署形态、`APP_ENV=production`、支付 sandbox 下线前检查、密钥注入、上传 ZIP 安全、日志、健康检查、备份与公网暴露复核
+- `docs/README.md` 增加 Safe Production Deployment 入口，`docs/RELEASE_CHECKLIST.md` 增加发布前阅读部署指南并确认生产开关的步骤
+- `TODO.md` 同步记录安全部署文档已补齐
+- 本地验证通过：no tunnel provider policy scan、`npm run scan:secrets`、`npm run check:js`、`npm run test:js`、`python -m pytest -q`
+
 ## v5.3.61 (2026-05-30) — Do Not Do Docs
 - 新增 `docs/DO_NOT_DO.md`，集中列出研究真实性、AI 修复验证、仓库卫生、敏感文件/密钥与公网暴露禁止事项
 - `docs/README.md` 增加 Do Not Do 入口，`docs/RELEASE_CHECKLIST.md` 增加发布前 guardrail 复核步骤
