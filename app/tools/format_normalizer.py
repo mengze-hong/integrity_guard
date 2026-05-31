@@ -23,7 +23,24 @@ def normalize_format(text: str, rules: list[str] | None = None) -> tuple[str, li
         (normalized_text, list_of_changes_made)
     """
     changes = []
-    all_rules = rules or ["tilde", "trailing_ws", "double_space", "blank_lines", "abbreviations", "percent_comment"]
+    all_rules = rules or ["citation_cmd", "tilde", "trailing_ws", "double_space", "blank_lines", "abbreviations", "percent_comment"]
+
+    if "citation_cmd" in all_rules:
+        # Conservative citation unification: only bare \cite -> \citep.
+        # Textual citations such as \citet keep their different semantics.
+        lines = text.split("\n")
+        fixed = 0
+        pattern = r"\\cite(?![A-Za-z])(\s*(?:\[[^\]]*\]\s*){0,2}\{)"
+        for i, line in enumerate(lines):
+            if line.strip().startswith("%"):
+                continue
+            new_line, count = re.subn(pattern, r"\\citep\1", line)
+            if count:
+                lines[i] = new_line
+                fixed += count
+        if fixed > 0:
+            text = "\n".join(lines)
+            changes.append(f"统一引用命令: \\cite → \\citep ({fixed} 处)")
 
     if "tilde" in all_rules:
         # Table 1 → Table~1, Figure 2 → Figure~2, Section 3 → Section~3

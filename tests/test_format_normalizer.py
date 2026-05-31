@@ -24,3 +24,20 @@ def test_normalize_format_fixes_common_latex_spacing():
     assert any("统一非断行空格" in change for change in changes)
     assert any("去除行尾空格" in change for change in changes)
     assert any("压缩多余空行" in change for change in changes)
+
+
+def test_normalize_format_unifies_only_bare_cite_commands():
+    text = (
+        "Prior work \\cite{alpha} and \\cite[see][p. 3]{beta}.\n"
+        "Textual \\citet{gamma} and parenthetical \\citep{delta} stay.\n"
+        "% Commented \\cite{skip} stays untouched.\n"
+    )
+
+    normalized, changes = normalize_format(text)
+
+    assert "\\citep{alpha}" in normalized
+    assert "\\citep[see][p. 3]{beta}" in normalized
+    assert "\\citet{gamma}" in normalized
+    assert "\\citep{delta}" in normalized
+    assert "% Commented \\cite{skip}" in normalized
+    assert any("统一引用命令" in change for change in changes)

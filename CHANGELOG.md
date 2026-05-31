@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.70 (2026-05-31) — Citation Command Normalization
+- LaTeX format normalizer 增加 `citation_cmd` 规则，保守地将裸 `\cite{...}` / `\cite[...]{...}` 统一为 `\citep...`
+- 规则会跳过注释行，并保留 `\citet`、`\citep` 等已有语义不同或已规范的引用命令
+- 新增测试覆盖裸 cite、带 optional args 的 cite、注释行和 `\citet` 保留行为
+- `TODO.md` 同步记录一键格式规范化的引用格式子项已完成
+
 ## v5.3.69 (2026-05-31) — User Dashboard Checks
 - `/api/auth/dashboard` 增加当前用户最近论文检查记录，按 user owner 过滤，不混入匿名或其他用户 job
 - “我的账户”弹窗升级为 dashboard：展示剩余次数、累计质检、会员等级、最近论文列表和积分记录，并可直接跳转恢复历史报告

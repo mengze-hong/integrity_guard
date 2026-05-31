@@ -286,7 +286,7 @@
 
 ### 🔧 格式自动修复（零 LLM 成本）
 - [x] **一键格式规范化**（工作台 toolbar 入口 + 当前文件/全项目后端 API）
-  - [ ] 统一引用格式（\cite vs \citep vs \citet）
+  - [x] 统一引用格式（保守统一裸 `\cite` → `\citep`，不改 `\citet` 语义引用）
   - [x] 统一数字格式（Table 1 vs Table~1 vs table 1）
   - [x] 统一缩写（Fig. vs Figure）
   - [x] 去除多余空行和空格 / 修复基础排版空白
