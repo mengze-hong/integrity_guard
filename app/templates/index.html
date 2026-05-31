@@ -3775,7 +3775,7 @@ function doLogout() {
 async function showDashboard() {
     toast('加载账户信息...', 'info', 1500);
     try {
-        const r = await fetch('/api/auth/dashboard');
+        const r = await apiFetch('/api/auth/dashboard');
         const d = await r.json();
         const modal = document.createElement('div');
         modal.className = 'modal-bg';
@@ -3784,13 +3784,31 @@ async function showDashboard() {
         const txnHtml = (d.recent_transactions || []).map(t => {
             const color = t.amount > 0 ? '#059669' : '#dc2626';
             return `<div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #f8fafc; font-size:11px;">
-                <span style="color:#475569;">${t.description}</span>
+                <span style="color:#475569;">${esc(t.description || '积分变动')}</span>
                 <span style="color:${color}; font-weight:600;">${t.amount > 0 ? '+' : ''}${t.amount}</span>
             </div>`;
         }).join('') || '<p style="font-size:12px; color:#94a3b8;">暂无记录</p>';
+        const checksHtml = (d.recent_checks || []).map(j => {
+            const score = Number(j.score || 0);
+            const scoreColor = score >= 90 ? '#16a34a' : score >= 60 ? '#d97706' : '#dc2626';
+            const date = j.timestamp ? new Date(j.timestamp).toLocaleDateString('zh-CN', {month:'short', day:'numeric'}) : '';
+            return `<div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid #f8fafc; font-size:11px;">
+                <div style="min-width:0;">
+                    <p style="margin:0; color:#334155; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(j.filename || '未命名论文')}</p>
+                    <p style="margin:2px 0 0; color:#94a3b8;">${date} · ${j.gates_passed || 0}/${j.gates_total || 0} 通过</p>
+                </div>
+                <button onclick="this.closest('.modal-bg').remove();resumeJob(${jsArg(j.job_id)})" style="flex-shrink:0; border:1px solid #e2e8f0; background:#fff; border-radius:8px; padding:5px 8px; cursor:pointer; color:${scoreColor}; font-size:11px; font-weight:800;">${score.toFixed(0)} 分</button>
+            </div>`;
+        }).join('') || '<p style="font-size:12px; color:#94a3b8;">暂无论文记录</p>';
 
-        modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:28px; max-width:440px; width:90%; max-height:80vh; overflow-y:auto;">
-            <h3 style="font-size:18px; font-weight:700; margin:0 0 16px; color:#0f172a;">我的账户</h3>
+        modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:28px; max-width:620px; width:92%; max-height:82vh; overflow-y:auto;">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:16px;">
+                <div>
+                    <h3 style="font-size:18px; font-weight:700; margin:0; color:#0f172a;">我的账户</h3>
+                    <p style="font-size:11px; color:#64748b; margin:4px 0 0;">${esc(d.user.name || d.user.email)} · ${esc(d.user.email)}</p>
+                </div>
+                <button onclick="this.closest('.modal-bg').remove()" style="font-size:20px; line-height:1; color:#94a3b8; background:none; border:none; cursor:pointer; padding:0 4px;">×</button>
+            </div>
             <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px;">
                 <div style="text-align:center; padding:12px; background:#f8fafc; border-radius:10px;">
                     <p style="font-size:22px; font-weight:700; color:#3b82f6; margin:0;">${d.stats.credits_remaining}</p>
@@ -3801,12 +3819,20 @@ async function showDashboard() {
                     <p style="font-size:10px; color:#64748b; margin:2px 0 0;">累计质检</p>
                 </div>
                 <div style="text-align:center; padding:12px; background:#f8fafc; border-radius:10px;">
-                    <p style="font-size:22px; font-weight:700; color:#0f172a; margin:0;">${d.user.tier}</p>
+                    <p style="font-size:22px; font-weight:700; color:#0f172a; margin:0;">${esc(d.user.tier || 'free')}</p>
                     <p style="font-size:10px; color:#64748b; margin:2px 0 0;">会员等级</p>
                 </div>
             </div>
-            <p style="font-size:12px; font-weight:600; color:#334155; margin:0 0 8px;">最近记录</p>
-            <div style="max-height:200px; overflow-y:auto;">${txnHtml}</div>
+            <div style="display:grid; grid-template-columns:1.2fr 1fr; gap:18px;">
+                <section>
+                    <p style="font-size:12px; font-weight:700; color:#334155; margin:0 0 8px;">最近论文</p>
+                    <div style="max-height:240px; overflow-y:auto;">${checksHtml}</div>
+                </section>
+                <section>
+                    <p style="font-size:12px; font-weight:700; color:#334155; margin:0 0 8px;">积分记录</p>
+                    <div style="max-height:240px; overflow-y:auto;">${txnHtml}</div>
+                </section>
+            </div>
             <button onclick="this.closest('.modal-bg').remove()" style="margin-top:16px; width:100%; padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:13px; color:#64748b;">关闭</button>
         </div>`;
         document.body.appendChild(modal);

@@ -1,6 +1,7 @@
 """Security tests for auth throttling/cookies and payment idempotency."""
 
 from datetime import datetime, timezone
+from types import SimpleNamespace
 
 import pytest
 from fastapi import FastAPI
@@ -95,6 +96,45 @@ def test_auth_cookie_secure_behind_https(auth_app):
     assert response.status_code == 200
     assert "secure" in response.headers["set-cookie"].lower()
     assert "httponly" in response.headers["set-cookie"].lower()
+
+
+def test_user_dashboard_returns_recent_checks(auth_app, monkeypatch):
+    client = TestClient(auth_app)
+    register = client.post(
+        "/auth/register",
+        json={"email": "dash@example.com", "password": "12345678", "name": "Dash"},
+    )
+    assert register.status_code == 200
+    user_id = register.json()["user"]["id"]
+
+    async def fake_get_current_user(request):
+        return SimpleNamespace(id=user_id)
+
+    def fake_list_jobs(*, limit, owner_type, owner_id, include_legacy):
+        assert limit == 8
+        assert owner_type == "user"
+        assert owner_id == user_id
+        assert include_legacy is False
+        return [{
+            "job_id": "job1",
+            "filename": "paper.zip",
+            "timestamp": "2026-05-31T10:00:00Z",
+            "score": 88,
+            "passed": False,
+            "gates_passed": 5,
+            "gates_total": 6,
+        }]
+
+    monkeypatch.setattr(auth_routes, "get_current_user", fake_get_current_user)
+    monkeypatch.setattr(auth_routes.storage, "list_jobs", fake_list_jobs)
+
+    response = client.get("/auth/dashboard")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["recent_checks"][0]["job_id"] == "job1"
+    assert body["recent_checks"][0]["filename"] == "paper.zip"
+    assert body["stats"]["total_checks"] == 1
 
 
 def test_admin_add_credits_requires_header_key(payment_app, temp_db):

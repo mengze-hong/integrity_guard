@@ -15,6 +15,7 @@ from app.models_db import User
 from app.dependencies import get_current_user, get_current_user_optional
 from app.credits import get_transactions
 from app.models_db import Transaction
+from app import storage
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -170,15 +171,22 @@ async def user_dashboard(request: Request, db: Session = Depends(get_db)):
         Transaction.user_id == user.id,
         Transaction.type == "consume"
     ).count()
+    recent_checks = storage.list_jobs(
+        limit=8,
+        owner_type="user",
+        owner_id=str(user.id),
+        include_legacy=False,
+    )
 
     return {
         "user": _user_dict(fresh_user),
         "stats": {
-            "total_checks": total_checks,
+            "total_checks": max(total_checks, len(recent_checks)),
             "credits_remaining": fresh_user.credits,
             "member_since": fresh_user.created_at,
         },
         "recent_transactions": txns,
+        "recent_checks": recent_checks,
     }
 
 
