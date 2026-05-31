@@ -53,6 +53,14 @@ Endpoint reference for ScholarLint · 投稿通, grouped by router. All API rout
 | POST | `/api/dismiss/{job_id}` | job write | Dismiss an issue with a reason (human-in-the-loop). |
 | GET | `/api/export/{job_id}` | job read | Branded Markdown report (author or share-readonly variant). |
 
+### Edit History
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| GET | `/api/history-edits/{job_id}` | job read | List edit history (newest first); optional `?file=` filter. Metadata only, no file contents. |
+| GET | `/api/history-edits/{job_id}/{entry_id}` | job read | One history entry with before/after content for a diff view. |
+| POST | `/api/history-edits/{job_id}/{entry_id}/revert` | job write | Revert a file to the entry's "before" content. Recorded as a new history entry. Share-token readers get `403`. |
+
 ### Tools
 
 | Method | Path | Access | Purpose |

@@ -554,6 +554,7 @@
                 <button onclick="doBibClean()" class="toolbar-btn">📋 整理 Bib</button>
                 <button onclick="doTidyUp()" class="toolbar-btn">🗂️ 整理结构</button>
                 <button onclick="doFormatNormalize()" class="toolbar-btn">🔧 规范格式</button>
+                <button onclick="showEditHistory()" class="toolbar-btn" title="查看修改历史，可回退到之前的版本">📜 修改历史</button>
                 <button onclick="showAnalysis()" class="toolbar-btn">📊 分析</button>
                 <button onclick="showChecklist()" class="toolbar-btn">✅ 清单</button>
                 <button onclick="showVenueChecklist()" class="toolbar-btn">📝 复现清单</button>
@@ -3571,6 +3572,124 @@ function showModal(html, {maxWidth='700px'} = {}) {
     document.body.appendChild(modal);
     return modal;
 }
+
+// === Edit history (track changes, timeline, revert) ===
+function _fmtHistoryTime(iso) {
+    try {
+        const d = new Date(iso);
+        const now = new Date();
+        const sameDay = d.toDateString() === now.toDateString();
+        const time = d.toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
+        if (sameDay) return `今天 ${time}`;
+        return `${d.toLocaleDateString('zh-CN', {month:'2-digit', day:'2-digit'})} ${time}`;
+    } catch (e) { return iso || ''; }
+}
+
+function _historyDeltaBadge(entry) {
+    if (entry.is_creation) return '<span style="font-size:11px; color:#166534; background:#dcfce7; border-radius:999px; padding:2px 8px;">新建</span>';
+    const d = entry.line_delta || 0;
+    if (d > 0) return `<span style="font-size:11px; color:#166534; background:#dcfce7; border-radius:999px; padding:2px 8px;">+${d} 行</span>`;
+    if (d < 0) return `<span style="font-size:11px; color:#b91c1c; background:#fee2e2; border-radius:999px; padding:2px 8px;">${d} 行</span>`;
+    return '<span style="font-size:11px; color:#475569; background:#f1f5f9; border-radius:999px; padding:2px 8px;">内容调整</span>';
+}
+
+async function showEditHistory() {
+    if (!jobId) { toast('请先打开一个项目', 'warning'); return; }
+    let data;
+    try {
+        const r = await apiFetch(`/api/history-edits/${jobId}`);
+        data = await r.json();
+    } catch (e) {
+        toast('加载修改历史失败: ' + e.message, 'error');
+        return;
+    }
+    const entries = data.entries || [];
+    const rows = entries.length ? entries.map(e => `
+        <div style="display:flex; align-items:flex-start; gap:12px; padding:12px 0; border-bottom:1px solid #f1f5f9;">
+            <span style="flex:0 0 8px; width:8px; height:8px; border-radius:50%; background:#2563eb; margin-top:6px;"></span>
+            <div style="flex:1; min-width:0;">
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <span style="font-size:13px; font-weight:600; color:#0f172a; word-break:break-all;">${esc(e.file_path)}</span>
+                    ${_historyDeltaBadge(e)}
+                </div>
+                <p style="font-size:11px; color:#94a3b8; margin:3px 0 0;">${esc(_fmtHistoryTime(e.timestamp))} · ${e.old_lines}→${e.new_lines} 行</p>
+            </div>
+            <div style="flex:0 0 auto; display:flex; gap:6px;">
+                <button onclick="viewHistoryDiff(${jsArg(e.id)})" style="font-size:12px; padding:5px 10px; border-radius:7px; border:1px solid #e2e8f0; background:#fff; cursor:pointer;">查看</button>
+                ${e.revertable ? `<button onclick="revertHistoryEntry(${jsArg(e.id)})" style="font-size:12px; padding:5px 10px; border-radius:7px; border:none; background:#2563eb; color:#fff; cursor:pointer;">回退到此前</button>` : ''}
+            </div>
+        </div>`).join('') : '<p style="font-size:13px; color:#94a3b8; padding:24px 0; text-align:center;">还没有修改记录。编辑并保存文件后，这里会记录每一次改动。</p>';
+
+    showModal(`
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:6px;">
+            <div>
+                <h3 style="font-size:17px; font-weight:800; margin:0 0 4px; color:#0f172a;">📜 修改历史</h3>
+                <p style="font-size:12px; color:#64748b; margin:0;">记录每次保存的改动，可查看 diff 或回退到改动前的版本。</p>
+            </div>
+            <button onclick="this.closest('.modal-bg').remove()" style="flex:0 0 auto; padding:6px 12px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-size:13px;">关闭</button>
+        </div>
+        <div style="margin-top:8px;">${rows}</div>
+    `, {maxWidth:'620px'});
+}
+
+function _renderLineDiff(oldText, newText) {
+    const oldLines = (oldText || '').split('\n');
+    const newLines = (newText || '').split('\n');
+    const oldSet = new Set(oldLines);
+    const newSet = new Set(newLines);
+    const row = (sign, text, color, bg) => `<div style="display:flex; gap:8px; font-family:var(--font-mono,monospace); font-size:12px; line-height:1.5;"><span style="flex:0 0 14px; color:${color}; user-select:none;">${sign}</span><span style="flex:1; min-width:0; white-space:pre-wrap; word-break:break-word; background:${bg}; color:${color};">${esc(text) || '&nbsp;'}</span></div>`;
+    const removed = oldLines.filter(l => !newSet.has(l)).slice(0, 200).map(l => row('-', l, '#b91c1c', '#fef2f2')).join('');
+    const added = newLines.filter(l => !oldSet.has(l)).slice(0, 200).map(l => row('+', l, '#166534', '#f0fdf4')).join('');
+    if (!removed && !added) return '<p style="font-size:12px; color:#94a3b8;">两个版本内容相同。</p>';
+    return `${removed}${added}`;
+}
+
+async function viewHistoryDiff(entryId) {
+    let d;
+    try {
+        const r = await apiFetch(`/api/history-edits/${jobId}/${encodeURIComponent(entryId)}`);
+        d = await r.json();
+    } catch (e) {
+        toast('加载 diff 失败: ' + e.message, 'error');
+        return;
+    }
+    const hasContent = d.old_content !== null && d.old_content !== undefined || d.new_content !== null && d.new_content !== undefined;
+    const diffHtml = hasContent
+        ? _renderLineDiff(d.old_content || '', d.new_content || '')
+        : '<p style="font-size:12px; color:#94a3b8;">该记录未保存内容快照（文件过大），仅可查看摘要。</p>';
+    showModal(`
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:10px;">
+            <div>
+                <h3 style="font-size:16px; font-weight:800; margin:0 0 4px; color:#0f172a;">改动详情</h3>
+                <p style="font-size:12px; color:#64748b; margin:0; word-break:break-all;">${esc(d.file_path)} · ${esc(_fmtHistoryTime(d.timestamp))}</p>
+            </div>
+            <button onclick="this.closest('.modal-bg').remove()" style="flex:0 0 auto; padding:6px 12px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-size:13px;">关闭</button>
+        </div>
+        <div style="border:1px solid #e2e8f0; border-radius:10px; padding:12px; max-height:50vh; overflow:auto; background:#fff;">${diffHtml}</div>
+        ${d.revertable ? `<div style="display:flex; justify-content:flex-end; margin-top:14px;"><button onclick="revertHistoryEntry(${jsArg(entryId)})" style="padding:8px 16px; border-radius:8px; border:none; background:#2563eb; color:#fff; cursor:pointer; font-size:13px; font-weight:600;">回退到改动前</button></div>` : ''}
+    `, {maxWidth:'680px'});
+}
+
+async function revertHistoryEntry(entryId) {
+    if (!confirm('确定要回退到这次改动之前的版本吗？当前内容会被覆盖（此次回退也会记入历史，可再次撤销）。')) return;
+    let d;
+    try {
+        const r = await apiFetch(`/api/history-edits/${jobId}/${encodeURIComponent(entryId)}/revert`, {method:'POST'});
+        d = await r.json();
+    } catch (e) {
+        toast('回退失败: ' + e.message, 'error');
+        return;
+    }
+    document.querySelectorAll('.modal-bg').forEach(m => m.remove());
+    // Refresh the editor view if the reverted file is open, else just reload tree.
+    if (d.file_path && d.file_path === currentFile) {
+        await openFile(d.file_path);
+    } else {
+        loadFileTree();
+    }
+    toast(`已回退 ${d.file_path}`, 'success', 3000);
+}
+
 document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
         const modals = document.querySelectorAll('.modal-bg');

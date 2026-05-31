@@ -41,6 +41,7 @@ from app.services.file_store import (
 )
 from app.services.dimension_scores import build_dimension_scores
 from app.services.style_analysis import analyze_writing_style
+from app.services import edit_history
 from app import storage
 from app.logging_config import logger
 
@@ -546,11 +547,110 @@ async def save_file(job_id: str, file_path: str, request: Request, response: Res
 
     target = safe_project_file(project_dir, file_path, allowed_suffixes=EDITABLE_EXTENSIONS)
 
+    # Capture the previous content (if any) before overwriting so the edit can
+    # be tracked in history and reverted later.
+    old_content: str | None = None
+    if target.exists() and target.is_file():
+        try:
+            old_content = target.read_text(encoding="utf-8")
+        except Exception:
+            old_content = None
+
     body = await request.body()
     content = body.decode("utf-8")
     target.write_text(content, encoding="utf-8")
 
+    # Record the change in the per-job edit history (best-effort: a history
+    # failure must never break saving the user's work).
+    try:
+        edit_history.record_edit(job_id, file_path, content, old_content)
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning(f"edit history record failed for {job_id}: {redact(str(exc))}")
+
     return {"status": "saved", "path": file_path, "size": len(content)}
+
+
+# ─── Edit history (track changes, review timeline, revert) ────
+
+@router.get("/history-edits/{job_id}")
+async def list_edit_history(job_id: str, request: Request, response: Response, file: str | None = None):
+    """List the edit history for a job (newest first), optionally one file.
+
+    Read access is enough to view history (owner or valid share token).
+    """
+    await _require_job_access(job_id, request, response)
+    return {"job_id": job_id, "file": file, "entries": edit_history.list_history(job_id, file)}
+
+
+@router.get("/history-edits/{job_id}/{entry_id}")
+async def get_edit_history_entry(job_id: str, entry_id: str, request: Request, response: Response):
+    """Return one history entry with before/after content for a diff view."""
+    await _require_job_access(job_id, request, response)
+    entry = edit_history.get_entry(job_id, entry_id)
+    if not entry:
+        raise HTTPException(status_code=404, detail="History entry not found")
+    return {
+        "id": entry.get("id"),
+        "timestamp": entry.get("timestamp"),
+        "file_path": entry.get("file_path"),
+        "old_lines": entry.get("old_lines", 0),
+        "new_lines": entry.get("new_lines", 0),
+        "line_delta": entry.get("line_delta", 0),
+        "is_creation": entry.get("is_creation", False),
+        "revertable": entry.get("revertable", False) and "new_content" in entry,
+        "old_content": entry.get("old_content"),
+        "new_content": entry.get("new_content"),
+    }
+
+
+@router.post("/history-edits/{job_id}/{entry_id}/revert")
+async def revert_edit_history_entry(job_id: str, entry_id: str, request: Request, response: Response):
+    """Revert a file to the 'before' content captured in a history entry.
+
+    Requires write access (share-token readers are rejected). The revert is
+    itself recorded as a new history entry, so it can also be undone.
+    """
+    await _require_job_access(job_id, request, response, write=True)
+    if job_id not in _job_dirs:
+        _get_report(job_id)
+    project_dir = _job_dirs.get(job_id)
+    if not project_dir:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    entry = edit_history.get_entry(job_id, entry_id)
+    if not entry:
+        raise HTTPException(status_code=404, detail="History entry not found")
+    if "old_content" not in entry or entry.get("old_content") is None:
+        raise HTTPException(status_code=400, detail="该记录无法回退（无可恢复的历史内容）")
+
+    file_path = entry["file_path"]
+    if not any(file_path.lower().endswith(ext) for ext in EDITABLE_EXTENSIONS):
+        raise HTTPException(status_code=403, detail="只能回退文本源文件")
+
+    target = safe_project_file(project_dir, file_path, allowed_suffixes=EDITABLE_EXTENSIONS)
+    restore_content = entry["old_content"]
+
+    current_content: str | None = None
+    if target.exists() and target.is_file():
+        try:
+            current_content = target.read_text(encoding="utf-8")
+        except Exception:
+            current_content = None
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(restore_content, encoding="utf-8")
+
+    try:
+        edit_history.record_edit(job_id, file_path, restore_content, current_content)
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning(f"edit history revert record failed for {job_id}: {redact(str(exc))}")
+
+    return {
+        "status": "reverted",
+        "file_path": file_path,
+        "content": restore_content,
+        "size": len(restore_content),
+    }
 
 
 # ─── Recheck (re-run checks on modified files) ────────────────
@@ -1494,6 +1594,11 @@ async def delete_job(job_id: str, request: Request, response: Response):
     _job_locks.discard(job_id)
     # Remove from disk
     deleted = storage.delete_job(job_id)
+    # Best-effort: also remove the per-job edit history.
+    try:
+        edit_history.delete_history(job_id)
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning(f"edit history delete failed for {job_id}: {redact(str(exc))}")
     if not deleted:
         raise HTTPException(status_code=404, detail="Job not found")
     return {"status": "deleted", "job_id": job_id}

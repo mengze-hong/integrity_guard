@@ -1,5 +1,14 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.88 (2026-05-31) — Edit History & Revert
+- 新增编辑修改历史功能：用户每次保存文件都会记录一条历史（时间、文件、行数增减、改动前后内容）
+- 新增 `app/services/edit_history.py`：历史加密存储于 `data/jobs/{job_id}.history.enc`（与报告同等保护，含论文内容必须加密），最多保留 100 条，超大快照（>512KB）仅存摘要不可回退，避免历史无限膨胀；内容未变化的保存不记录
+- 新增三个接口：`GET /api/history-edits/{job_id}`（时间线列表）、`GET /api/history-edits/{job_id}/{entry_id}`（改动前后内容用于 diff）、`POST /api/history-edits/{job_id}/{entry_id}/revert`（回退到改动前，回退本身也记入历史，可再次撤销）
+- 权限：查看历史需 read 权限（owner 或 share token），回退需 write 权限（share token 只读用户被拒 403）；删除 job 时一并清理历史
+- 工作台工具栏新增「📜 修改历史」入口：时间线弹窗展示每次改动（文件名、时间、+/- 行数徽章），可查看行级 diff（红删绿增）并一键回退；回退后自动刷新编辑器
+- 历史记录为 best-effort，记录失败绝不影响用户保存；新增 `tests/test_edit_history.py` 覆盖记录、无变化跳过、diff、回退恢复、share token 拒绝回退（pytest 103 → 108）
+- 通过 ruff、JS 语法检查、JS helper 测试 7 项、secret scan
+
 ## v5.3.87 (2026-05-31) — Shared Test Fixtures
 - 新增 `tests/conftest.py`，集中提供 `clear_route_state()` 与 `reset_route_state` fixture，统一清理 `app.api.routes` 的 9 个进程级状态（jobs/status/dirs/progress/owners/locks/rate_limit/llm_calls），保证测试间隔离
 - `test_ai_routes.py`、`test_e2e_minimal.py`、`test_export_report.py`、`test_job_ownership.py`、`test_upload_api.py` 改用共享清理函数，移除各自重复的 setup/teardown 清理代码
