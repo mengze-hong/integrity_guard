@@ -289,7 +289,7 @@
   - [ ] 统一引用格式（\cite vs \citep vs \citet）
   - [x] 统一数字格式（Table 1 vs Table~1 vs table 1）
   - [x] 统一缩写（Fig. vs Figure）
-  - [x] 去除多余空格 / 修复基础排版空白
+  - [x] 去除多余空行和空格 / 修复基础排版空白
 - [ ] **Bib 自动补全**
   - [ ] 缺少 DOI 的条目自动从 Crossref 补全
   - [ ] 缺少 URL 的条目自动补全 Semantic Scholar 链接

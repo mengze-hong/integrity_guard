@@ -1,5 +1,10 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.68 (2026-05-31) — Blank Line Normalization
+- LaTeX format normalizer 增加 `blank_lines` 规则，将 3 个及以上连续空行压缩为 2 个，保留段落分隔同时清理噪声空白
+- 扩展格式规范化测试，覆盖多余空行压缩以及变更记录
+- `TODO.md` 同步记录基础排版空白清理已覆盖多余空行
+
 ## v5.3.67 (2026-05-31) — Format Normalize Entry
 - 工作台 toolbar 增加“规范格式”入口，让已有 LaTeX format normalization 不再只藏在右键菜单里
 - 格式规范化请求改用统一 `apiFetch`，继承现有错误处理、权限与会话语义

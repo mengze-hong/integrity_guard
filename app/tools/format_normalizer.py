@@ -23,7 +23,7 @@ def normalize_format(text: str, rules: list[str] | None = None) -> tuple[str, li
         (normalized_text, list_of_changes_made)
     """
     changes = []
-    all_rules = rules or ["tilde", "trailing_ws", "double_space", "abbreviations", "percent_comment"]
+    all_rules = rules or ["tilde", "trailing_ws", "double_space", "blank_lines", "abbreviations", "percent_comment"]
 
     if "tilde" in all_rules:
         # Table 1 → Table~1, Figure 2 → Figure~2, Section 3 → Section~3
@@ -64,6 +64,14 @@ def normalize_format(text: str, rules: list[str] | None = None) -> tuple[str, li
         if fixed > 0:
             text = "\n".join(lines)
             changes.append(f"修复多余空格 ({fixed} 行)")
+
+    if "blank_lines" in all_rules:
+        # Keep paragraph breaks, but collapse noisy vertical whitespace.
+        new_text = re.sub(r"\n{3,}", "\n\n", text)
+        if new_text != text:
+            count = len(re.findall(r"\n{3,}", text))
+            changes.append(f"压缩多余空行 ({count} 处)")
+            text = new_text
 
     if "abbreviations" in all_rules:
         # Unify Fig. / Figure references
