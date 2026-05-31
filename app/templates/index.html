@@ -1151,7 +1151,8 @@ document.getElementById('upload-form').addEventListener('submit', async e => {
     e.preventDefault(); if (!uploadedFile) return;
 
     // Check credits if logged in
-    if (currentUser && currentUser.credits < 1) {
+    const hasUnlimitedChecks = currentUser && ['pro', 'team'].includes(String(currentUser.tier || '').toLowerCase());
+    if (currentUser && !hasUnlimitedChecks && currentUser.credits < 1) {
         toast('💰 次数不足（完整质检需要 1 次），请购买', 'warning', 4000);
         document.getElementById('recharge-modal').classList.remove('hidden');
         return;

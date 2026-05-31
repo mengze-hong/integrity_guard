@@ -12,6 +12,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.api import auth_routes, payment_routes
 from app.auth import FREE_TIER_MONTHLY_GIFT_PREFIX, refresh_free_tier_monthly_credits
+from app.credits import deduct_check_credit, has_unlimited_checks
 from app.database import Base
 from app.models_db import PaymentOrder, Transaction, User
 
@@ -140,6 +141,30 @@ def test_free_tier_monthly_refresh_tops_up_once(temp_db):
 
         assert again.credits == 0
         assert db.query(Transaction).filter(Transaction.user_id == user.id).count() == 1
+    finally:
+        db.close()
+
+
+def test_pro_and_team_tiers_have_unlimited_checks(temp_db):
+    db = temp_db()
+    try:
+        free_user = User(id="free-tier", email="free-tier@example.com", password_hash="x", credits=1)
+        pro_user = User(id="pro-tier", email="pro-tier@example.com", password_hash="x", credits=0, tier="pro")
+        team_user = User(id="team-tier", email="team-tier@example.com", password_hash="x", credits=0, tier="team")
+        db.add_all([free_user, pro_user, team_user])
+        db.commit()
+
+        assert has_unlimited_checks(free_user) is False
+        assert has_unlimited_checks(pro_user) is True
+        assert has_unlimited_checks(team_user) is True
+
+        assert deduct_check_credit(db, pro_user.id, 1, "论文质检") == 0
+        assert deduct_check_credit(db, team_user.id, 1, "论文质检") == 0
+        assert db.query(Transaction).count() == 0
+
+        deduct_check_credit(db, free_user.id, 1, "论文质检")
+        assert db.query(User).filter(User.id == free_user.id).first().credits == 0
+        assert db.query(Transaction).filter(Transaction.user_id == free_user.id).count() == 1
     finally:
         db.close()
 

@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.77 (2026-05-31) — Pro Tier Unlimited Check Entitlement
+- 新增 `UNLIMITED_CHECK_TIERS` 与 `deduct_check_credit()`，Pro/Team 用户完整质检不再消耗免费检查次数
+- 上传扣费路径改用权益感知扣费，Free 用户仍按配置消耗 1 次并保留余额不足保护
+- 前端上传前余额判断识别 Pro/Team tier，避免 0 次余额的付费用户被错误拦截
+- 更新测试覆盖 Pro/Team unlimited entitlement 不生成 consume 交易，`TODO.md` 记录该权益切片已完成
+
 ## v5.3.76 (2026-05-31) — Free Tier Monthly Refresh
 - 新增 Free tier 月度懒刷新：老用户每月余额低于 3 次时自动补足到 3 次
 - 登录、OAuth 复用、`/auth/me`、dashboard 和上传扣费前都会触发刷新，避免需要额外后台任务

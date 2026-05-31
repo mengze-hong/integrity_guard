@@ -7,10 +7,17 @@ from sqlalchemy.orm import Session
 
 from app.models_db import User, Transaction
 
+UNLIMITED_CHECK_TIERS = {"pro", "team"}
+
 
 class InsufficientCredits(Exception):
     """Raised when user doesn't have enough credits."""
     pass
+
+
+def has_unlimited_checks(user: User | None) -> bool:
+    """Return whether a user tier includes unlimited full checks."""
+    return bool(user and (user.tier or "").lower() in UNLIMITED_CHECK_TIERS)
 
 
 def check_credits(db: Session, user_id: str, required: int) -> bool:
@@ -41,6 +48,16 @@ def deduct_credits(db: Session, user_id: str, amount: int, description: str) -> 
     ))
     db.commit()
     return user.credits
+
+
+def deduct_check_credit(db: Session, user_id: str, amount: int, description: str) -> int:
+    """Deduct a full-check credit unless the user's tier includes unlimited checks."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise InsufficientCredits()
+    if has_unlimited_checks(user):
+        return int(user.credits or 0)
+    return deduct_credits(db, user_id, amount, description)
 
 
 def add_credits(db: Session, user_id: str, amount: int, description: str, payment_id: str = None) -> int:

@@ -405,7 +405,7 @@ async def upload_paper(
 ):
     """Upload a zip file and start integrity checks."""
     from app.dependencies import get_current_user_optional
-    from app.credits import deduct_credits, InsufficientCredits
+    from app.credits import deduct_check_credit, InsufficientCredits
     from app.database import SessionLocal
     from app.auth import refresh_free_tier_monthly_credits
     from app.models_db import User
@@ -419,7 +419,7 @@ async def upload_paper(
                 db,
                 db.query(User).filter(User.id == user.id).first(),
             )
-            deduct_credits(db, user.id, settings.credits_upload, "论文质检")
+            deduct_check_credit(db, user.id, settings.credits_upload, "论文质检")
         except InsufficientCredits:
             raise HTTPException(status_code=402, detail="积分不足，请充值")
         finally:
