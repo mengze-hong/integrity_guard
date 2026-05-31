@@ -1,7 +1,9 @@
 """Tests for gate checks."""
 
-import pytest
+import struct
 from pathlib import Path
+
+import pytest
 
 from app.models import ParsedPaper, BibEntry, TexFile, Severity
 from app.parsers.tex_parser import parse_tex_file
@@ -199,6 +201,52 @@ async def test_structure_gate_warns_when_graphicspath_has_no_supported_suffix(tm
         issue.message for issue in result.issues if issue.severity == Severity.WARNING
     ]
     assert any("图片文件不存在" in m and "plot" in m for m in warning_messages)
+
+
+@pytest.mark.asyncio
+async def test_structure_gate_warns_low_resolution_and_large_images(tmp_path):
+    """Structure gate surfaces basic image quality and optimization hints."""
+    figures = tmp_path / "figures"
+    figures.mkdir()
+    low_png = figures / "tiny.png"
+    low_png.write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + struct.pack(">I", 13)
+        + b"IHDR"
+        + struct.pack(">II", 320, 240)
+        + b"\x08\x02\x00\x00\x00"
+        + b"\x00\x00\x00\x00"
+    )
+    large_pdf = figures / "huge.pdf"
+    with large_pdf.open("wb") as fh:
+        fh.write(b"%PDF-1.4\n")
+        fh.truncate(6 * 1024 * 1024)
+
+    tex_path = tmp_path / "main.tex"
+    tex_path.write_text(
+        r"""
+\documentclass{article}
+\graphicspath{{figures/}}
+\begin{document}
+\includegraphics{tiny.png}
+\includegraphics{huge.pdf}
+\end{document}
+""",
+        encoding="utf-8",
+    )
+    paper = _build_structure_paper(
+        tmp_path,
+        parse_tex_file(tex_path),
+        figure_files=[low_png, large_pdf],
+    )
+
+    result = await StructureGate().check(paper)
+
+    warning_messages = [
+        issue.message for issue in result.issues if issue.severity == Severity.WARNING
+    ]
+    assert any("图片像素偏低" in m and "tiny.png" in m for m in warning_messages)
+    assert any("图片文件过大" in m and "huge.pdf" in m for m in warning_messages)
 
 
 @pytest.mark.asyncio

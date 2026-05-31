@@ -13,6 +13,7 @@ Verifies that the uploaded project has a valid structure:
 
 import hashlib
 import re
+import struct
 from collections import Counter
 from pathlib import Path
 
@@ -22,6 +23,8 @@ from app.models import CheckResult, Issue, ParsedPaper, Severity
 _BIBLIOGRAPHY_PATTERN = re.compile(r"\\bibliography\{([^}]+)\}")
 _ADDBIBRESOURCE_PATTERN = re.compile(r"\\addbibresource(?:\[[^\]]*\])?\{([^}]+)\}")
 _GRAPHICSPATH_PATTERN = re.compile(r"\\graphicspath\s*\{((?:\{[^{}]+\}\s*)+)\}", re.DOTALL)
+_LOW_RASTER_MIN_DIMENSION = 600
+_LARGE_IMAGE_BYTES = 5 * 1024 * 1024
 
 
 def _graphicspath_dirs(raw_text: str, base_dir: Path) -> list[Path]:
@@ -31,6 +34,41 @@ def _graphicspath_dirs(raw_text: str, base_dir: Path) -> list[Path]:
         for item in re.findall(r"\{([^{}]+)\}", match.group(1)):
             dirs.append(base_dir / item)
     return dirs
+
+
+def _raster_dimensions(path: Path) -> tuple[int, int] | None:
+    """Read PNG/JPEG dimensions without pulling in image-processing dependencies."""
+    suffix = path.suffix.lower()
+    try:
+        data = path.read_bytes()
+    except Exception:
+        return None
+
+    if suffix == ".png" and data.startswith(b"\x89PNG\r\n\x1a\n") and len(data) >= 24:
+        return struct.unpack(">II", data[16:24])
+
+    if suffix in {".jpg", ".jpeg"} and data.startswith(b"\xff\xd8"):
+        idx = 2
+        while idx + 9 < len(data):
+            if data[idx] != 0xFF:
+                idx += 1
+                continue
+            marker = data[idx + 1]
+            idx += 2
+            if marker in {0xD8, 0xD9}:
+                continue
+            if idx + 2 > len(data):
+                return None
+            segment_len = int.from_bytes(data[idx:idx + 2], "big")
+            if segment_len < 2 or idx + segment_len > len(data):
+                return None
+            if marker in {0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF}:
+                height = int.from_bytes(data[idx + 3:idx + 5], "big")
+                width = int.from_bytes(data[idx + 5:idx + 7], "big")
+                return width, height
+            idx += segment_len
+
+    return None
 
 
 class StructureGate(BaseGate):
@@ -217,6 +255,41 @@ class StructureGate(BaseGate):
                     suggestion="这些图片文件内容完全一样。如果用于不同的 figure，可能是 copy-paste 错误。",
                 ))
                 score -= 5
+
+        # Check 8.5: Basic image quality / optimization hints
+        for img_file in paper.project_dir.rglob("*"):
+            if not img_file.is_file() or img_file.suffix.lower() not in image_exts:
+                continue
+            try:
+                rel = str(img_file.relative_to(paper.project_dir))
+                size_bytes = img_file.stat().st_size
+            except Exception:
+                continue
+
+            if size_bytes > _LARGE_IMAGE_BYTES:
+                issues.append(Issue(
+                    severity=Severity.WARNING,
+                    message=f"图片文件过大: {rel}",
+                    location=rel,
+                    file=rel,
+                    evidence=f"文件大小约 {size_bytes / 1024 / 1024:.1f} MB",
+                    suggestion="建议压缩位图或 PDF 图片；若是图表，优先使用矢量 PDF/SVG，并避免嵌入过大的未压缩截图。",
+                ))
+                score -= 2
+
+            dimensions = _raster_dimensions(img_file)
+            if dimensions:
+                width, height = dimensions
+                if min(width, height) < _LOW_RASTER_MIN_DIMENSION:
+                    issues.append(Issue(
+                        severity=Severity.WARNING,
+                        message=f"图片像素偏低: {rel}",
+                        location=rel,
+                        file=rel,
+                        evidence=f"检测到 {width}x{height}px，短边低于 {_LOW_RASTER_MIN_DIMENSION}px",
+                        suggestion="建议替换为更高分辨率图片或矢量图，避免投稿 PDF 中图表模糊。",
+                    ))
+                    score -= 2
 
         # Check 9: Unmatched \begin{} / \end{} environments
         for tex_file in paper.tex_files:

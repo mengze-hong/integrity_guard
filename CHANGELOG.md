@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.71 (2026-05-31) — Image Quality Hints
+- Structure gate 增加图片质量与优化提示：检测短边低于 600px 的 PNG/JPEG 栅格图，提示替换高分辨率图或矢量图
+- 检测超过 5MB 的图片/PDF 资产，提示压缩或避免嵌入未压缩截图
+- 新增结构 gate 测试覆盖低像素 PNG 和过大 PDF 图片告警
+- `TODO.md` 同步记录图片优化建议已完成，并注明图表字体可读性仍待独立实现
+
 ## v5.3.70 (2026-05-31) — Citation Command Normalization
 - LaTeX format normalizer 增加 `citation_cmd` 规则，保守地将裸 `\cite{...}` / `\cite[...]{...}` 统一为 `\citep...`
 - 规则会跳过注释行，并保留 `\citet`、`\citep` 等已有语义不同或已规范的引用命令
