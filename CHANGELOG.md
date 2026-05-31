@@ -1,5 +1,10 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.82 (2026-05-31) — AI Handover Document
+- 新增根目录 `HANDOVER.md`，为后续 AI/agent 接手提供当前版本、项目目标、操作规则、架构概览和安全注意事项
+- 记录近期商业化与工程基线提交、验证命令、重点风险、推荐下一步和禁止事项
+- `TODO.md` 同步记录 AI 交接文档已完成，方便后续从任务清单定位
+
 ## v5.3.81 (2026-05-31) — Paid Tier API Token Foundation
 - 新增 `api_tokens` 数据表，支持 Pro/Team 用户创建、查看和撤销个人 API Token
 - API Token 明文只在创建时返回一次，服务端仅保存 SHA-256 hash 和短前缀，降低泄露风险
