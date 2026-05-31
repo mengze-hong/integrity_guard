@@ -3864,8 +3864,34 @@ async function showDashboard() {
                 <button onclick="this.closest('.modal-bg').remove();resumeJob(${jsArg(j.job_id)})" style="flex-shrink:0; border:1px solid #e2e8f0; background:#fff; border-radius:8px; padding:5px 8px; cursor:pointer; color:${scoreColor}; font-size:11px; font-weight:800;">${score.toFixed(0)} 分</button>
             </div>`;
         }).join('') || '<p style="font-size:12px; color:#94a3b8;">暂无论文记录</p>';
+        const team = d.team_dashboard;
+        const teamHtml = team ? (() => {
+            const lowItems = (team.low_score_checks || []).map(j => {
+                const score = Number(j.score || 0);
+                const date = j.timestamp ? new Date(j.timestamp).toLocaleDateString('zh-CN', {month:'short', day:'numeric'}) : '';
+                return `<div style="display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-top:1px solid rgba(255,255,255,0.16); font-size:11px;">
+                    <span style="min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(j.filename || '未命名论文')} · ${date}</span>
+                    <button onclick="this.closest('.modal-bg').remove();resumeJob(${jsArg(j.job_id)})" style="flex-shrink:0; border:1px solid rgba(255,255,255,0.25); background:rgba(255,255,255,0.12); color:#fff; border-radius:8px; padding:3px 7px; cursor:pointer; font-size:11px;">${score.toFixed(0)} 分</button>
+                </div>`;
+            }).join('') || '<p style="font-size:11px; color:#bae6fd; margin:8px 0 0;">暂无待关注论文</p>';
+            return `<section style="margin-bottom:18px; padding:16px; border-radius:14px; background:linear-gradient(135deg,#0f172a,#1d4ed8); color:#fff;">
+                <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin-bottom:12px;">
+                    <div>
+                        <p style="font-size:13px; font-weight:800; margin:0;">导师 Dashboard</p>
+                        <p style="font-size:11px; color:#bae6fd; margin:3px 0 0;">最近 ${team.total_checks || 0} 次检查的团队视角</p>
+                    </div>
+                    <span style="font-size:10px; padding:3px 8px; border-radius:999px; background:rgba(255,255,255,0.14);">Team</span>
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px;">
+                    <div><p style="font-size:20px; font-weight:900; margin:0;">${Number(team.avg_score || 0).toFixed(1)}</p><p style="font-size:10px; color:#bae6fd; margin:0;">平均分</p></div>
+                    <div><p style="font-size:20px; font-weight:900; margin:0;">${Number(team.pass_rate || 0).toFixed(0)}%</p><p style="font-size:10px; color:#bae6fd; margin:0;">通过率</p></div>
+                    <div><p style="font-size:20px; font-weight:900; margin:0;">${team.needs_attention || 0}</p><p style="font-size:10px; color:#bae6fd; margin:0;">待关注</p></div>
+                </div>
+                ${lowItems}
+            </section>`;
+        })() : '';
 
-        modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:28px; max-width:620px; width:92%; max-height:82vh; overflow-y:auto;">
+        modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:28px; max-width:760px; width:92%; max-height:82vh; overflow-y:auto;">
             <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:16px;">
                 <div>
                     <h3 style="font-size:18px; font-weight:700; margin:0; color:#0f172a;">我的账户</h3>
@@ -3887,6 +3913,7 @@ async function showDashboard() {
                     <p style="font-size:10px; color:#64748b; margin:2px 0 0;">会员等级</p>
                 </div>
             </div>
+            ${teamHtml}
             <div style="display:grid; grid-template-columns:1.2fr 1fr; gap:18px;">
                 <section>
                     <p style="font-size:12px; font-weight:700; color:#334155; margin:0 0 8px;">最近论文</p>

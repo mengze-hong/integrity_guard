@@ -208,6 +208,53 @@ def test_user_dashboard_returns_recent_checks(auth_app, monkeypatch):
     assert body["stats"]["total_checks"] == 1
 
 
+def test_team_dashboard_returns_mentor_summary(auth_app, temp_db, monkeypatch):
+    client = TestClient(auth_app)
+    register = client.post(
+        "/auth/register",
+        json={"email": "teamdash@example.com", "password": "12345678", "name": "Team"},
+    )
+    assert register.status_code == 200
+    user_id = register.json()["user"]["id"]
+
+    db = temp_db()
+    try:
+        user = db.query(User).filter(User.id == user_id).first()
+        user.tier = "team"
+        db.commit()
+    finally:
+        db.close()
+
+    async def fake_get_current_user(request):
+        return SimpleNamespace(id=user_id)
+
+    team_checks = [
+        {"job_id": "a", "filename": "good.zip", "timestamp": "2026-05-31T10:00:00Z", "score": 95, "passed": True, "gates_passed": 6, "gates_total": 6},
+        {"job_id": "b", "filename": "needs-work.zip", "timestamp": "2026-05-30T10:00:00Z", "score": 62, "passed": False, "gates_passed": 4, "gates_total": 6},
+        {"job_id": "c", "filename": "borderline.zip", "timestamp": "2026-05-29T10:00:00Z", "score": 68, "passed": True, "gates_passed": 6, "gates_total": 6},
+    ]
+
+    def fake_list_jobs(*, limit, owner_type, owner_id, include_legacy):
+        assert owner_type == "user"
+        assert owner_id == user_id
+        assert include_legacy is False
+        return team_checks[:limit]
+
+    monkeypatch.setattr(auth_routes, "get_current_user", fake_get_current_user)
+    monkeypatch.setattr(auth_routes.storage, "list_jobs", fake_list_jobs)
+
+    response = client.get("/auth/dashboard")
+
+    assert response.status_code == 200
+    team = response.json()["team_dashboard"]
+    assert team["available"] is True
+    assert team["total_checks"] == 3
+    assert team["avg_score"] == 75.0
+    assert team["pass_rate"] == 66.7
+    assert team["needs_attention"] == 2
+    assert [item["job_id"] for item in team["low_score_checks"]] == ["b", "c"]
+
+
 def test_admin_add_credits_requires_header_key(payment_app, temp_db):
     client = TestClient(payment_app)
     body_key = client.post(

@@ -81,6 +81,38 @@ def _set_auth_cookie(response: Response, request: Request, token: str) -> None:
     )
 
 
+def _build_team_dashboard(checks: list[dict]) -> dict:
+    """Build a lightweight mentor dashboard from the user's recent checks."""
+    total = len(checks)
+    if total == 0:
+        return {
+            "available": True,
+            "total_checks": 0,
+            "avg_score": 0,
+            "pass_rate": 0,
+            "needs_attention": 0,
+            "low_score_checks": [],
+        }
+
+    scores = [float(item.get("score") or 0) for item in checks]
+    passed = sum(1 for item in checks if item.get("passed"))
+    low_score_checks = sorted(
+        [
+            item for item in checks
+            if not item.get("passed") or float(item.get("score") or 0) < 70
+        ],
+        key=lambda item: float(item.get("score") or 0),
+    )[:5]
+    return {
+        "available": True,
+        "total_checks": total,
+        "avg_score": round(sum(scores) / total, 1),
+        "pass_rate": round(passed / total * 100, 1),
+        "needs_attention": len(low_score_checks),
+        "low_score_checks": low_score_checks,
+    }
+
+
 @router.post("/register")
 async def register(body: RegisterRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     """Register a new user with email + password."""
@@ -184,6 +216,15 @@ async def user_dashboard(request: Request, db: Session = Depends(get_db)):
         owner_id=str(user.id),
         include_legacy=False,
     )
+    team_dashboard = None
+    if (fresh_user.tier or "").lower() == "team":
+        team_checks = storage.list_jobs(
+            limit=50,
+            owner_type="user",
+            owner_id=str(user.id),
+            include_legacy=False,
+        )
+        team_dashboard = _build_team_dashboard(team_checks)
 
     return {
         "user": _user_dict(fresh_user),
@@ -194,6 +235,7 @@ async def user_dashboard(request: Request, db: Session = Depends(get_db)):
         },
         "recent_transactions": txns,
         "recent_checks": recent_checks,
+        "team_dashboard": team_dashboard,
     }
 
 

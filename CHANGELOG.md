@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.79 (2026-05-31) — Team Mentor Dashboard
+- `/auth/dashboard` 对 Team tier 用户新增 `team_dashboard`，基于最近 50 次检查计算平均分、通过率、待关注数量和低分论文列表
+- 账户弹窗新增导师 Dashboard 品牌卡片，展示 Team 视角核心指标并支持直接打开待关注论文
+- 不引入外部账号或团队成员表，先用当前 Team 用户自己的历史检查跑通导师视角 MVP
+- 新增测试覆盖 Team dashboard 汇总计算、低分列表排序和响应结构，`TODO.md` 记录该权益切片已完成
+
 ## v5.3.78 (2026-05-31) — Paid Package Tier Upgrade
 - 专业包现在声明 `tier=pro`，实验室包声明 `tier=team`，套餐列表会返回对应权益信息
 - 支付入账时自动应用套餐 tier：购买专业包升级 Pro，购买实验室包升级 Team，且不会从 Team 降级回 Pro
