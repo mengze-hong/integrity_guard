@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.64 (2026-05-31) — Lightweight Monitoring
+- 新增进程内请求监控，记录服务启动时间、uptime、总请求数、5xx 错误数、错误率、平均/最大延迟和最近窗口统计
+- 新增 `/metrics` JSON endpoint，按接口聚合请求量、错误量、延迟与最近状态码，并对高基数字段做路径脱敏，避免泄露 job id、share token 或长文件名
+- `docs/DEPLOY_SAFE.md` 增加 `/metrics` 运维说明，`TODO.md` 同步记录监控项已完成
+- 新增测试覆盖 `/metrics` 输出和路径脱敏行为
+
 ## v5.3.63 (2026-05-31) — Frontend Loading Skeleton
 - 前端补齐复用型 loading skeleton：恢复历史报告时会先渲染概览页占位，包括 gate 节点、统计区、检查卡片和提交建议区域
 - 首页最近检查历史加载时显示轻量骨架屏，并在无历史记录时主动收起历史区，避免残留旧状态

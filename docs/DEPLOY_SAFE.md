@@ -36,6 +36,7 @@ Use this guide before exposing ScholarLint to real users or any public network.
 - Do not log raw secrets, internal endpoints, payment payload secrets, user tokens, or uploaded paper content.
 - Use `/healthz` as the liveness probe.
 - Use `/readyz` as the readiness probe before routing production traffic.
+- Use `/metrics` for lightweight uptime, request count, latency, and server error-rate checks. Treat it as operational metadata and expose it only behind the same production access controls as the rest of the service.
 
 ## Backups
 

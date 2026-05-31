@@ -1,6 +1,5 @@
 """API routes for integrity checks + file editor + human-in-the-loop."""
 
-import json
 import secrets
 import time
 import uuid
@@ -44,6 +43,18 @@ from app import storage
 from app.logging_config import logger
 
 router = APIRouter()
+
+__all__ = [
+    "_ai_fix_provenance",
+    "_candidate_from_crossref",
+    "_candidate_from_openalex",
+    "_candidate_from_s2",
+    "_collect_batch_fix_candidates",
+    "_extract_reference_title",
+    "_is_reference_authenticity_issue",
+    "_not_fixable_reference_payload",
+    "router",
+]
 
 # In-memory caches (authoritative data is on disk via storage module)
 _jobs: dict[str, FullReport] = {}

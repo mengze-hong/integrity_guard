@@ -2,6 +2,7 @@
 
 from contextlib import asynccontextmanager
 from pathlib import Path
+import time
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -16,6 +17,7 @@ from app.api.payment_routes import router as payment_router
 from app import storage
 from app.logging_config import logger
 from app.database import engine, init_db
+from app.monitoring import request_metrics
 
 
 @asynccontextmanager
@@ -32,7 +34,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="ScholarLint",
     description="投稿通 — Academic paper pre-submission integrity checker",
-    version="5.3.63",
+    version="5.3.64",
     lifespan=lifespan,
 )
 
@@ -45,6 +47,22 @@ app.include_router(api_router, prefix="/api")
 app.include_router(ai_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")
 app.include_router(payment_router, prefix="/api")
+
+
+@app.middleware("http")
+async def monitoring_middleware(request: Request, call_next):
+    """Record coarse request counts, latency, and server errors."""
+    started = time.perf_counter()
+    status_code = 500
+    try:
+        response = await call_next(request)
+        status_code = response.status_code
+        return response
+    finally:
+        elapsed_ms = (time.perf_counter() - started) * 1000
+        route = request.scope.get("route")
+        path = getattr(route, "path", request.url.path)
+        request_metrics.record(request.method, path, status_code, elapsed_ms)
 
 
 @app.middleware("http")
@@ -141,6 +159,12 @@ async def readyz():
 
     ready = all(item.get("ok") for item in checks.values())
     return {"status": "ready" if ready else "degraded", "environment": settings.app_env, "checks": checks}
+
+
+@app.get("/metrics")
+async def metrics():
+    """Operational metrics for uptime, latency, and server error rate."""
+    return request_metrics.snapshot(service="scholarlint", version=app.version)
 
 
 @app.get("/report/{job_id}", response_class=HTMLResponse)

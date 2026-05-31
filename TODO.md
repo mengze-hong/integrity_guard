@@ -166,7 +166,7 @@
 - [x] 禁止事项文档补齐：新增 `docs/DO_NOT_DO.md`，覆盖研究真实性、AI 修复验证、敏感文件/密钥提交边界、无关文件混入与未加固 dev server 公网暴露禁令
 - [x] 安全部署文档补齐：新增 `docs/DEPLOY_SAFE.md`，覆盖 Docker、反向代理、HTTPS、生产开关、密钥注入、上传 ZIP 安全、健康检查、备份与公网暴露检查
 - [x] 日志系统（structured logging with timestamp, level, module）
-- [ ] 监控（uptime check、API 延迟、错误率）
+- [x] 监控（`/metrics` 暴露 uptime、API 延迟、错误率与按接口聚合统计）
 - [x] Rate limiting（IP 级别，每小时 10 次上传）
 - [x] 日志系统（structured logging 替换 print）
 - [x] 文件安全扫描（上传的 zip 删除 .exe/.sh 等危险文件 + 100MB 限制）
