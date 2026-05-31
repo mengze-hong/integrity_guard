@@ -1,5 +1,9 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.73 (2026-05-31) — TODO Auth Alignment
+- `TODO.md` 对齐当前实现状态：邮箱 + 密码注册/登录已存在并有前端入口、JWT/cookie 会话和安全测试覆盖
+- 将 GitHub/Google OAuth 从混合描述拆成后续独立 TODO，避免把已完成邮箱登录和未做 OAuth 混在同一项里
+
 ## v5.3.72 (2026-05-31) — Writing Style Analysis
 - 新增 `app/services/style_analysis.py`，从 LaTeX 文本中剥离命令/引用/注释后计算词汇多样性、平均句长、长句比例和高频重复词
 - `/api/analysis/{job_id}` 返回 `writing_style` 指标，前端分析弹窗新增“写作风格分析”卡片和可读性提示
