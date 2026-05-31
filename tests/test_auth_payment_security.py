@@ -248,3 +248,51 @@ def test_alipay_callback_is_idempotent_and_validates_amount(payment_app, temp_db
 
     bad_amount = {**callback, "out_trade_no": "ORDER1", "total_amount": "1.00"}
     assert client.post("/payment/callback/alipay", data=bad_amount).status_code == 400
+
+
+def test_paid_packages_upgrade_user_tier_idempotently(temp_db):
+    db = temp_db()
+    try:
+        db.add(User(id="paid-user", email="paid@example.com", password_hash="x", credits=0, tier="free"))
+        db.add(PaymentOrder(
+            id="PROORDER",
+            user_id="paid-user",
+            package_id="pro",
+            credits=20,
+            price=199,
+            status="paid",
+            sandbox=True,
+            created_at=datetime.now(timezone.utc).isoformat(),
+        ))
+        db.add(PaymentOrder(
+            id="LABORDER",
+            user_id="paid-user",
+            package_id="lab",
+            credits=100,
+            price=699,
+            status="paid",
+            sandbox=True,
+            created_at=datetime.now(timezone.utc).isoformat(),
+        ))
+        db.commit()
+
+        pro_order = db.query(PaymentOrder).filter(PaymentOrder.id == "PROORDER").first()
+        assert payment_routes._credit_order_once(db, pro_order) == 20
+        user = db.query(User).filter(User.id == "paid-user").first()
+        assert user.credits == 20
+        assert user.tier == "pro"
+
+        assert payment_routes._credit_order_once(db, pro_order) == 20
+        assert db.query(Transaction).filter(Transaction.payment_id == "PROORDER").count() == 1
+
+        lab_order = db.query(PaymentOrder).filter(PaymentOrder.id == "LABORDER").first()
+        assert payment_routes._credit_order_once(db, lab_order) == 120
+        user = db.query(User).filter(User.id == "paid-user").first()
+        assert user.credits == 120
+        assert user.tier == "team"
+
+        assert payment_routes._credit_order_once(db, pro_order) == 120
+        user = db.query(User).filter(User.id == "paid-user").first()
+        assert user.tier == "team"
+    finally:
+        db.close()

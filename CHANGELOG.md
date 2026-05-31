@@ -1,5 +1,12 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.78 (2026-05-31) — Paid Package Tier Upgrade
+- 专业包现在声明 `tier=pro`，实验室包声明 `tier=team`，套餐列表会返回对应权益信息
+- 支付入账时自动应用套餐 tier：购买专业包升级 Pro，购买实验室包升级 Team，且不会从 Team 降级回 Pro
+- 支付回调幂等路径也会补齐 tier 升级，历史已入账订单重复回调不会重复加 credits
+- Sandbox 充值响应返回 `new_tier`，前端即时刷新当前用户 tier，使 Pro/Team 无限检查权益立即生效
+- 新增测试覆盖 Pro/Lab 套餐升级、回调幂等和防降级，`TODO.md` 记录付费套餐自动升级已完成
+
 ## v5.3.77 (2026-05-31) — Pro Tier Unlimited Check Entitlement
 - 新增 `UNLIMITED_CHECK_TIERS` 与 `deduct_check_credit()`，Pro/Team 用户完整质检不再消耗免费检查次数
 - 上传扣费路径改用权益感知扣费，Free 用户仍按配置消耗 1 次并保留余额不足保护

@@ -23,6 +23,7 @@ router = APIRouter(prefix="/payment", tags=["payment"])
 _admin_attempts: dict[str, list[float]] = defaultdict(list)
 _ADMIN_RATE_LIMIT_WINDOW = 300
 _ADMIN_RATE_LIMIT_MAX = 20
+_TIER_RANK = {"free": 0, "pro": 1, "team": 2}
 
 
 class CreateOrderRequest(BaseModel):
@@ -106,10 +107,28 @@ def _validate_callback_amount(order: PaymentOrder, params: dict) -> None:
         raise HTTPException(400, "支付金额不匹配")
 
 
+def _apply_package_tier(db, user_id: str, package_id: str) -> str | None:
+    target_tier = PACKAGES.get(package_id, {}).get("tier")
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return None
+    if not target_tier:
+        return user.tier
+
+    current_rank = _TIER_RANK.get((user.tier or "free").lower(), 0)
+    target_rank = _TIER_RANK.get(target_tier, 0)
+    if target_rank > current_rank:
+        user.tier = target_tier
+        db.commit()
+        db.refresh(user)
+    return user.tier
+
+
 def _credit_order_once(db, order: PaymentOrder) -> int:
     """Credit a paid order exactly once, even if callbacks are replayed."""
     existing = db.query(Transaction).filter(Transaction.payment_id == order.id).first()
     if existing:
+        _apply_package_tier(db, order.user_id, order.package_id)
         order.status = "credited"
         order.credited_at = order.credited_at or _now()
         db.commit()
@@ -123,6 +142,7 @@ def _credit_order_once(db, order: PaymentOrder) -> int:
         f"充值 {PACKAGES[order.package_id]['name']}",
         payment_id=order.id,
     )
+    _apply_package_tier(db, order.user_id, order.package_id)
     order.status = "credited"
     order.credited_at = _now()
     db.commit()
@@ -154,6 +174,8 @@ async def create_payment(body: CreateOrderRequest, request: Request):
         if order.get("sandbox"):
             order["new_balance"] = _credit_order_once(db, db_order)
             order["status"] = db_order.status
+            credited_user = db.query(User).filter(User.id == user.id).first()
+            order["new_tier"] = credited_user.tier if credited_user else user.tier
     finally:
         db.close()
 
@@ -164,6 +186,7 @@ async def create_payment(body: CreateOrderRequest, request: Request):
         "price": order["price"],
         "payment_url": order.get("payment_url"),
         "new_balance": order.get("new_balance"),
+        "new_tier": order.get("new_tier", user.tier),
         "sandbox": order.get("sandbox", False),
     }
 
@@ -186,6 +209,7 @@ async def check_order_status(order_id: str, request: Request):
         "status": order["status"],
         "credits": order["credits"],
         "price": order["price"],
+        "tier": PACKAGES.get(order["package_id"], {}).get("tier", user.tier),
     }
 
 

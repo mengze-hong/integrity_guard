@@ -101,6 +101,7 @@
 - [x] Free tier 月度重置：每月刷新 3 次免费检查额度
 - [ ] Pro tier: 无限检查 + LLM 深度分析 + Copilot 修复 + 优先 API
 - [x] Pro/Team tier 权益：完整质检不消耗免费检查次数，前端上传不因 0 次余额误拦截
+- [x] 付费套餐自动升级 tier：购买专业包升 Pro，购买实验室包升 Team
 - [ ] Team tier: 导师 dashboard + 批量检查 + API 接入
 - [ ] Stripe/支付宝 集成
 

@@ -3931,6 +3931,7 @@ async function doRecharge() {
         if (d.sandbox) {
             // Sandbox mode: credits added instantly
             currentUser.credits = d.new_balance;
+            if (d.new_tier) currentUser.tier = d.new_tier;
             updateNavbar();
             document.getElementById('recharge-modal').classList.add('hidden');
             toast(`🎉 充值成功！+${d.credits} 积分，余额 ${d.new_balance}`, 'success', 4000);

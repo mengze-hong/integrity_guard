@@ -20,8 +20,8 @@ _pending_orders: dict[str, dict] = {}
 PACKAGES = {
     "single": {"credits": 1, "price": 19.9, "name": "单次质检", "desc": "1 篇论文完整检查"},
     "starter": {"credits": 5, "price": 69, "name": "入门包", "desc": "适合投稿季集中使用"},
-    "pro": {"credits": 20, "price": 199, "name": "专业包", "desc": "课题组/学期使用"},
-    "lab": {"credits": 100, "price": 699, "name": "实验室包", "desc": "导师团队共享"},
+    "pro": {"credits": 20, "price": 199, "name": "专业包", "desc": "课题组/学期使用", "tier": "pro"},
+    "lab": {"credits": 100, "price": 699, "name": "实验室包", "desc": "导师团队共享", "tier": "team"},
 }
 
 
