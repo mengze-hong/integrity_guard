@@ -512,6 +512,9 @@
             <!-- Submission verdict -->
             <div id="overview-verdict" class="mb-6" style="padding:16px 20px; border-radius:12px; font-size:14px;"></div>
 
+            <!-- Previous run comparison -->
+            <div id="overview-compare" class="mb-6 hidden"></div>
+
             <!-- Action buttons -->
             <div class="text-center" style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
                 <button onclick="enterWorkspace()" class="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold text-base hover:bg-blue-700 shadow-lg transition-all hover:shadow-xl">
@@ -859,6 +862,7 @@ function renderOverviewSkeleton(message = '正在加载报告...') {
     const stats = document.getElementById('overview-stats');
     const gates = document.getElementById('overview-gates');
     const verdict = document.getElementById('overview-verdict');
+    const compare = document.getElementById('overview-compare');
     if (filename) filename.textContent = message;
     if (score) score.textContent = '--';
     if (status) status.innerHTML = '<span class="skeleton" style="display:inline-block;width:180px;height:12px;"></span>';
@@ -890,6 +894,10 @@ function renderOverviewSkeleton(message = '正在加载报告...') {
         verdict.innerHTML = '<div class="skeleton" style="height:52px;width:100%;border-radius:10px;"></div>';
         verdict.style.background = 'transparent';
         verdict.style.padding = '0';
+    }
+    if (compare) {
+        compare.classList.add('hidden');
+        compare.innerHTML = '';
     }
 }
 
@@ -1359,6 +1367,12 @@ function showOverview() {
         verdictEl.innerHTML = `<strong>尚未准备好。</strong> 发现 ${errTotal} 个错误，建议进入工作台逐一修复后再提交。`;
     }
 
+    const compareEl = document.getElementById('overview-compare');
+    if (compareEl) {
+        compareEl.classList.add('hidden');
+        compareEl.innerHTML = '';
+    }
+    loadComparison();
 }
 
 async function loadScoreTrend() {
@@ -1392,21 +1406,72 @@ async function loadScoreTrend() {
 }
 
 async function loadComparison() {
+    const compareEl = document.getElementById('overview-compare');
+    if (!compareEl) return;
     try {
-        const r = await fetch(`/api/compare/${jobId}`);
+        const r = await apiFetch(`/api/compare/${jobId}`);
         const d = await r.json();
         if (!d.has_previous) return;
 
-        // Show comparison badge near the score
-        const scoreEl = document.getElementById('overview-status-text');
         const diff = d.score_diff;
         const diffColor = diff > 0 ? '#22c55e' : diff < 0 ? '#ef4444' : '#64748b';
         const diffIcon = diff > 0 ? '📈' : diff < 0 ? '📉' : '➡️';
         const errDiff = d.error_diff;
-        const errText = errDiff < 0 ? `<span style="color:#22c55e;">错误 ${errDiff}</span>` : errDiff > 0 ? `<span style="color:#ef4444;">错误 +${errDiff}</span>` : '';
+        const warnDiff = d.warning_diff;
+        const deltaText = (value, label) => {
+            const color = value < 0 ? '#16a34a' : value > 0 ? '#dc2626' : '#64748b';
+            const prefix = value > 0 ? '+' : '';
+            return `<span style="color:${color};">${label} ${prefix}${value}</span>`;
+        };
+        const previousTime = d.previous_timestamp ? new Date(d.previous_timestamp).toLocaleString('zh-CN') : '上次检查';
+        const gateRows = (d.gates || []).map(g => {
+            const info = GATE_INFO[g.gate] || {name:g.gate, icon:'📋'};
+            const scoreDelta = g.curr_score - g.prev_score;
+            const statusText = g.prev_passed === g.curr_passed
+                ? (g.curr_passed ? '保持通过' : '仍需修复')
+                : (g.curr_passed ? '已修复通过' : '本次未通过');
+            const statusColor = g.curr_passed ? '#16a34a' : '#dc2626';
+            return `<div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 0; border-top:1px solid #f1f5f9;">
+                <div style="min-width:0;">
+                    <p style="margin:0; font-size:12px; font-weight:700; color:#334155;">${info.icon} ${esc(info.name)}</p>
+                    <p style="margin:2px 0 0; font-size:11px; color:${statusColor};">${statusText}</p>
+                </div>
+                <div style="text-align:right; flex-shrink:0;">
+                    <p style="margin:0; font-size:12px; font-weight:800; color:${scoreDelta >= 0 ? '#16a34a' : '#dc2626'};">${scoreDelta >= 0 ? '+' : ''}${scoreDelta.toFixed(1)}</p>
+                    <p style="margin:2px 0 0; font-size:10px; color:#94a3b8;">${g.prev_score.toFixed(0)} → ${g.curr_score.toFixed(0)}</p>
+                </div>
+            </div>`;
+        }).join('');
 
-        scoreEl.innerHTML += `<br><span style="font-size:12px; color:${diffColor}; margin-top:4px; display:inline-block;">${diffIcon} 较上次: ${diff>0?'+':''}${diff.toFixed(1)} 分 ${errText}</span>`;
-    } catch(e) { /* silent */ }
+        compareEl.classList.remove('hidden');
+        compareEl.innerHTML = `<div style="border:1px solid #dbeafe; background:linear-gradient(180deg,#eff6ff,#fff); border-radius:14px; padding:16px 18px;">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:12px;">
+                <div>
+                    <p style="margin:0; font-size:13px; font-weight:800; color:#1e3a8a;">${diffIcon} 与上次检查对比</p>
+                    <p style="margin:4px 0 0; font-size:11px; color:#64748b;">上次：${esc(previousTime)}</p>
+                </div>
+                <button onclick="resumeJob(${jsArg(d.previous_job_id)})" style="font-size:11px; color:#2563eb; background:#fff; border:1px solid #bfdbfe; border-radius:8px; padding:5px 10px; cursor:pointer;">查看上次</button>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-bottom:10px;">
+                <div style="background:#fff; border:1px solid #dbeafe; border-radius:10px; padding:10px;">
+                    <p style="margin:0; font-size:10px; color:#64748b;">总分变化</p>
+                    <p style="margin:4px 0 0; font-size:18px; font-weight:900; color:${diffColor};">${diff>0?'+':''}${diff.toFixed(1)}</p>
+                </div>
+                <div style="background:#fff; border:1px solid #dbeafe; border-radius:10px; padding:10px;">
+                    <p style="margin:0; font-size:10px; color:#64748b;">错误变化</p>
+                    <p style="margin:4px 0 0; font-size:13px; font-weight:800;">${deltaText(errDiff, '错误')}</p>
+                </div>
+                <div style="background:#fff; border:1px solid #dbeafe; border-radius:10px; padding:10px;">
+                    <p style="margin:0; font-size:10px; color:#64748b;">警告变化</p>
+                    <p style="margin:4px 0 0; font-size:13px; font-weight:800;">${deltaText(warnDiff, '警告')}</p>
+                </div>
+            </div>
+            ${gateRows}
+        </div>`;
+    } catch(e) {
+        compareEl.classList.add('hidden');
+        compareEl.innerHTML = '';
+    }
 }
 
 // === Workspace ===

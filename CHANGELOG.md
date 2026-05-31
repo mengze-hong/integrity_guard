@@ -1,5 +1,10 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.66 (2026-05-31) — Report Comparison View
+- 概览页新增前后两次检查对比卡片，复用 `/api/compare/{job_id}` 展示总分、错误数、警告数变化
+- 对比卡片增加 gate 级状态与分数变化，支持跳转查看上一次检查记录
+- `TODO.md` 同步记录对比视图已完成
+
 ## v5.3.65 (2026-05-31) — Data Backup Strategy
 - 新增 `scripts/backup_data.py`，默认备份 `data/` 到带 manifest 的 ZIP，可选 `--include-uploads` 纳入用户上传文件，并支持 `--dry-run` 预览
 - SQLite 文件通过 SQLite backup API 写入归档，降低运行中直接复制数据库导致不一致的风险
