@@ -1,5 +1,10 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.63 (2026-05-31) — Frontend Loading Skeleton
+- 前端补齐复用型 loading skeleton：恢复历史报告时会先渲染概览页占位，包括 gate 节点、统计区、检查卡片和提交建议区域
+- 首页最近检查历史加载时显示轻量骨架屏，并在无历史记录时主动收起历史区，避免残留旧状态
+- `TODO.md` 同步记录 Loading skeleton 已完成
+
 ## v5.3.62 (2026-05-30) — Safe Deployment Docs
 - 新增 `docs/DEPLOY_SAFE.md`，覆盖 Docker + 反向代理 + HTTPS 的生产部署形态、`APP_ENV=production`、支付 sandbox 下线前检查、密钥注入、上传 ZIP 安全、日志、健康检查、备份与公网暴露复核
 - `docs/README.md` 增加 Safe Production Deployment 入口，`docs/RELEASE_CHECKLIST.md` 增加发布前阅读部署指南并确认生产开关的步骤

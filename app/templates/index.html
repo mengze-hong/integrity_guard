@@ -212,6 +212,8 @@
             animation: shimmer 1.5s infinite;
             border-radius:6px;
         }
+        .skeleton-card { border:1px solid #e2e8f0; background:#fff; border-radius:12px; padding:16px; }
+        .skeleton-line { height:10px; margin:7px 0; }
         @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
         /* Module cards */
@@ -846,6 +848,60 @@ async function apiFetch(path, options = {}) {
 
 function fileApiUrl(path) {
     return apiUrl(`/api/files/${jobId}/${String(path).split('/').map(encodeURIComponent).join('/')}`);
+}
+
+function renderOverviewSkeleton(message = '正在加载报告...') {
+    showScreen('screen-overview');
+    const filename = document.getElementById('overview-filename');
+    const score = document.getElementById('overview-score');
+    const status = document.getElementById('overview-status-text');
+    const nodes = document.getElementById('overview-nodes');
+    const stats = document.getElementById('overview-stats');
+    const gates = document.getElementById('overview-gates');
+    const verdict = document.getElementById('overview-verdict');
+    if (filename) filename.textContent = message;
+    if (score) score.textContent = '--';
+    if (status) status.innerHTML = '<span class="skeleton" style="display:inline-block;width:180px;height:12px;"></span>';
+    if (nodes) {
+        nodes.innerHTML = Array(6).fill('').map((_, i) => `
+            <div class="flex flex-col items-center">
+                <div class="skeleton" style="width:42px;height:42px;border-radius:50%;"></div>
+                <div class="skeleton" style="width:44px;height:8px;margin-top:6px;"></div>
+            </div>${i < 5 ? '<div class="skeleton" style="height:2px;flex:1;max-width:42px;"></div>' : ''}
+        `).join('');
+    }
+    if (stats) {
+        stats.innerHTML = Array(4).fill('').map(() => `
+            <div class="text-center" style="width:56px;">
+                <div class="skeleton" style="width:42px;height:24px;margin:0 auto 8px;"></div>
+                <div class="skeleton" style="width:34px;height:8px;margin:0 auto;"></div>
+            </div>
+        `).join('');
+    }
+    if (gates) {
+        gates.innerHTML = Array(4).fill('').map(() => `
+            <div class="skeleton-card">
+                <div class="skeleton skeleton-line" style="width:40%;"></div>
+                <div class="skeleton skeleton-line" style="width:72%;"></div>
+            </div>
+        `).join('');
+    }
+    if (verdict) {
+        verdict.innerHTML = '<div class="skeleton" style="height:52px;width:100%;border-radius:10px;"></div>';
+        verdict.style.background = 'transparent';
+        verdict.style.padding = '0';
+    }
+}
+
+function renderHistorySkeleton() {
+    const section = document.getElementById('history-section');
+    const list = document.getElementById('history-list');
+    if (!section || !list) return;
+    section.style.display = 'block';
+    list.innerHTML = `<div class="skeleton-card" style="padding:10px;">
+        <div class="skeleton skeleton-line" style="width:62%;"></div>
+        <div class="skeleton skeleton-line" style="width:38%;"></div>
+    </div>`;
 }
 
 function newFileSaveState(baseHash = null) {
@@ -3426,10 +3482,17 @@ function hideAiLoading() {
 
 // === History ===
 async function loadHistory() {
+    renderHistorySkeleton();
     try {
         const r = await apiFetch('/api/history');
         const d = await r.json();
-        if (!d.jobs || !d.jobs.length) return;
+        if (!d.jobs || !d.jobs.length) {
+            const section = document.getElementById('history-section');
+            const list = document.getElementById('history-list');
+            if (section) section.style.display = 'none';
+            if (list) list.innerHTML = '';
+            return;
+        }
 
         const section = document.getElementById('history-section');
         const list = document.getElementById('history-list');
@@ -3451,7 +3514,12 @@ async function loadHistory() {
                     <span onclick="event.stopPropagation();deleteJob(${jsArg(j.job_id)})" style="font-size:14px; color:#94a3b8; padding:2px 6px; border-radius:4px; cursor:pointer;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#94a3b8'" title="删除">🗑</span>
                 </div>
             </div>`;
-    } catch(e) { /* silent fail */ }
+    } catch(e) {
+        const section = document.getElementById('history-section');
+        const list = document.getElementById('history-list');
+        if (section) section.style.display = 'none';
+        if (list) list.innerHTML = '';
+    }
 }
 
 // === All Projects modal ===
@@ -3515,13 +3583,7 @@ async function deleteJobInModal(id) {
 async function resumeJob(id) {
     if (jobId !== id) resetWorkspaceState();
     jobId = id;
-    // Show overview with skeleton loading state
-    showScreen('screen-overview');
-    document.getElementById('overview-filename').textContent = '加载中...';
-    document.getElementById('overview-score').textContent = '--';
-    document.getElementById('overview-status-text').innerHTML = '';
-    document.getElementById('overview-nodes').innerHTML = Array(6).fill('').map(()=>`<div class="skeleton" style="width:42px;height:42px;border-radius:50%;"></div><div class="skeleton" style="height:2px;flex:1;"></div>`).join('');
-    document.getElementById('overview-gates').innerHTML = Array(4).fill('').map(()=>`<div class="skeleton" style="height:72px;width:100%;margin-bottom:12px;"></div>`).join('');
+    renderOverviewSkeleton('正在恢复历史报告...');
 
     await loadReport();
     if (report) showOverview();

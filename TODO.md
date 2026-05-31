@@ -132,7 +132,7 @@
 - [x] 动画 transitions（fadeIn 页面切换 + slideUp issue 卡片）
 - [x] 品牌 logo 静态资产接入（navbar 与上传页 hero 复用 `app/static/brand/logo.png`）
 - [x] 对外报告、证书页脚、报告页标题与 HTTP User-Agent 统一为 ScholarLint · 投稿通 品牌命名
-- [ ] Loading skeleton（加载时的骨架屏）
+- [x] Loading skeleton（加载历史记录与恢复报告时的骨架屏）
 - [x] 错误状态设计（网络错误 toast 提示、graceful fallback）
 - [x] AI loading card 显示后台处理耗时，长请求更可观察
 - [x] 文件树支持按文件名/路径搜索，文件多时可快速定位
