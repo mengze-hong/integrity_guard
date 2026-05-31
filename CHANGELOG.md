@@ -1,5 +1,12 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.84 (2026-05-31) — Engineering Docs Baseline
+- 新增 `docs/ARCHITECTURE.md`：系统分层、应用入口、上传→报告请求流、六类 gate、parser/service 职责、AI guardrail 不可破坏不变量、权限模型（owner/share-token/legacy 兼容）、存储加密、健康探针和已知可维护性风险
+- 新增 `docs/CONFIGURATION.md`：逐项列出 `config.py` 的密钥、LLM 用量上限、服务器、路径、Crossref、gate 阈值、计费与支付设置，含默认值、来源优先级（env → 加密库）和生产建议
+- 新增 `docs/API_OVERVIEW.md`：按 router（core/ai/auth/payment）分组列出全部端点、方法、访问权限与用途，路径经核对 router prefix（`/api/auth`、`/api/payment`）准确无误
+- 文档内容逐一对照真实代码核实：端点取自路由装饰器、配置取自 `config.py` 字段、权限取自 `_require_job_access` 与 `dependencies.py`，确保可交接给工程师直接使用
+- `docs/README.md` 索引补入架构/配置/API 三篇并链接 root README 与 HANDOVER；纯文档交付，无运行时行为变化
+
 ## v5.3.83 (2026-05-31) — Root README
 - 新增根目录 `README.md`，提供项目定位、能力概览、目录结构、请求流程、快速启动、健康检查、测试验证、文档索引和操作红线
 - README 对齐当前实际代码：六类 gate、AI 路由拆分现状、`/healthz` `/readyz` `/metrics` 探针和统一验证命令集，改善 GitHub onboarding
