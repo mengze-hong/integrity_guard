@@ -39,6 +39,7 @@ from app.services.file_store import (
     project_zip_bytes,
     safe_project_file,
 )
+from app.services.dimension_scores import build_dimension_scores
 from app.services.style_analysis import analyze_writing_style
 from app import storage
 from app.logging_config import logger
@@ -477,7 +478,9 @@ async def get_report(job_id: str, request: Request, response: Response):
         if status == "processing":
             raise HTTPException(status_code=202, detail="Still processing")
         raise HTTPException(status_code=404, detail="Report not found")
-    return report.model_dump()
+    payload = report.model_dump()
+    payload["dimension_scores"] = build_dimension_scores(report)
+    return payload
 
 
 # ─── File CRUD (for editor) ───────────────────────────────────

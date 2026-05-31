@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.74 (2026-05-31) — Multi-Dimensional Scores
+- 新增 `app/services/dimension_scores.py`，从现有 gate 分数派生 Novelty / Soundness / Clarity / Significance 四维启发式评分
+- `/api/report/{job_id}` 返回 `dimension_scores`，概览页新增多维度评分卡片和四个维度分数条
+- 新增 `tests/test_dimension_scores.py` 覆盖维度计算、分数边界和缺 gate 时的 fallback 行为
+- `TODO.md` 同步记录四维评分已完成；基于 OpenReview 的 venue 均分对比仍保留为后续项
+
 ## v5.3.73 (2026-05-31) — TODO Auth Alignment
 - `TODO.md` 对齐当前实现状态：邮箱 + 密码注册/登录已存在并有前端入口、JWT/cookie 会话和安全测试覆盖
 - 将 GitHub/Google OAuth 从混合描述拆成后续独立 TODO，避免把已完成邮箱登录和未做 OAuth 混在同一项里

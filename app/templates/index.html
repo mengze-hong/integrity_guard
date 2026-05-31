@@ -506,6 +506,9 @@
                 <div id="overview-stats" class="flex gap-6 text-sm"></div>
             </div>
 
+            <!-- Reviewer-style dimensions -->
+            <div id="overview-dimensions" class="mb-8"></div>
+
             <!-- Gate summary cards -->
             <div id="overview-gates" class="space-y-3 mb-8"></div>
 
@@ -864,6 +867,7 @@ function renderOverviewSkeleton(message = '正在加载报告...') {
     const gates = document.getElementById('overview-gates');
     const verdict = document.getElementById('overview-verdict');
     const compare = document.getElementById('overview-compare');
+    const dimensions = document.getElementById('overview-dimensions');
     if (filename) filename.textContent = message;
     if (score) score.textContent = '--';
     if (status) status.innerHTML = '<span class="skeleton" style="display:inline-block;width:180px;height:12px;"></span>';
@@ -900,6 +904,7 @@ function renderOverviewSkeleton(message = '正在加载报告...') {
         compare.classList.add('hidden');
         compare.innerHTML = '';
     }
+    if (dimensions) dimensions.innerHTML = '';
 }
 
 function renderHistorySkeleton() {
@@ -910,6 +915,37 @@ function renderHistorySkeleton() {
     list.innerHTML = `<div class="skeleton-card" style="padding:10px;">
         <div class="skeleton skeleton-line" style="width:62%;"></div>
         <div class="skeleton skeleton-line" style="width:38%;"></div>
+    </div>`;
+}
+
+function renderDimensionScores(dimensionScores) {
+    const el = document.getElementById('overview-dimensions');
+    if (!el) return;
+    const dimensions = dimensionScores?.dimensions || [];
+    if (!dimensions.length) {
+        el.innerHTML = '';
+        return;
+    }
+    const colorFor = score => score >= 85 ? '#16a34a' : score >= 65 ? '#2563eb' : score >= 45 ? '#d97706' : '#dc2626';
+    el.innerHTML = `<div style="border:1px solid #dbeafe; background:linear-gradient(180deg,#eff6ff,#fff); border-radius:14px; padding:16px 18px;">
+        <p style="font-size:13px; font-weight:800; color:#1e3a8a; margin:0;">🎯 多维度评分</p>
+        <p style="font-size:11px; color:#64748b; margin:3px 0 12px;">基于当前 gate 结果的启发式审稿维度，不替代人工评审。</p>
+        <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px;">
+            ${dimensions.map(d => {
+                const score = Number(d.score || 0);
+                const color = colorFor(score);
+                return `<div style="background:#fff; border:1px solid #dbeafe; border-radius:10px; padding:10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                        <span style="font-size:12px; font-weight:800; color:#334155;">${esc(d.label)}</span>
+                        <span style="font-size:13px; font-weight:900; color:${color};">${score.toFixed(1)}</span>
+                    </div>
+                    <div style="height:6px; background:#e2e8f0; border-radius:999px; overflow:hidden; margin-top:7px;">
+                        <div style="width:${Math.max(0, Math.min(100, score))}%; height:100%; background:${color};"></div>
+                    </div>
+                    <p style="font-size:10px; color:#64748b; margin:7px 0 0; line-height:1.45;">${esc(d.basis || '')}</p>
+                </div>`;
+            }).join('')}
+        </div>
     </div>`;
 }
 
@@ -1282,6 +1318,7 @@ function showOverview() {
         <div class="text-center"><span class="text-2xl font-bold text-amber-500">${totalWarnings}</span><p class="text-xs text-slate-400">警告</p></div>
         <div class="text-center"><span class="text-2xl font-bold text-blue-600">${bibCount}</span><p class="text-xs text-slate-400">引文</p></div>
         <div class="text-center"><span class="text-2xl font-bold text-slate-600">${wordCount>1000?(wordCount/1000).toFixed(1)+'k':wordCount}</span><p class="text-xs text-slate-400">词数</p></div>`;
+    renderDimensionScores(report.dimension_scores);
 
     // Gate cards
     let cardsHtml = '';

@@ -248,7 +248,7 @@
   - [ ] 每条建议可点击跳转到论文对应位置
   - [ ] 用户可勾选完成状态，追踪修改进度
 - [ ] **多维度评分**
-  - [ ] Novelty / Soundness / Clarity / Significance 四维雷达图
+  - [x] Novelty / Soundness / Clarity / Significance 四维评分
   - [ ] 对比同 venue 论文的平均分（基于 OpenReview 数据）
 
 ### ✨ AI 写作助手（已有 API，需加前端入口）
