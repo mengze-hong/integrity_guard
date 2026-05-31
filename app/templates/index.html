@@ -2696,6 +2696,31 @@ async function showAnalysis() {
             </div>`;
         }
 
+        const style = d.writing_style || {};
+        const diversity = Number(style.lexical_diversity || 0);
+        const diversityColor = diversity < 0.35 ? '#ef4444' : diversity < 0.45 ? '#f59e0b' : '#22c55e';
+        const sentenceColor = Number(style.avg_sentence_words || 0) > 28 ? '#ef4444' : Number(style.avg_sentence_words || 0) > 22 ? '#f59e0b' : '#22c55e';
+        const repeatedHtml = (style.repeated_words || []).map(w => `<span style="font-size:10px; color:#64748b; background:#f8fafc; border:1px solid #e2e8f0; border-radius:999px; padding:2px 7px;">${esc(w.word)} ×${w.count}</span>`).join('') || '<span style="font-size:11px; color:#94a3b8;">无明显重复高频词</span>';
+        const styleHtml = `<div style="margin-top:16px;">
+            <p style="font-size:12px; font-weight:600; color:#334155; margin:0 0 8px;">✍️ 写作风格分析</p>
+            <div style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px;">
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px;">
+                    <p style="margin:0; font-size:10px; color:#64748b;">词汇多样性</p>
+                    <p style="margin:4px 0 0; font-size:18px; font-weight:900; color:${diversityColor};">${diversity.toFixed(2)}</p>
+                </div>
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px;">
+                    <p style="margin:0; font-size:10px; color:#64748b;">平均句长</p>
+                    <p style="margin:4px 0 0; font-size:18px; font-weight:900; color:${sentenceColor};">${Number(style.avg_sentence_words || 0).toFixed(1)}</p>
+                </div>
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px;">
+                    <p style="margin:0; font-size:10px; color:#64748b;">长句比例</p>
+                    <p style="margin:4px 0 0; font-size:18px; font-weight:900; color:${Number(style.long_sentence_pct || 0) > 20 ? '#ef4444' : '#22c55e'};">${Number(style.long_sentence_pct || 0).toFixed(1)}%</p>
+                </div>
+            </div>
+            <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">${repeatedHtml}</div>
+            ${(style.hints || []).map(h => `<p style="margin:8px 0 0; font-size:11px; color:#475569; background:#f8fafc; border:1px solid #e2e8f0; padding:7px 10px; border-radius:8px;">${esc(h)}</p>`).join('')}
+        </div>`;
+
         // Show modal
         const modal = document.createElement('div');
         modal.className = 'modal-bg';
@@ -2706,6 +2731,7 @@ async function showAnalysis() {
             <p style="font-size:12px; font-weight:600; color:#334155; margin:0 0 8px;">📝 章节字数分布</p>
             <div style="max-height:240px; overflow-y:auto; padding-right:8px;">${sectionsHtml}</div>
             ${yearHtml}
+            ${styleHtml}
             <button onclick="this.closest('.modal-bg').remove()" style="margin-top:20px; width:100%; padding:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:13px; color:#64748b;">关闭</button>
         </div>`;
         document.body.appendChild(modal);

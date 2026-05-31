@@ -39,6 +39,7 @@ from app.services.file_store import (
     project_zip_bytes,
     safe_project_file,
 )
+from app.services.style_analysis import analyze_writing_style
 from app import storage
 from app.logging_config import logger
 
@@ -1411,8 +1412,10 @@ async def get_analysis(job_id: str, request: Request, response: Response):
     # 1. Section word counts
     import re
     sections = []
+    tex_texts = []
     for f in project_dir.rglob("*.tex"):
         text = f.read_text(encoding="utf-8", errors="replace")
+        tex_texts.append(text)
         # Remove comments
         text = re.sub(r"%.*", "", text)
         # Find sections
@@ -1466,6 +1469,7 @@ async def get_analysis(job_id: str, request: Request, response: Response):
             "oldest": min(years) if years else None,
             "newest": max(years) if years else None,
         },
+        "writing_style": analyze_writing_style(tex_texts),
     }
 
 

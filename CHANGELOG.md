@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.72 (2026-05-31) — Writing Style Analysis
+- 新增 `app/services/style_analysis.py`，从 LaTeX 文本中剥离命令/引用/注释后计算词汇多样性、平均句长、长句比例和高频重复词
+- `/api/analysis/{job_id}` 返回 `writing_style` 指标，前端分析弹窗新增“写作风格分析”卡片和可读性提示
+- 新增 `tests/test_style_analysis.py` 覆盖复杂句、重复词、注释/引用剥离和空文本行为
+- `TODO.md` 同步记录写作风格分析已完成
+
 ## v5.3.71 (2026-05-31) — Image Quality Hints
 - Structure gate 增加图片质量与优化提示：检测短边低于 600px 的 PNG/JPEG 栅格图，提示替换高分辨率图或矢量图
 - 检测超过 5MB 的图片/PDF 资产，提示压缩或避免嵌入未压缩截图
