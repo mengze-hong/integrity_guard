@@ -1151,8 +1151,8 @@ document.getElementById('upload-form').addEventListener('submit', async e => {
     e.preventDefault(); if (!uploadedFile) return;
 
     // Check credits if logged in
-    if (currentUser && currentUser.credits < 10) {
-        toast('💰 积分不足（需要 10 积分），请充值', 'warning', 4000);
+    if (currentUser && currentUser.credits < 1) {
+        toast('💰 次数不足（完整质检需要 1 次），请购买', 'warning', 4000);
         document.getElementById('recharge-modal').classList.remove('hidden');
         return;
     }
@@ -3777,7 +3777,7 @@ async function handleAuth(e) {
         localStorage.setItem('token', d.token);
         document.getElementById('auth-modal').classList.add('hidden');
         updateNavbar();
-        toast(authMode === 'login' ? `👋 欢迎回来，${currentUser.name}` : `🎉 注册成功！赠送 50 积分`, 'success', 3000);
+        toast(authMode === 'login' ? `👋 欢迎回来，${currentUser.name}` : `🎉 注册成功！赠送 3 次免费质检`, 'success', 3000);
     } catch(err) {
         errEl.textContent = '网络错误';
         errEl.style.display = 'block';

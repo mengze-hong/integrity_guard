@@ -98,6 +98,18 @@ def test_auth_cookie_secure_behind_https(auth_app):
     assert "httponly" in response.headers["set-cookie"].lower()
 
 
+def test_register_grants_three_free_checks(auth_app):
+    client = TestClient(auth_app)
+    response = client.post(
+        "/auth/register",
+        json={"email": "free@example.com", "password": "12345678"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["user"]["credits"] == 3
+
+
 def test_user_dashboard_returns_recent_checks(auth_app, monkeypatch):
     client = TestClient(auth_app)
     register = client.post(

@@ -13,6 +13,7 @@ from app.config import settings
 JWT_SECRET = settings.jwt_secret
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_DAYS = 7
+FREE_TIER_STARTING_CREDITS = 3
 
 
 # === Password Hashing ===
@@ -52,7 +53,7 @@ def register_user(db: Session, email: str, password: str, name: str = None) -> U
         email=email.lower().strip(),
         password_hash=hash_password(password),
         name=name or email.split("@")[0],
-        credits=2,
+        credits=FREE_TIER_STARTING_CREDITS,
         created_at=datetime.now(timezone.utc).isoformat(),
     )
     db.add(user)
@@ -62,9 +63,9 @@ def register_user(db: Session, email: str, password: str, name: str = None) -> U
         id=uuid.uuid4().hex[:12],
         user_id=user.id,
         type="gift",
-        amount=2,
-        balance_after=2,
-        description="注册赠送 2 次免费质检",
+        amount=FREE_TIER_STARTING_CREDITS,
+        balance_after=FREE_TIER_STARTING_CREDITS,
+        description=f"注册赠送 {FREE_TIER_STARTING_CREDITS} 次免费质检",
         created_at=datetime.now(timezone.utc).isoformat(),
     ))
     db.commit()
@@ -117,7 +118,7 @@ def get_or_create_oauth_user(
         avatar_url=avatar,
         oauth_provider=provider,
         oauth_id=oauth_id,
-        credits=2,
+        credits=FREE_TIER_STARTING_CREDITS,
         created_at=datetime.now(timezone.utc).isoformat(),
         last_login_at=datetime.now(timezone.utc).isoformat(),
     )
@@ -126,9 +127,9 @@ def get_or_create_oauth_user(
         id=uuid.uuid4().hex[:12],
         user_id=user.id,
         type="gift",
-        amount=2,
-        balance_after=2,
-        description="注册赠送 2 次免费质检",
+        amount=FREE_TIER_STARTING_CREDITS,
+        balance_after=FREE_TIER_STARTING_CREDITS,
+        description=f"注册赠送 {FREE_TIER_STARTING_CREDITS} 次免费质检",
         created_at=datetime.now(timezone.utc).isoformat(),
     ))
     db.commit()

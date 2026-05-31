@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.75 (2026-05-31) — Free Tier Credit Alignment
+- 注册和 OAuth 新用户默认赠送 3 次免费质检，统一为 `FREE_TIER_STARTING_CREDITS`
+- 修复前端上传前余额判断：完整质检实际消耗 1 次，不再错误要求 10 次余额
+- 更新注册成功提示为“赠送 3 次免费质检”，新增测试覆盖注册赠送额度
+- `TODO.md` 同步记录 Free tier 注册赠送 3 次已完成，并拆出月度重置为后续独立项
+
 ## v5.3.74 (2026-05-31) — Multi-Dimensional Scores
 - 新增 `app/services/dimension_scores.py`，从现有 gate 分数派生 Novelty / Soundness / Clarity / Significance 四维启发式评分
 - `/api/report/{job_id}` 返回 `dimension_scores`，概览页新增多维度评分卡片和四个维度分数条
