@@ -1,5 +1,12 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.81 (2026-05-31) — Paid Tier API Token Foundation
+- 新增 `api_tokens` 数据表，支持 Pro/Team 用户创建、查看和撤销个人 API Token
+- API Token 明文只在创建时返回一次，服务端仅保存 SHA-256 hash 和短前缀，降低泄露风险
+- Free 用户访问 API Token 列表、创建和撤销接口会返回 403，付费 tier 权益边界更清晰
+- 新增测试覆盖付费 tier 限制、token 只返回一次、hash 存储和撤销后列表隐藏
+- `TODO.md` 记录 Pro/Team API Token 基础能力已完成，为后续 CLI/API 接入铺路
+
 ## v5.3.80 (2026-05-31) — Hardened CI Safety Checks
 - GitHub Actions 安装流程补齐 `python -m pip` 与 `npm ci`，确保 JS helper 测试和 secret scan 在干净环境可复现
 - CI ruff 命令与本地验证对齐，纳入 `scripts/backup_data.py`

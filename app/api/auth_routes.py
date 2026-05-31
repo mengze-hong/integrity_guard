@@ -1,8 +1,11 @@
 """Authentication API routes: register, login, profile, OAuth."""
 
+import hashlib
 import os
+import secrets
 import time
 from collections import defaultdict
+from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends, Response, Request
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
@@ -12,7 +15,7 @@ from app.auth import (
     register_user, authenticate_user, create_token,
     refresh_free_tier_monthly_credits,
 )
-from app.models_db import User
+from app.models_db import ApiToken, User
 from app.dependencies import get_current_user, get_current_user_optional
 from app.credits import get_transactions
 from app.models_db import Transaction
@@ -24,6 +27,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 _login_attempts: dict[str, list[float]] = defaultdict(list)
 _RATE_LIMIT_WINDOW = 300  # 5 minutes
 _RATE_LIMIT_MAX = 10  # max attempts per window
+API_TOKEN_PREFIX = "sl_api_"
+API_TOKEN_ALLOWED_TIERS = {"pro", "team"}
 
 
 def _check_rate_limit(key: str):
@@ -53,6 +58,10 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class CreateApiTokenRequest(BaseModel):
+    name: str = "Default API token"
+
+
 def _client_ip(request: Request) -> str:
     forwarded = request.headers.get("x-forwarded-for", "")
     if forwarded:
@@ -79,6 +88,34 @@ def _set_auth_cookie(response: Response, request: Request, token: str) -> None:
         max_age=7 * 86400,
         samesite="lax",
     )
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _hash_api_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _new_api_token() -> str:
+    return f"{API_TOKEN_PREFIX}{secrets.token_urlsafe(32)}"
+
+
+def _api_token_dict(token: ApiToken) -> dict:
+    return {
+        "id": token.id,
+        "name": token.name,
+        "token_prefix": token.token_prefix,
+        "created_at": token.created_at,
+        "revoked_at": token.revoked_at,
+        "last_used_at": token.last_used_at,
+    }
+
+
+def _require_api_token_tier(user: User) -> None:
+    if (user.tier or "free").lower() not in API_TOKEN_ALLOWED_TIERS:
+        raise HTTPException(status_code=403, detail="API Token 仅 Pro/Team 用户可用")
 
 
 def _build_team_dashboard(checks: list[dict]) -> dict:
@@ -189,6 +226,68 @@ async def my_transactions(request: Request, db: Session = Depends(get_db)):
     user = await get_current_user(request)
     txns = get_transactions(db, user.id)
     return {"transactions": txns}
+
+
+@router.get("/api-tokens")
+async def list_api_tokens(request: Request, db: Session = Depends(get_db)):
+    """List current user's API tokens without exposing secrets."""
+    user = await get_current_user(request)
+    fresh_user = db.query(User).filter(User.id == user.id).first()
+    _require_api_token_tier(fresh_user)
+    tokens = (
+        db.query(ApiToken)
+        .filter(ApiToken.user_id == user.id, ApiToken.revoked_at.is_(None))
+        .order_by(ApiToken.created_at.desc())
+        .all()
+    )
+    return {"tokens": [_api_token_dict(token) for token in tokens]}
+
+
+@router.post("/api-tokens")
+async def create_api_token(
+    body: CreateApiTokenRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Create a Pro/Team API token. The plaintext token is returned once."""
+    user = await get_current_user(request)
+    fresh_user = db.query(User).filter(User.id == user.id).first()
+    _require_api_token_tier(fresh_user)
+
+    name = (body.name or "Default API token").strip()[:80] or "Default API token"
+    plaintext = _new_api_token()
+    token = ApiToken(
+        user_id=user.id,
+        name=name,
+        token_hash=_hash_api_token(plaintext),
+        token_prefix=plaintext[:14],
+        created_at=_now(),
+    )
+    db.add(token)
+    db.commit()
+    db.refresh(token)
+    payload = _api_token_dict(token)
+    payload["token"] = plaintext
+    return {"token": payload}
+
+
+@router.delete("/api-tokens/{token_id}")
+async def revoke_api_token(token_id: str, request: Request, db: Session = Depends(get_db)):
+    """Revoke an API token owned by the current user."""
+    user = await get_current_user(request)
+    fresh_user = db.query(User).filter(User.id == user.id).first()
+    _require_api_token_tier(fresh_user)
+    token = (
+        db.query(ApiToken)
+        .filter(ApiToken.id == token_id, ApiToken.user_id == user.id)
+        .first()
+    )
+    if not token:
+        raise HTTPException(status_code=404, detail="API Token 不存在")
+    if not token.revoked_at:
+        token.revoked_at = _now()
+        db.commit()
+    return {"status": "ok"}
 
 
 @router.get("/dashboard")

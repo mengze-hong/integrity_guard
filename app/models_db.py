@@ -66,3 +66,18 @@ class PaymentOrder(Base):
     credited_at = Column(String, nullable=True)
 
     user = relationship("User")
+
+
+class ApiToken(Base):
+    __tablename__ = "api_tokens"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    token_hash = Column(String, unique=True, nullable=False, index=True)
+    token_prefix = Column(String, nullable=False)
+    created_at = Column(String, default=_now)
+    revoked_at = Column(String, nullable=True)
+    last_used_at = Column(String, nullable=True)
+
+    user = relationship("User")

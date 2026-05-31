@@ -14,7 +14,7 @@ from app.api import auth_routes, payment_routes
 from app.auth import FREE_TIER_MONTHLY_GIFT_PREFIX, refresh_free_tier_monthly_credits
 from app.credits import deduct_check_credit, has_unlimited_checks
 from app.database import Base
-from app.models_db import PaymentOrder, Transaction, User
+from app.models_db import ApiToken, PaymentOrder, Transaction, User
 
 
 @pytest.fixture()
@@ -253,6 +253,58 @@ def test_team_dashboard_returns_mentor_summary(auth_app, temp_db, monkeypatch):
     assert team["pass_rate"] == 66.7
     assert team["needs_attention"] == 2
     assert [item["job_id"] for item in team["low_score_checks"]] == ["b", "c"]
+
+
+def test_api_tokens_require_paid_tier_and_return_secret_once(auth_app, temp_db, monkeypatch):
+    client = TestClient(auth_app)
+    register = client.post(
+        "/auth/register",
+        json={"email": "token@example.com", "password": "12345678", "name": "Token"},
+    )
+    assert register.status_code == 200
+    user_id = register.json()["user"]["id"]
+
+    async def fake_get_current_user(request):
+        return SimpleNamespace(id=user_id)
+
+    monkeypatch.setattr(auth_routes, "get_current_user", fake_get_current_user)
+
+    assert client.get("/auth/api-tokens").status_code == 403
+    assert client.post("/auth/api-tokens", json={"name": "Local CLI"}).status_code == 403
+
+    db = temp_db()
+    try:
+        user = db.query(User).filter(User.id == user_id).first()
+        user.tier = "pro"
+        db.commit()
+    finally:
+        db.close()
+
+    created = client.post("/auth/api-tokens", json={"name": "Local CLI"})
+    assert created.status_code == 200
+    token_body = created.json()["token"]
+    assert token_body["name"] == "Local CLI"
+    assert token_body["token"].startswith(auth_routes.API_TOKEN_PREFIX)
+    assert token_body["token_prefix"] == token_body["token"][:14]
+
+    db = temp_db()
+    try:
+        stored = db.query(ApiToken).filter(ApiToken.user_id == user_id).first()
+        assert stored is not None
+        assert stored.token_hash == auth_routes._hash_api_token(token_body["token"])
+        assert stored.token_hash != token_body["token"]
+    finally:
+        db.close()
+
+    listed = client.get("/auth/api-tokens")
+    assert listed.status_code == 200
+    listed_token = listed.json()["tokens"][0]
+    assert listed_token["id"] == token_body["id"]
+    assert "token" not in listed_token
+
+    revoked = client.delete(f"/auth/api-tokens/{token_body['id']}")
+    assert revoked.status_code == 200
+    assert client.get("/auth/api-tokens").json()["tokens"] == []
 
 
 def test_admin_add_credits_requires_header_key(payment_app, temp_db):
