@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.auth import (
     register_user, authenticate_user, create_token,
+    refresh_free_tier_monthly_credits,
 )
 from app.models_db import User
 from app.dependencies import get_current_user, get_current_user_optional
@@ -137,7 +138,10 @@ async def get_me(request: Request, db: Session = Depends(get_db)):
         return {"authenticated": False}
 
     # Refresh from DB to get latest credits
-    fresh_user = db.query(User).filter(User.id == user.id).first()
+    fresh_user = refresh_free_tier_monthly_credits(
+        db,
+        db.query(User).filter(User.id == user.id).first(),
+    )
     if not fresh_user:
         return {"authenticated": False}
 
@@ -161,7 +165,10 @@ async def user_dashboard(request: Request, db: Session = Depends(get_db)):
     user = await get_current_user(request)
 
     # Refresh user from DB
-    fresh_user = db.query(User).filter(User.id == user.id).first()
+    fresh_user = refresh_free_tier_monthly_credits(
+        db,
+        db.query(User).filter(User.id == user.id).first(),
+    )
 
     # Get transactions
     txns = get_transactions(db, user.id, limit=10)

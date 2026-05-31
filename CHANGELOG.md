@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.76 (2026-05-31) — Free Tier Monthly Refresh
+- 新增 Free tier 月度懒刷新：老用户每月余额低于 3 次时自动补足到 3 次
+- 登录、OAuth 复用、`/auth/me`、dashboard 和上传扣费前都会触发刷新，避免需要额外后台任务
+- 月度赠送写入 `Transaction` gift 记录，按月份去重，避免同月重复领取
+- 更新用户模型默认额度注释和测试，覆盖月度补足与同月幂等
+
 ## v5.3.75 (2026-05-31) — Free Tier Credit Alignment
 - 注册和 OAuth 新用户默认赠送 3 次免费质检，统一为 `FREE_TIER_STARTING_CREDITS`
 - 修复前端上传前余额判断：完整质检实际消耗 1 次，不再错误要求 10 次余额

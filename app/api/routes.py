@@ -407,12 +407,18 @@ async def upload_paper(
     from app.dependencies import get_current_user_optional
     from app.credits import deduct_credits, InsufficientCredits
     from app.database import SessionLocal
+    from app.auth import refresh_free_tier_monthly_credits
+    from app.models_db import User
 
     # Check auth + credits
     user = await get_current_user_optional(request)
     if user:
         db = SessionLocal()
         try:
+            user = refresh_free_tier_monthly_credits(
+                db,
+                db.query(User).filter(User.id == user.id).first(),
+            )
             deduct_credits(db, user.id, settings.credits_upload, "论文质检")
         except InsufficientCredits:
             raise HTTPException(status_code=402, detail="积分不足，请充值")

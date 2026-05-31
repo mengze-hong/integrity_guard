@@ -14,6 +14,7 @@ JWT_SECRET = settings.jwt_secret
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_DAYS = 7
 FREE_TIER_STARTING_CREDITS = 3
+FREE_TIER_MONTHLY_GIFT_PREFIX = "Free tier 月度赠送"
 
 
 # === Password Hashing ===
@@ -73,6 +74,51 @@ def register_user(db: Session, email: str, password: str, name: str = None) -> U
     return user
 
 
+def _current_month_key(now: datetime | None = None) -> str:
+    now = now or datetime.now(timezone.utc)
+    return now.astimezone(timezone.utc).strftime("%Y-%m")
+
+
+def refresh_free_tier_monthly_credits(
+    db: Session, user: User | None, now: datetime | None = None
+) -> User | None:
+    """Top up free users to the monthly free-check balance once per month."""
+    if not user or user.tier != "free":
+        return user
+
+    month_key = _current_month_key(now)
+    if str(user.created_at or "").startswith(month_key):
+        return user
+
+    description = f"{FREE_TIER_MONTHLY_GIFT_PREFIX} {month_key}"
+    existing = db.query(Transaction).filter(
+        Transaction.user_id == user.id,
+        Transaction.type == "gift",
+        Transaction.description == description,
+    ).first()
+    if existing:
+        return user
+
+    current_credits = int(user.credits or 0)
+    top_up = max(0, FREE_TIER_STARTING_CREDITS - current_credits)
+    if top_up <= 0:
+        return user
+
+    user.credits = current_credits + top_up
+    db.add(Transaction(
+        id=uuid.uuid4().hex[:12],
+        user_id=user.id,
+        type="gift",
+        amount=top_up,
+        balance_after=user.credits,
+        description=description,
+        created_at=(now or datetime.now(timezone.utc)).isoformat(),
+    ))
+    db.commit()
+    db.refresh(user)
+    return user
+
+
 def authenticate_user(db: Session, email: str, password: str) -> User | None:
     """Verify email + password, return user or None."""
     user = db.query(User).filter(User.email == email.lower().strip()).first()
@@ -83,7 +129,7 @@ def authenticate_user(db: Session, email: str, password: str) -> User | None:
     # Update last login
     user.last_login_at = datetime.now(timezone.utc).isoformat()
     db.commit()
-    return user
+    return refresh_free_tier_monthly_credits(db, user)
 
 
 def get_or_create_oauth_user(
@@ -97,7 +143,7 @@ def get_or_create_oauth_user(
     if user:
         user.last_login_at = datetime.now(timezone.utc).isoformat()
         db.commit()
-        return user
+        return refresh_free_tier_monthly_credits(db, user)
 
     # Try to find by email (link accounts)
     user = db.query(User).filter(User.email == email.lower()).first()
@@ -108,7 +154,7 @@ def get_or_create_oauth_user(
             user.avatar_url = avatar
         user.last_login_at = datetime.now(timezone.utc).isoformat()
         db.commit()
-        return user
+        return refresh_free_tier_monthly_credits(db, user)
 
     # Create new user
     user = User(

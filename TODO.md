@@ -98,7 +98,7 @@
 
 ### 订阅 & 付费
 - [x] Free tier: 注册赠送 3 次检查，基础规则
-- [ ] Free tier 月度重置：每月刷新 3 次免费检查额度
+- [x] Free tier 月度重置：每月刷新 3 次免费检查额度
 - [ ] Pro tier: 无限检查 + LLM 深度分析 + Copilot 修复 + 优先 API
 - [ ] Team tier: 导师 dashboard + 批量检查 + API 接入
 - [ ] Stripe/支付宝 集成

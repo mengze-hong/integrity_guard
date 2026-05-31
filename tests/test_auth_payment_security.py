@@ -11,6 +11,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.api import auth_routes, payment_routes
+from app.auth import FREE_TIER_MONTHLY_GIFT_PREFIX, refresh_free_tier_monthly_credits
 from app.database import Base
 from app.models_db import PaymentOrder, Transaction, User
 
@@ -108,6 +109,39 @@ def test_register_grants_three_free_checks(auth_app):
     assert response.status_code == 200
     body = response.json()
     assert body["user"]["credits"] == 3
+
+
+def test_free_tier_monthly_refresh_tops_up_once(temp_db):
+    db = temp_db()
+    try:
+        user = User(
+            id="free-user",
+            email="free-monthly@example.com",
+            password_hash="x",
+            credits=0,
+            tier="free",
+            created_at="2026-04-15T00:00:00+00:00",
+        )
+        db.add(user)
+        db.commit()
+
+        now = datetime(2026, 5, 31, tzinfo=timezone.utc)
+        refreshed = refresh_free_tier_monthly_credits(db, user, now=now)
+
+        assert refreshed.credits == 3
+        txn = db.query(Transaction).filter(Transaction.user_id == user.id).first()
+        assert txn.amount == 3
+        assert txn.balance_after == 3
+        assert txn.description == f"{FREE_TIER_MONTHLY_GIFT_PREFIX} 2026-05"
+
+        refreshed.credits = 0
+        db.commit()
+        again = refresh_free_tier_monthly_credits(db, refreshed, now=now)
+
+        assert again.credits == 0
+        assert db.query(Transaction).filter(Transaction.user_id == user.id).count() == 1
+    finally:
+        db.close()
 
 
 def test_user_dashboard_returns_recent_checks(auth_app, monkeypatch):

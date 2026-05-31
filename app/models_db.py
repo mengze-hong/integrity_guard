@@ -27,7 +27,7 @@ class User(Base):
     avatar_url = Column(String, nullable=True)
     oauth_provider = Column(String, nullable=True)  # 'google'|'github'
     oauth_id = Column(String, nullable=True)
-    credits = Column(Integer, default=2)  # 注册送 2 次免费质检
+    credits = Column(Integer, default=3)  # 注册送 3 次免费质检
     tier = Column(String, default="free")  # 'free'|'pro'|'team'
     created_at = Column(String, default=_now)
     last_login_at = Column(String, nullable=True)
