@@ -162,6 +162,7 @@
 - [x] AI router 权限测试覆盖 share token 只读用户不能调用 AI 写操作，且在 LLM 前拦截
 - [x] 上传 API 集成测试覆盖真实解压/gate 编排、失败报告持久化、Zip Slip 与危险文件清理
 - [x] 最小 API 级 E2E 覆盖 upload/report/files/save/recheck，验证编辑后重新质检会刷新报告并清除图表交叉引用问题
+- [x] 共享测试 fixture：新增 `tests/conftest.py` 统一路由状态清理（`clear_route_state`），5 个测试文件去重 setup/teardown，降低维护与交接成本
 
 ### 部署 & 运维
 - [x] Docker 化（Dockerfile + docker-compose.yml + requirements.txt）

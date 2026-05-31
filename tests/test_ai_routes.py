@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.api import ai_routes, routes
 from app.models import CheckResult, FullReport, Issue, Severity
+from tests.conftest import clear_route_state
 
 
 class MockLLMResponse:
@@ -22,12 +23,7 @@ class MockLLMResponse:
 
 @pytest.fixture()
 def ai_app(tmp_path: Path):
-    routes._jobs.clear()
-    routes._job_status.clear()
-    routes._job_dirs.clear()
-    routes._job_owners.clear()
-    routes._llm_calls_by_ip.clear()
-    routes._llm_calls_global.clear()
+    clear_route_state()
 
     job_id = "ai-route-job"
     owner_session = "owner-session"
@@ -79,12 +75,7 @@ def ai_app(tmp_path: Path):
     client.cookies.set(routes.SESSION_COOKIE_NAME, owner_session)
     yield client, job_id
 
-    routes._jobs.clear()
-    routes._job_status.clear()
-    routes._job_dirs.clear()
-    routes._job_owners.clear()
-    routes._llm_calls_by_ip.clear()
-    routes._llm_calls_global.clear()
+    clear_route_state()
 
 
 def test_ai_fix_reference_guardrail_never_calls_llm(ai_app, monkeypatch):

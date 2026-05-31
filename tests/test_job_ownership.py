@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from app import storage
 from app.api import routes
 from app.models import FullReport
+from tests.conftest import clear_route_state
 
 
 @pytest.fixture()
@@ -25,13 +26,7 @@ def ownership_app(tmp_path, monkeypatch):
     monkeypatch.setattr(storage, "JOBS_DIR", jobs_dir)
     monkeypatch.setattr(routes.storage, "JOBS_DIR", jobs_dir)
 
-    routes._jobs.clear()
-    routes._job_status.clear()
-    routes._job_dirs.clear()
-    routes._job_progress.clear()
-    routes._job_owners.clear()
-    routes._job_locks.clear()
-    routes._rate_limit.clear()
+    clear_route_state()
 
     async def fake_run_checks(job_id, zip_path, extract_dir, filename, owner_metadata):
         project_dir = extract_dir / "paper"
@@ -67,13 +62,7 @@ def ownership_app(tmp_path, monkeypatch):
     app.include_router(routes.router, prefix="/api")
     yield app
 
-    routes._jobs.clear()
-    routes._job_status.clear()
-    routes._job_dirs.clear()
-    routes._job_progress.clear()
-    routes._job_owners.clear()
-    routes._job_locks.clear()
-    routes._rate_limit.clear()
+    clear_route_state()
 
 
 def _zip_bytes(tmp_path: Path) -> bytes:

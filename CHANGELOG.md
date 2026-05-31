@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.87 (2026-05-31) — Shared Test Fixtures
+- 新增 `tests/conftest.py`，集中提供 `clear_route_state()` 与 `reset_route_state` fixture，统一清理 `app.api.routes` 的 9 个进程级状态（jobs/status/dirs/progress/owners/locks/rate_limit/llm_calls），保证测试间隔离
+- `test_ai_routes.py`、`test_e2e_minimal.py`、`test_export_report.py`、`test_job_ownership.py`、`test_upload_api.py` 改用共享清理函数，移除各自重复的 setup/teardown 清理代码
+- 各文件统一为清理全部 9 个状态（原先有的只清 6-7 个子集）；测试内部刻意只清部分状态以模拟重启恢复的逻辑保持原样不动
+- 纯测试基础设施重构，降低维护成本、便于交接；app 运行时行为零变化，pytest 仍 103 项全过，ruff/secret scan 通过
+
 ## v5.3.86 (2026-05-31) — Image-Heavy Project Performance
 - 修复含大量图表的项目质检卡顿：StructureGate 重复图检测与图片质量检测原本各自全目录遍历一次（两次 rglob），且对每张图 `read_bytes()` 整图入内存算 MD5
 - 合并为单次目录遍历，复用同一份图片清单做重复检测与质量提示

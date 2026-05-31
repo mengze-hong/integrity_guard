@@ -9,29 +9,16 @@ from fastapi.testclient import TestClient
 
 from app.api import routes
 from app.models import CheckResult, FullReport, Issue, Severity
+from tests.conftest import clear_route_state
 
 
 @pytest.fixture()
 def export_app():
-    routes._jobs.clear()
-    routes._job_status.clear()
-    routes._job_dirs.clear()
-    routes._job_progress.clear()
-    routes._job_owners.clear()
-    routes._job_locks.clear()
-    routes._rate_limit.clear()
-
+    clear_route_state()
     app = FastAPI()
     app.include_router(routes.router, prefix="/api")
     yield app
-
-    routes._jobs.clear()
-    routes._job_status.clear()
-    routes._job_dirs.clear()
-    routes._job_progress.clear()
-    routes._job_owners.clear()
-    routes._job_locks.clear()
-    routes._rate_limit.clear()
+    clear_route_state()
 
 
 def _seed_report(job_id: str = "job-export", timestamp: str | None = None) -> FullReport:

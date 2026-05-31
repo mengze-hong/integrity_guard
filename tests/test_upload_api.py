@@ -13,18 +13,7 @@ from fastapi.testclient import TestClient
 from app import storage
 from app.api import routes
 from app.models import CheckResult
-
-
-def _clear_route_state() -> None:
-    routes._jobs.clear()
-    routes._job_status.clear()
-    routes._job_dirs.clear()
-    routes._job_progress.clear()
-    routes._job_owners.clear()
-    routes._job_locks.clear()
-    routes._rate_limit.clear()
-    routes._llm_calls_by_ip.clear()
-    routes._llm_calls_global.clear()
+from tests.conftest import clear_route_state
 
 
 @pytest.fixture()
@@ -51,14 +40,14 @@ def upload_client(tmp_path: Path, monkeypatch) -> TestClient:
 
     monkeypatch.setattr(routes.ReferenceAuthenticityGate, "check", fast_reference_check)
 
-    _clear_route_state()
+    clear_route_state()
     app = FastAPI()
     app.include_router(routes.router, prefix="/api")
 
     with TestClient(app) as client:
         yield client
 
-    _clear_route_state()
+    clear_route_state()
 
 
 def _zip_bytes(files: dict[str, str | bytes]) -> bytes:
