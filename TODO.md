@@ -174,7 +174,7 @@
 ### 数据库迁移
 - [ ] 从 JSON 文件迁移到 PostgreSQL/SQLite
 - [ ] 用户表、Job 表、Issue 表关系设计
-- [ ] 数据备份策略
+- [x] 数据备份策略（`scripts/backup_data.py` + `docs/BACKUP.md`，默认备份 data，可选 uploads）
 
 ---
 

@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.65 (2026-05-31) — Data Backup Strategy
+- 新增 `scripts/backup_data.py`，默认备份 `data/` 到带 manifest 的 ZIP，可选 `--include-uploads` 纳入用户上传文件，并支持 `--dry-run` 预览
+- SQLite 文件通过 SQLite backup API 写入归档，降低运行中直接复制数据库导致不一致的风险
+- 新增 `docs/BACKUP.md`，说明备份范围、uploads 边界、加密存储提醒和 restore smoke checks；文档索引、部署文档与 release checklist 同步引用
+- `TODO.md` 同步记录数据备份策略已完成，并忽略本地 `backups/` 归档目录
+
 ## v5.3.64 (2026-05-31) — Lightweight Monitoring
 - 新增进程内请求监控，记录服务启动时间、uptime、总请求数、5xx 错误数、错误率、平均/最大延迟和最近窗口统计
 - 新增 `/metrics` JSON endpoint，按接口聚合请求量、错误量、延迟与最近状态码，并对高基数字段做路径脱敏，避免泄露 job id、share token 或长文件名

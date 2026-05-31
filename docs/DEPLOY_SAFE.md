@@ -40,7 +40,7 @@ Use this guide before exposing ScholarLint to real users or any public network.
 
 ## Backups
 
-- Back up the data directory that stores the SQLite database, encrypted job reports, payment/order state, and encrypted secrets where applicable.
+- Back up the data directory that stores the SQLite database, encrypted job reports, payment/order state, and encrypted secrets where applicable. Use `python scripts/backup_data.py` for a local archive and see `docs/BACKUP.md` for restore steps.
 - Test restore on a separate environment before relying on backups.
 - Keep backup storage access restricted and encrypted.
 - Do not back up temporary upload extraction directories unless there is a clear retention requirement.

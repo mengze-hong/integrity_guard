@@ -40,6 +40,7 @@ data/secrets.enc
 # Screenshots & generated
 screenshots/
 screenshots_new/
+backups/
 /logo.png
 IntegrityGuard_Demo.pptx
 IntegrityGuard_Pitch_Deck.pptx
