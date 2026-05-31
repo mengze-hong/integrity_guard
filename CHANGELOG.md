@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.67 (2026-05-31) — Format Normalize Entry
+- 工作台 toolbar 增加“规范格式”入口，让已有 LaTeX format normalization 不再只藏在右键菜单里
+- 格式规范化请求改用统一 `apiFetch`，继承现有错误处理、权限与会话语义
+- 新增 `tests/test_format_normalizer.py` 覆盖 Table/Figure 非断行空格、Fig./Eq. ref 空格、行尾空白和注释空格规则
+- `TODO.md` 同步记录一键格式规范化入口、数字格式、缩写与基础空白清理已完成
+
 ## v5.3.66 (2026-05-31) — Report Comparison View
 - 概览页新增前后两次检查对比卡片，复用 `/api/compare/{job_id}` 展示总分、错误数、警告数变化
 - 对比卡片增加 gate 级状态与分数变化，支持跳转查看上一次检查记录

@@ -285,11 +285,11 @@
 - [ ] **图表质量评估**（分辨率检查、图表是否有标题、字体大小是否可读）
 
 ### 🔧 格式自动修复（零 LLM 成本）
-- [ ] **一键格式规范化**
+- [x] **一键格式规范化**（工作台 toolbar 入口 + 当前文件/全项目后端 API）
   - [ ] 统一引用格式（\cite vs \citep vs \citet）
-  - [ ] 统一数字格式（Table 1 vs Table~1 vs table 1）
-  - [ ] 统一缩写（Fig. vs Figure）
-  - [ ] 去除多余空行 / 修复缩进
+  - [x] 统一数字格式（Table 1 vs Table~1 vs table 1）
+  - [x] 统一缩写（Fig. vs Figure）
+  - [x] 去除多余空格 / 修复基础排版空白
 - [ ] **Bib 自动补全**
   - [ ] 缺少 DOI 的条目自动从 Crossref 补全
   - [ ] 缺少 URL 的条目自动补全 Semantic Scholar 链接

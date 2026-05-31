@@ -550,6 +550,7 @@
             <div class="flex items-center gap-1.5" style="overflow-x:auto; flex-shrink:0;">
                 <button onclick="doBibClean()" class="toolbar-btn">📋 整理 Bib</button>
                 <button onclick="doTidyUp()" class="toolbar-btn">🗂️ 整理结构</button>
+                <button onclick="doFormatNormalize()" class="toolbar-btn">🔧 规范格式</button>
                 <button onclick="showAnalysis()" class="toolbar-btn">📊 分析</button>
                 <button onclick="showChecklist()" class="toolbar-btn">✅ 清单</button>
                 <button onclick="showVenueChecklist()" class="toolbar-btn">📝 复现清单</button>
@@ -2977,7 +2978,7 @@ async function doFormatNormalize() {
     if (!jobId) return;
     toast('🔧 正在规范化格式...', 'info', 2000);
     try {
-        const r = await fetch(`/api/format-normalize/${jobId}`, {
+        const r = await apiFetch(`/api/format-normalize/${jobId}`, {
             method: 'POST', headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({file: currentFile}),
         });
