@@ -164,9 +164,13 @@ async def _owner_metadata_allows(
     owner_id = metadata.get("owner_id")
     share_token = metadata.get("share_token")
 
-    # Legacy reports created before ownership metadata remain readable/writable
-    # for local demo compatibility.
+    # Legacy reports created before ownership metadata exist on local-demo
+    # installs and must stay accessible there for backward compatibility. In
+    # production, however, no-owner reports are treated as inaccessible —
+    # otherwise anyone who can guess a job_id would have full access.
     if not owner_type or not owner_id:
+        if settings.app_env in {"prod", "production"}:
+            return False
         return True
 
     request_owner = await _get_request_owner(request, response)

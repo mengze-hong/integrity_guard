@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.91 (2026-06-01) — Legacy Job Tightened in Production
+- 修复生产权限旁路：`_owner_metadata_allows()` 原本对缺少 `owner_type/owner_id` 的旧 job 一律放行（本地 demo 兼容），上线公网后等同于"猜中 job_id 即可访问"
+- 当 `settings.app_env in {"prod", "production"}` 时，缺 owner metadata 的 job 一律返回 403；本地默认 `app_env=local` 行为保持不变（旧报告仍可访问）
+- 新增 `tests/test_legacy_owner_strict.py` 4 项：本地放行、`production`/`prod` 别名拒绝、有 owner 的 job 在生产仍正常访问（pytest 116→120）
+- 通过 ruff、JS 检查、JS helper 测试 7 项、secret scan、隧道扫描
+
 ## v5.3.90 (2026-06-01) — Hardened Secret Redaction
 - 新增工作计划清单 `WORK_PLAN.md`：按 P0 安全/P1 可维护性/P2 性能/P3 商业化分组列出可一轮完成的执行项，配合 TODO.md 与 HANDOVER.md 使用
 - 扩展 `secrets_manager.redact()`：除原有 LLM key/url 字面替换外，覆盖 JWT (`eyJ…`)、`Authorization: Bearer …`、内部 LLM key 前缀、API token 前缀 `sl_…`、PEM 私钥/证书块；同时把 `JWT_SECRET`、`ADMIN_KEY`、`ALIPAY_*` 加入已知敏感名单按值替换

@@ -4,18 +4,16 @@
 >
 > 与 [TODO.md](TODO.md)（历史完成情况快照）和 [HANDOVER.md](HANDOVER.md)（项目状态总览）配合使用。
 >
-> **当前版本**：v5.3.90 · **当前节奏**：每轮一项，走完整流水线（验证 → CHANGELOG → commit → push）。
+> **当前版本**：v5.3.91 · **当前节奏**：每轮一项，走完整流水线（验证 → CHANGELOG → commit → push）。
 
 ---
 
 ## 🔴 P0 — 安全基线（公网上线前必须完成）
 
-### S1. 收紧无 owner 的 legacy job 在生产环境的访问
+### S1. 收紧无 owner 的 legacy job 在生产环境的访问 ✅ v5.3.91
 
-- **现状**：`_owner_metadata_allows()` 对没有 owner_type/owner_id 的报告默认放行（本地 demo 兼容）。生产环境这是过宽的旁路。
-- **要做**：当 `settings.app_env in {"prod", "production"}` 时，缺少 owner metadata 的 job 视为不可访问。本地保持原行为。
-- **验证**：新增测试覆盖 prod 模式下 legacy job 返回 403、本地仍可访问。
-- **文件**：`app/api/routes.py` 的 `_owner_metadata_allows`、新增 `tests/test_legacy_owner_strict.py`。
+- ~~**现状**：`_owner_metadata_allows()` 对没有 owner_type/owner_id 的报告默认放行（本地 demo 兼容）。生产环境这是过宽的旁路。~~
+- **已完成**：当 `settings.app_env in {"prod", "production"}` 时，缺 owner metadata 的 job 一律返回 403；本地保持原行为。新增 `tests/test_legacy_owner_strict.py` 4 项覆盖 prod 拒绝 / 本地放行 / 有 owner 不受影响。
 
 ### S2. API Token 真正接入鉴权
 

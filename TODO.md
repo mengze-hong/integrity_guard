@@ -168,6 +168,7 @@
 - [x] 最小 API 级 E2E 覆盖 upload/report/files/save/recheck，验证编辑后重新质检会刷新报告并清除图表交叉引用问题
 - [x] 共享测试 fixture：新增 `tests/conftest.py` 统一路由状态清理（`clear_route_state`），5 个测试文件去重 setup/teardown，降低维护与交接成本
 - [x] 全局脱敏加固：`secrets_manager.redact()` 扩展覆盖 JWT、Bearer、PEM 块、API token 前缀、内部 LLM key 前缀；`_SENSITIVE_NAMES` 加入 JWT_SECRET/ADMIN_KEY/ALIPAY_*；新增 `tests/test_redact.py` 8 项
+- [x] Legacy job 生产收紧：`_owner_metadata_allows` 在 `app_env=prod/production` 时拒绝缺 owner metadata 的 job（403），本地兼容保留；新增 `tests/test_legacy_owner_strict.py` 4 项
 
 ### 部署 & 运维
 - [x] Docker 化（Dockerfile + docker-compose.yml + requirements.txt）
