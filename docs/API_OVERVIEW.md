@@ -46,6 +46,8 @@ Endpoint reference for ScholarLint · 投稿通, grouped by router. All API rout
 | PUT | `/api/files/{job_id}/{file_path}` | job write | Save a file (text-source allowlist; preserves CRLF/LF). |
 | GET | `/api/download/{job_id}` | job read | Download the current project as a ZIP. |
 
+> As of v5.3.94 these four endpoints live in `app/api/file_routes.py`, not the legacy `app/api/routes.py`. URLs are unchanged.
+
 ### Issues & Export
 
 | Method | Path | Access | Purpose |

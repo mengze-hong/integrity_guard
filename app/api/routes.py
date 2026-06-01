@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, UploadFile, File, BackgroundTasks, HTTPException, Request, Response
-from fastapi.responses import PlainTextResponse, StreamingResponse
+from fastapi.responses import PlainTextResponse
 
 from app.brand_report import build_report_footer, build_report_header
 from app.config import settings, LLM_RATE_PER_IP, LLM_RATE_WINDOW, LLM_GLOBAL_HOURLY_CAP
@@ -35,8 +35,6 @@ from app.services.ai_guardrails import (
 )
 from app.services.file_store import (
     EDITABLE_EXTENSIONS,
-    list_editable_files,
-    project_zip_bytes,
     safe_project_file,
 )
 from app.services.dimension_scores import build_dimension_scores
@@ -510,84 +508,7 @@ async def get_report(job_id: str, request: Request, response: Response):
     return payload
 
 
-# ─── File CRUD (for editor) ───────────────────────────────────
-
-@router.get("/files/{job_id}")
-async def list_files(job_id: str, request: Request, response: Response):
-    """List all editable files (.tex, .bib) in the project."""
-    await _require_job_access(job_id, request, response)
-    # Ensure job_dirs is populated (may need disk recovery)
-    if job_id not in _job_dirs:
-        _get_report(job_id)
-    project_dir = _job_dirs.get(job_id)
-    if not project_dir or not project_dir.exists():
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    return {"files": list_editable_files(project_dir)}
-
-
-@router.get("/files/{job_id}/{file_path:path}")
-async def read_file(job_id: str, file_path: str, request: Request, response: Response):
-    """Read a file's content."""
-    await _require_job_access(job_id, request, response)
-    if job_id not in _job_dirs:
-        _get_report(job_id)
-    project_dir = _job_dirs.get(job_id)
-    if not project_dir:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    target = safe_project_file(project_dir, file_path)
-    if not target.exists() or not target.is_file():
-        raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
-
-    # Security: ensure path is within project
-    try:
-        target.resolve().relative_to(project_dir.resolve())
-    except ValueError:
-        raise HTTPException(status_code=403, detail="Access denied")
-
-    content = target.read_text(encoding="utf-8", errors="replace")
-    return {"path": file_path, "content": content}
-
-
-@router.put("/files/{job_id}/{file_path:path}")
-async def save_file(job_id: str, file_path: str, request: Request, response: Response):
-    """Save file content (auto-save from editor)."""
-    await _require_job_access(job_id, request, response, write=True)
-    if job_id not in _job_dirs:
-        _get_report(job_id)
-    project_dir = _job_dirs.get(job_id)
-    if not project_dir:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    # Security: only allow editing known plain-text source files (blocks
-    # writing binaries/executables while preserving editor functionality)
-    if not any(file_path.lower().endswith(ext) for ext in EDITABLE_EXTENSIONS):
-        raise HTTPException(status_code=403, detail="只能编辑文本源文件（.tex/.bib/.cls/.sty 等）")
-
-    target = safe_project_file(project_dir, file_path, allowed_suffixes=EDITABLE_EXTENSIONS)
-
-    # Capture the previous content (if any) before overwriting so the edit can
-    # be tracked in history and reverted later.
-    old_content: str | None = None
-    if target.exists() and target.is_file():
-        try:
-            old_content = target.read_text(encoding="utf-8")
-        except Exception:
-            old_content = None
-
-    body = await request.body()
-    content = body.decode("utf-8")
-    target.write_text(content, encoding="utf-8")
-
-    # Record the change in the per-job edit history (best-effort: a history
-    # failure must never break saving the user's work).
-    try:
-        edit_history.record_edit(job_id, file_path, content, old_content)
-    except Exception as exc:  # pragma: no cover - defensive
-        logger.warning(f"edit history record failed for {job_id}: {redact(str(exc))}")
-
-    return {"status": "saved", "path": file_path, "size": len(content)}
+# ─── File CRUD endpoints moved to app.api.file_routes ─────────
 
 
 # ─── Edit history (track changes, review timeline, revert) ────
@@ -851,24 +772,7 @@ async def export_report(job_id: str, request: Request, response: Response):
     return PlainTextResponse("\n".join(lines), media_type="text/plain; charset=utf-8")
 
 
-@router.get("/download/{job_id}")
-async def download_project_zip(job_id: str, request: Request, response: Response):
-    """Download the current edited project as a ZIP archive."""
-    report = await _require_job_access(job_id, request, response)
-    if job_id not in _job_dirs:
-        _get_report(job_id)
-    project_dir = _job_dirs.get(job_id)
-    if not project_dir or not project_dir.exists():
-        raise HTTPException(status_code=404, detail="Project files not found")
-
-    buffer = project_zip_bytes(project_dir)
-    stem = Path(report.filename if report else job_id).stem
-    filename = f"{stem or job_id}-scholarlint.zip"
-    return StreamingResponse(
-        buffer,
-        media_type="application/zip",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
+# Project ZIP download moved to app.api.file_routes.
 
 
 # ─── Bib Cleaning Tools ──────────────────────────────────────

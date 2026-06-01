@@ -1,5 +1,12 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.94 (2026-06-01) — Split file_routes from routes.py
+- 拆分上帝文件第一刀：新增 `app/api/file_routes.py`，从 `app/api/routes.py` 迁出 4 个端点：`GET /api/files/{job_id}`（列表）、`GET /api/files/{job_id}/{file_path}`（读）、`PUT /api/files/{job_id}/{file_path}`（写）、`GET /api/download/{job_id}`（项目 ZIP）
+- 外部 URL 完全不变；新模块通过 import `routes` 私有 helper（`_require_job_access` / `_get_report` / `_job_dirs`）保持权限校验、状态管理、edit_history 追踪等行为完全一致
+- `main.py` 挂载新 router，原 routes.py 删除对应 4 段端点定义并清理未用 import（`StreamingResponse` / `list_editable_files` / `project_zip_bytes`）
+- 4 个相关测试 fixture（test_e2e_minimal、test_edit_history、test_job_ownership、test_upload_api）同步挂载新 router
+- 纯结构性重构，零行为变化；通过 ruff、JS 检查、JS helper 测试 7 项、secret scan、pytest 133 项
+
 ## v5.3.93 (2026-06-01) — Anonymous Session Cookie Secure Alignment
 - 匿名 `sl_session` cookie 的 Secure 标志原本写死 `False`，与登录 cookie 的"生产/HTTPS 自动 Secure"行为不一致
 - 新增 `_secure_session_cookie(request)` 判断（与 `auth_routes._secure_cookie` 同款逻辑）：`app_env=prod/production`、`request.url.scheme=https`、或 `x-forwarded-proto=https` 任一成立即设 Secure

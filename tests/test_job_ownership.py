@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 
 from app import storage
 from app.api import routes
+from app.api import file_routes
 from app.models import FullReport
 from tests.conftest import clear_route_state
 
@@ -60,6 +61,7 @@ def ownership_app(tmp_path, monkeypatch):
 
     app = FastAPI()
     app.include_router(routes.router, prefix="/api")
+    app.include_router(file_routes.router, prefix="/api")
     yield app
 
     clear_route_state()

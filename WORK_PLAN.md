@@ -4,7 +4,7 @@
 >
 > 与 [TODO.md](TODO.md)（历史完成情况快照）和 [HANDOVER.md](HANDOVER.md)（项目状态总览）配合使用。
 >
-> **当前版本**：v5.3.93 · **当前节奏**：每轮一项，走完整流水线（验证 → CHANGELOG → commit → push）。
+> **当前版本**：v5.3.94 · **当前节奏**：每轮一项，走完整流水线（验证 → CHANGELOG → commit → push）。
 
 ---
 
@@ -38,11 +38,10 @@
 
 ## 🟡 P1 — 工程可维护性（继续"好交接给工程师"方向）
 
-### M1. 拆分 routes.py：抽出 file_routes.py
+### M1. 拆分 routes.py：抽出 file_routes.py ✅ v5.3.94
 
-- **范围**：把 `GET /api/files/{job_id}`、`GET /api/files/{job_id}/{file_path}`、`PUT /api/files/{job_id}/{file_path}`、`GET /api/download/{job_id}` 4 个端点迁到新模块。
-- **要点**：保留外部 URL 不变；`main.py` 里挂载新 router；老 routes.py 留兼容 import 直到下一轮拆完。
-- **验证**：现有 103+ 测试全过；URL 不变意味着前端无改动。
+- ~~**范围**：把 `GET /api/files/{job_id}`、`GET /api/files/{job_id}/{file_path}`、`PUT /api/files/{job_id}/{file_path}`、`GET /api/download/{job_id}` 4 个端点迁到新模块。~~
+- **已完成**：新模块 `app/api/file_routes.py` 通过 import `routes` 私有 helper 复用权限/状态逻辑；URL 不变；4 个测试 fixture 同步挂载新 router；ruff 清理未用 import。pytest 133 全过。
 
 ### M2. 拆分 routes.py：抽出 tool_routes.py
 

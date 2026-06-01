@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 
 from app import storage
 from app.api import routes
+from app.api import file_routes
 from app.models import CheckResult
 from tests.conftest import clear_route_state
 
@@ -43,6 +44,7 @@ def e2e_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     clear_route_state()
     app = FastAPI()
     app.include_router(routes.router, prefix="/api")
+    app.include_router(file_routes.router, prefix="/api")
 
     with TestClient(app) as client:
         yield client

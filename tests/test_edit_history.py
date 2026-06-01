@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 
 from app import storage
 from app.api import routes
+from app.api import file_routes
 from app.models import FullReport
 from app.services import edit_history
 from tests.conftest import clear_route_state
@@ -58,6 +59,7 @@ def history_client(tmp_path, monkeypatch):
 
     app = FastAPI()
     app.include_router(routes.router, prefix="/api")
+    app.include_router(file_routes.router, prefix="/api")
     client = TestClient(app)
     client.cookies.set(routes.SESSION_COOKIE_NAME, owner_session)
     yield client, job_id, share_token
