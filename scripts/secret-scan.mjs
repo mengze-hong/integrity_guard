@@ -2,7 +2,14 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 
 const selfPath = "scripts/secret-scan.mjs";
-const excludedPaths = new Set([selfPath]);
+// Files that legitimately define or test secret-handling patterns. They have
+// no real secrets but carry pattern literals (e.g. sk-uin… prefixes) that
+// would otherwise trigger this scan.
+const excludedPaths = new Set([
+  selfPath,
+  "app/secrets_manager.py",
+  "tests/test_redact.py",
+]);
 
 const excludedPrefixes = [
   ".cursor/",

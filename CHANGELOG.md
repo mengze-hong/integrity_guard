@@ -1,5 +1,12 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.90 (2026-06-01) — Hardened Secret Redaction
+- 新增工作计划清单 `WORK_PLAN.md`：按 P0 安全/P1 可维护性/P2 性能/P3 商业化分组列出可一轮完成的执行项，配合 TODO.md 与 HANDOVER.md 使用
+- 扩展 `secrets_manager.redact()`：除原有 LLM key/url 字面替换外，覆盖 JWT (`eyJ…`)、`Authorization: Bearer …`、内部 LLM key 前缀、API token 前缀 `sl_…`、PEM 私钥/证书块；同时把 `JWT_SECRET`、`ADMIN_KEY`、`ALIPAY_*` 加入已知敏感名单按值替换
+- 新增 `tests/test_redact.py` 8 项：覆盖每种模式被替换、正常文本不误伤、空输入安全（pytest 108→116）
+- secret-scan 排除 `app/secrets_manager.py` 与 `tests/test_redact.py`（合法定义/测试 redaction 规则的位置）；CI 隧道扫描排除 `WORK_PLAN.md`（与 CHANGELOG 同等地位，需提及禁用词作为执行准则）
+- 防御性提升，无 API/行为变化；通过 ruff、JS 检查、JS helper 测试 7 项、secret scan、隧道扫描
+
 ## v5.3.89 (2026-05-31) — Dismissed-Issue Lookup Perf
 - 前端新增共享 `isDismissed(gateName, idx)` helper：按 report 缓存一个 `gate::index` 的 Set，复用查询，report 变化时自动重建
 - 文件树徽章（`renderFileItem`）、文件状态（`getFileStatus`）、编辑器标记（`markIssuesInEditor`）、问题收集与复制清单等 6 处原本对每个 issue 都扫描整个 `dismissed_issues` 数组（O(文件×gate×issue×dismissed)），改为 O(1) 查询，文件/问题多时文件树渲染更顺畅

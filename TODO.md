@@ -167,6 +167,7 @@
 - [x] 上传 API 集成测试覆盖真实解压/gate 编排、失败报告持久化、Zip Slip 与危险文件清理
 - [x] 最小 API 级 E2E 覆盖 upload/report/files/save/recheck，验证编辑后重新质检会刷新报告并清除图表交叉引用问题
 - [x] 共享测试 fixture：新增 `tests/conftest.py` 统一路由状态清理（`clear_route_state`），5 个测试文件去重 setup/teardown，降低维护与交接成本
+- [x] 全局脱敏加固：`secrets_manager.redact()` 扩展覆盖 JWT、Bearer、PEM 块、API token 前缀、内部 LLM key 前缀；`_SENSITIVE_NAMES` 加入 JWT_SECRET/ADMIN_KEY/ALIPAY_*；新增 `tests/test_redact.py` 8 项
 
 ### 部署 & 运维
 - [x] Docker 化（Dockerfile + docker-compose.yml + requirements.txt）

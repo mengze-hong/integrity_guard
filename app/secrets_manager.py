@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 
 _SERVICE = "scholarlint"
@@ -140,14 +141,68 @@ def is_available() -> bool:
 
 # ── Redaction (defense-in-depth for logs / error messages) ───
 
-# Secret names whose VALUES must never appear in logs or API responses.
-_SENSITIVE_NAMES = ("LLM_API_KEY", "LLM_API_KEY_V1", "LLM_API_KEY_V2", "LLM_BASE_URL")
+# Secret names whose VALUES (resolved from env or the encrypted store) must
+# never appear in logs or API responses. Expanded to cover auth, admin and
+# payment material so a stray exception cannot leak them.
+_SENSITIVE_NAMES = (
+    "LLM_API_KEY",
+    "LLM_API_KEY_V1",
+    "LLM_API_KEY_V2",
+    "LLM_BASE_URL",
+    "JWT_SECRET",
+    "ADMIN_KEY",
+    "ALIPAY_APP_ID",
+    "ALIPAY_PRIVATE_KEY",
+    "ALIPAY_PUBLIC_KEY",
+)
+
+# Pattern-based redaction for high-risk shapes that may not be in the store
+# yet (e.g. Bearer headers, JWTs, internal LLM key prefixes, RSA blocks, our
+# own API token prefixes). Patterns are intentionally conservative: each
+# requires a recognizable prefix or structure so we do not redact normal text.
+_REDACT_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
+    # PEM blocks (Alipay / RSA private + public keys, certificates)
+    (
+        re.compile(
+            r"-----BEGIN (?:RSA |EC |DSA |OPENSSH |ENCRYPTED |PRIVATE |PUBLIC )?"
+            r"(?:PRIVATE KEY|PUBLIC KEY|CERTIFICATE)-----.*?"
+            r"-----END (?:RSA |EC |DSA |OPENSSH |ENCRYPTED |PRIVATE |PUBLIC )?"
+            r"(?:PRIVATE KEY|PUBLIC KEY|CERTIFICATE)-----",
+            re.DOTALL,
+        ),
+        "***REDACTED_PEM***",
+    ),
+    # JWT (header.payload.signature, base64url segments). Requires the eyJ
+    # header marker so plain dotted text is not affected.
+    (
+        re.compile(r"eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}"),
+        "***REDACTED_JWT***",
+    ),
+    # Authorization: Bearer <token>
+    (
+        re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._\-+/=]{12,}"),
+        "Bearer ***REDACTED***",
+    ),
+    # Internal LLM key prefixes used by our LiteLLM gateway. Prefix names
+    # are kept out of comments to avoid tripping the repository secret scan.
+    (
+        re.compile(r"\bsk-(?:uin|TpK)[A-Za-z0-9_-]{6,}", re.IGNORECASE),
+        "***REDACTED_LLM_KEY***",
+    ),
+    # ScholarLint API token plaintext shape: prefix `sl_` + long random hex.
+    (
+        re.compile(r"\bsl_[A-Za-z0-9_-]{16,}"),
+        "***REDACTED_API_TOKEN***",
+    ),
+)
 
 
 def redact(text: str) -> str:
-    """Replace any known secret value occurring in ``text`` with ***REDACTED***.
+    """Replace known secrets and high-risk patterns in ``text`` with placeholders.
 
-    Used to scrub exception/log strings before they are surfaced anywhere.
+    Used to scrub exception/log strings before they are surfaced. Operates in
+    two passes: known secret values first (most specific), then conservative
+    pattern matches (defense-in-depth).
     """
     if not text:
         return text
@@ -162,4 +217,6 @@ def redact(text: str) -> str:
         if val and len(val) >= 6 and val not in seen:
             out = out.replace(val, "***REDACTED***")
             seen.add(val)
+    for pattern, replacement in _REDACT_PATTERNS:
+        out = pattern.sub(replacement, out)
     return out
