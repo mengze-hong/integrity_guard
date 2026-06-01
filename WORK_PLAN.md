@@ -4,7 +4,7 @@
 >
 > 与 [TODO.md](TODO.md)（历史完成情况快照）和 [HANDOVER.md](HANDOVER.md)（项目状态总览）配合使用。
 >
-> **当前版本**：v5.3.94 · **当前节奏**：每轮一项，走完整流水线（验证 → CHANGELOG → commit → push）。
+> **当前版本**：v5.3.95 · **当前节奏**：每轮一项，走完整流水线（验证 → CHANGELOG → commit → push）。
 
 ---
 
@@ -43,10 +43,10 @@
 - ~~**范围**：把 `GET /api/files/{job_id}`、`GET /api/files/{job_id}/{file_path}`、`PUT /api/files/{job_id}/{file_path}`、`GET /api/download/{job_id}` 4 个端点迁到新模块。~~
 - **已完成**：新模块 `app/api/file_routes.py` 通过 import `routes` 私有 helper 复用权限/状态逻辑；URL 不变；4 个测试 fixture 同步挂载新 router；ruff 清理未用 import。pytest 133 全过。
 
-### M2. 拆分 routes.py：抽出 tool_routes.py
+### M2. 拆分 routes.py：抽出 tool_routes.py ✅ v5.3.95
 
-- **范围**：`/api/bib-clean`、`/api/tidyup`（GET+POST）、`/api/format-normalize`、`/api/fetch-bib`。
-- **同 M1 节奏**：迁路由 + 挂载 + 测试不变。
+- ~~**范围**：`/api/bib-clean`、`/api/tidyup`（GET+POST）、`/api/format-normalize`、`/api/fetch-bib`。~~
+- **已完成**：5 个端点（含 `/api/reference-candidates`）迁到 `app/api/tool_routes.py`，URL 不变；新模块顶部统一 `import httpx`（替代 5 处惰性导入），引用候选直接 import `ai_guardrails`，不再借 routes 跳板；ruff/pytest 133 全过。
 
 ### M3. 拆分 routes.py：抽出 checklist_routes.py
 

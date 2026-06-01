@@ -1,5 +1,12 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.95 (2026-06-01) — Split tool_routes from routes.py
+- 拆分上帝文件第二刀：新增 `app/api/tool_routes.py`，迁出 5 个工具端点：`POST /api/bib-clean/{job_id}`、`GET /api/fetch-bib/{doi}`、`POST /api/reference-candidates/{job_id}`、`GET|POST /api/tidyup/{job_id}`、`POST /api/format-normalize/{job_id}`
+- 新模块顶部固定 `import httpx`（之前 5 处惰性导入冗余），统一 `from app.api.routes import _require_job_access, _get_report, _job_dirs` 复用权限/状态
+- 引用候选逻辑保留对 `app.services.ai_guardrails` 的直接 import（`candidate_from_crossref` / `s2` / `openalex` / `extract_reference_title`），不再借助 `routes.py` 的 re-export 跳板
+- `routes.py` 删除 5 个端点定义、清理 `__all__` 中已不再 re-export 的 4 个名字、移除对应 ai_guardrails import；`tests/test_ai_integrity.py` 改为直接从 `ai_guardrails` 导入
+- 外部 URL 完全不变；`main.py` 挂载新 router；纯结构性重构，pytest 133 项全过；通过 ruff、JS 检查、JS helper 测试 7 项、secret scan、隧道扫描
+
 ## v5.3.94 (2026-06-01) — Split file_routes from routes.py
 - 拆分上帝文件第一刀：新增 `app/api/file_routes.py`，从 `app/api/routes.py` 迁出 4 个端点：`GET /api/files/{job_id}`（列表）、`GET /api/files/{job_id}/{file_path}`（读）、`PUT /api/files/{job_id}/{file_path}`（写）、`GET /api/download/{job_id}`（项目 ZIP）
 - 外部 URL 完全不变；新模块通过 import `routes` 私有 helper（`_require_job_access` / `_get_report` / `_job_dirs`）保持权限校验、状态管理、edit_history 追踪等行为完全一致

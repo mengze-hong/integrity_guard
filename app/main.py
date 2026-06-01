@@ -12,6 +12,7 @@ from fastapi.templating import Jinja2Templates
 from app.config import settings
 from app.api.routes import router as api_router
 from app.api.file_routes import router as file_router
+from app.api.tool_routes import router as tool_router
 from app.api.ai_routes import router as ai_router
 from app.api.auth_routes import router as auth_router
 from app.api.payment_routes import router as payment_router
@@ -35,7 +36,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="ScholarLint",
     description="投稿通 — Academic paper pre-submission integrity checker",
-    version="5.3.94",
+    version="5.3.95",
     lifespan=lifespan,
 )
 
@@ -46,6 +47,7 @@ templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 # Include API routes
 app.include_router(api_router, prefix="/api")
 app.include_router(file_router, prefix="/api")
+app.include_router(tool_router, prefix="/api")
 app.include_router(ai_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")
 app.include_router(payment_router, prefix="/api")

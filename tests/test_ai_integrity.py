@@ -4,10 +4,12 @@ from pathlib import Path
 
 from app.api.routes import (
     _collect_batch_fix_candidates,
-    _candidate_from_crossref,
-    _extract_reference_title,
     _is_reference_authenticity_issue,
     _not_fixable_reference_payload,
+)
+from app.services.ai_guardrails import (
+    candidate_from_crossref as _candidate_from_crossref,
+    extract_reference_title as _extract_reference_title,
 )
 from app.models import CheckResult, DismissedIssue, FullReport, Issue, Severity
 from app.services.ai_reports import (

@@ -172,6 +172,7 @@
 - [x] API Token 接入鉴权：`get_current_user_optional` 识别 `Authorization: Bearer sl_api_…`，按 SHA-256 hash 查 `api_tokens` 表，命中返回 user 并写 `last_used_at`；新增 `tests/test_api_token_auth.py` 7 项
 - [x] 匿名 `sl_session` cookie Secure 对齐：与登录 cookie 同款判定（prod/HTTPS/x-forwarded-proto=https 自动 Secure）；新增 `tests/test_session_cookie_secure.py` 6 项
 - [x] 拆分 routes.py：抽出 `app/api/file_routes.py`（list/read/save 文件 + 下载 ZIP 4 个端点），URL 不变、行为不变；4 个测试 fixture 同步挂载新 router
+- [x] 拆分 routes.py 第二刀：抽出 `app/api/tool_routes.py`（bib-clean / fetch-bib / reference-candidates / tidyup GET+POST / format-normalize 共 5 端点），URL 不变；引用候选 helper 不再借 routes 跳板；test_ai_integrity 改直接从 ai_guardrails 导入
 
 ### 部署 & 运维
 - [x] Docker 化（Dockerfile + docker-compose.yml + requirements.txt）

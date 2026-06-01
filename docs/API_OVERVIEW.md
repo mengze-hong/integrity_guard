@@ -75,6 +75,8 @@ Endpoint reference for ScholarLint · 投稿通, grouped by router. All API rout
 | POST | `/api/format-normalize/{job_id}` | job write | Normalize LaTeX formatting (refs, abbreviations, whitespace, conservative cite). |
 | POST | `/api/venue-checklist/{job_id}` | job read | Generate ARR or NeurIPS checklist with evidence and rewrite suggestions. |
 
+> As of v5.3.95, the bib/tidyup/format/reference-candidates endpoints live in `app/api/tool_routes.py`; URLs are unchanged.
+
 ## AI Router (`app/api/ai_routes.py`)
 
 All AI endpoints enforce the reference-authenticity guardrail and LLM usage caps. Outputs are labeled as suggestions/simulations requiring human verification.
