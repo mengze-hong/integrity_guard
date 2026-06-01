@@ -4,7 +4,7 @@
 >
 > 与 [TODO.md](TODO.md)（历史完成情况快照）和 [HANDOVER.md](HANDOVER.md)（项目状态总览）配合使用。
 >
-> **当前版本**：v5.3.91 · **当前节奏**：每轮一项，走完整流水线（验证 → CHANGELOG → commit → push）。
+> **当前版本**：v5.3.92 · **当前节奏**：每轮一项，走完整流水线（验证 → CHANGELOG → commit → push）。
 
 ---
 
@@ -15,12 +15,10 @@
 - ~~**现状**：`_owner_metadata_allows()` 对没有 owner_type/owner_id 的报告默认放行（本地 demo 兼容）。生产环境这是过宽的旁路。~~
 - **已完成**：当 `settings.app_env in {"prod", "production"}` 时，缺 owner metadata 的 job 一律返回 403；本地保持原行为。新增 `tests/test_legacy_owner_strict.py` 4 项覆盖 prod 拒绝 / 本地放行 / 有 owner 不受影响。
 
-### S2. API Token 真正接入鉴权
+### S2. API Token 真正接入鉴权 ✅ v5.3.92
 
-- **现状**：Pro/Team 用户能创建/撤销 API Token，但业务接口实际只认 cookie/JWT，token 还没生效。
-- **要做**：扩展 `app/dependencies.py`：在 `get_current_user_optional` 里识别 `Authorization: Bearer <token>` 是否为有效的 API Token（按 SHA-256 哈希查 `api_tokens` 表），命中则返回对应用户。
-- **验证**：新增测试覆盖 token 命中 / 错误 / 已撤销 / 跨用户拒绝。
-- **文件**：`app/dependencies.py`、`app/auth.py` 或新增 `app/services/api_tokens.py`、`tests/test_api_token_auth.py`。
+- ~~**现状**：Pro/Team 用户能创建/撤销 API Token，但业务接口实际只认 cookie/JWT，token 还没生效。~~
+- **已完成**：`app/dependencies.py` 在 Bearer 值以 `sl_api_` 开头时按 SHA-256 hash 查 `api_tokens` 表；命中即返回 user 并写 `last_used_at`，未知/已撤销返回 None。新增 `tests/test_api_token_auth.py` 7 项覆盖各路径。
 
 ### S3. 全局脱敏覆盖更多敏感模式 ✅ v5.3.90
 

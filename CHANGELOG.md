@@ -1,5 +1,12 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.92 (2026-06-01) — API Token Authentication
+- Pro/Team API Token 真正接入业务接口鉴权：`get_current_user_optional` 在 `Authorization: Bearer sl_api_…` 时按 SHA-256 hash 查 `api_tokens` 表，命中且未撤销则返回对应用户；其他 Bearer 值仍按 JWT 解码（向后兼容）
+- 命中后写 `last_used_at` 时间戳，便于审计；未知/已撤销 token 静默返回 None（不泄露存在性）
+- 新增 `tests/test_api_token_auth.py` 7 项：有效 token / 未知 token / 已撤销 / last_used_at 写入 / 无凭证 / 合法 JWT Bearer 仍工作 / 非法 JWT 拒绝（pytest 120→127）
+- 修复 SQLAlchemy detached-instance 陷阱：commit 后重新查询 user 并 expunge，使 dependency 返回的对象在 session 关闭后仍可读属性
+- 通过 ruff、JS 检查、JS helper 测试 7 项、secret scan、隧道扫描
+
 ## v5.3.91 (2026-06-01) — Legacy Job Tightened in Production
 - 修复生产权限旁路：`_owner_metadata_allows()` 原本对缺少 `owner_type/owner_id` 的旧 job 一律放行（本地 demo 兼容），上线公网后等同于"猜中 job_id 即可访问"
 - 当 `settings.app_env in {"prod", "production"}` 时，缺 owner metadata 的 job 一律返回 403；本地默认 `app_env=local` 行为保持不变（旧报告仍可访问）

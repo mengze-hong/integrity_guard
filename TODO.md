@@ -169,6 +169,7 @@
 - [x] 共享测试 fixture：新增 `tests/conftest.py` 统一路由状态清理（`clear_route_state`），5 个测试文件去重 setup/teardown，降低维护与交接成本
 - [x] 全局脱敏加固：`secrets_manager.redact()` 扩展覆盖 JWT、Bearer、PEM 块、API token 前缀、内部 LLM key 前缀；`_SENSITIVE_NAMES` 加入 JWT_SECRET/ADMIN_KEY/ALIPAY_*；新增 `tests/test_redact.py` 8 项
 - [x] Legacy job 生产收紧：`_owner_metadata_allows` 在 `app_env=prod/production` 时拒绝缺 owner metadata 的 job（403），本地兼容保留；新增 `tests/test_legacy_owner_strict.py` 4 项
+- [x] API Token 接入鉴权：`get_current_user_optional` 识别 `Authorization: Bearer sl_api_…`，按 SHA-256 hash 查 `api_tokens` 表，命中返回 user 并写 `last_used_at`；新增 `tests/test_api_token_auth.py` 7 项
 
 ### 部署 & 运维
 - [x] Docker 化（Dockerfile + docker-compose.yml + requirements.txt）
