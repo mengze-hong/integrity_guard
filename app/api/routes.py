@@ -23,7 +23,6 @@ from app.checks.gate_citations import CitationConsistencyGate
 from app.checks.gate_figures import FigureTableGate
 from app.checks.gate_data import DataIntegrityGate
 from app.checks.gate_writing import WritingQualityGate
-from app.checklists import CHECKLISTS
 from app.services.ai_guardrails import (
     ai_fix_provenance as _ai_fix_provenance,
     is_reference_authenticity_issue as _is_reference_authenticity_issue,
@@ -905,115 +904,7 @@ def _collect_batch_fix_candidates(report: FullReport, project_dir: Path, limit: 
 
 
 # ─── Reproducibility Checklist ───────────────────────────────
-
-@router.post("/venue-checklist/{job_id}")
-async def generate_venue_checklist(job_id: str, request: Request, response: Response):
-    """AI auto-fill an official ARR / NeurIPS checklist based on paper content."""
-    await _require_job_access(job_id, request, response, write=True)
-    _llm_usage_guard(request)
-    if job_id not in _job_dirs:
-        _get_report(job_id)
-    project_dir = _job_dirs.get(job_id)
-    if not project_dir:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
-    venue = str(body.get("venue", "arr")).lower()
-    if venue == "reproducibility":
-        venue = "arr"
-    template = CHECKLISTS.get(venue, CHECKLISTS["arr"])
-    checklist = template["items"]
-
-    # Get paper content
-    main_text = ""
-    for f in project_dir.rglob("*.tex"):
-        content = f.read_text(encoding="utf-8", errors="replace")
-        if "\\documentclass" in content:
-            main_text = content[:10000]
-            break
-
-    if not main_text:
-        return {"status": "error", "detail": "No main .tex found"}
-
-    # Build prompt
-    checklist_str = "\n".join(
-        [f"- [{item['id']}] ({item['section']}) {item['text']}" for item in checklist]
-    )
-
-    import httpx
-    try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            resp = await _llm_chat_post(
-                client,
-                [
-                    {"role": "system", "content": f"""You are an academic reproducibility assistant helping authors fill out the official {template['name']} for their paper.
-
-For each checklist item, determine:
-- "yes": The paper addresses this. Provide the exact section/paragraph evidence if visible.
-- "no": The paper does NOT address this. Write a brief justification and a concrete rewrite/addition suggestion.
-- "na": Not applicable. Explain why in one sentence.
-
-IMPORTANT:
-- Use the checklist IDs exactly as provided.
-- The justification must be a complete sentence that can be directly pasted into the submission form.
-- Write in English (this is for conference submission).
-- If the paper is missing evidence, answer "no"; do not infer unstated compliance.
-- Include an "evidence" field for every item. Use "Not found in provided excerpt" if no evidence is visible.
-- For "no", include "missing_type": "missing_from_paper" or "insufficient_evidence".
-- Include "rewrite_suggestion" for "no" items. Keep it actionable but do not invent claims or results.
-
-Examples:
-- {{"id":"C1","answer":"yes","evidence":"Section 1 states that code will be released in an anonymized repository.","justification":"We release our source code at the anonymized repository linked in Section 1, with a README describing how to reproduce all results.","missing_type":"","rewrite_suggestion":""}}
-- {{"id":"E3","answer":"no","evidence":"Not found in provided excerpt","justification":"We report only single-run results; we will add mean and standard deviation over multiple seeds.","missing_type":"missing_from_paper","rewrite_suggestion":"Add a paragraph in the Experiments section reporting mean and standard deviation over multiple random seeds."}}
-- {{"id":"T1","answer":"na","evidence":"The paper excerpt describes empirical experiments only.","justification":"Our work is empirical and contains no theoretical claims requiring proofs.","missing_type":"","rewrite_suggestion":""}}
-
-Output as JSON array."""},
-                    {"role": "user", "content": f"Checklist items:\n{checklist_str}\n\nPaper content:\n{main_text[:6000]}"},
-                ],
-                max_tokens=3000,
-                temperature=0.2,
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                result_text = data["choices"][0]["message"]["content"].strip()
-                # Parse JSON from response
-                import json
-                # Try to extract JSON array
-                json_match = result_text
-                if "```" in json_match:
-                    json_match = json_match.split("```")[1].replace("json", "").strip()
-                try:
-                    answers = json.loads(json_match)
-                except json.JSONDecodeError:
-                    answers = []
-
-                # Merge answers with checklist items
-                result = []
-                for item in checklist:
-                    answer_data = next((a for a in answers if a.get("id") == item["id"]), None)
-                    result.append({
-                        **item,
-                        "answer": answer_data.get("answer", "unknown") if answer_data else "unknown",
-                        "justification": answer_data.get("justification", answer_data.get("reason", "")) if answer_data else "",
-                        "evidence": answer_data.get("evidence", "") if answer_data else "",
-                        "missing_type": answer_data.get("missing_type", "") if answer_data else "",
-                        "rewrite_suggestion": answer_data.get("rewrite_suggestion", "") if answer_data else "",
-                    })
-
-                return {
-                    "status": "ok",
-                    "venue": venue,
-                    "name": template["name"],
-                    "source": template["source"],
-                    "checklist": result,
-                }
-            else:
-                return {"status": "error", "detail": f"LLM returned {resp.status_code}"}
-    except Exception as e:
-        return {"status": "error", "detail": redact(str(e))[:100]}
+# venue-checklist endpoint moved to app.api.checklist_routes.
 
 
 # ─── History & Cleanup ────────────────────────────────────────

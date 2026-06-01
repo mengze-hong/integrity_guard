@@ -4,7 +4,7 @@
 >
 > 与 [TODO.md](TODO.md)（历史完成情况快照）和 [HANDOVER.md](HANDOVER.md)（项目状态总览）配合使用。
 >
-> **当前版本**：v5.3.95 · **当前节奏**：每轮一项，走完整流水线（验证 → CHANGELOG → commit → push）。
+> **当前版本**：v5.3.96 · **当前节奏**：每轮一项，走完整流水线（验证 → CHANGELOG → commit → push）。
 
 ---
 
@@ -48,10 +48,10 @@
 - ~~**范围**：`/api/bib-clean`、`/api/tidyup`（GET+POST）、`/api/format-normalize`、`/api/fetch-bib`。~~
 - **已完成**：5 个端点（含 `/api/reference-candidates`）迁到 `app/api/tool_routes.py`，URL 不变；新模块顶部统一 `import httpx`（替代 5 处惰性导入），引用候选直接 import `ai_guardrails`，不再借 routes 跳板；ruff/pytest 133 全过。
 
-### M3. 拆分 routes.py：抽出 checklist_routes.py
+### M3. 拆分 routes.py：抽出 checklist_routes.py ✅ v5.3.96
 
-- **范围**：`/api/venue-checklist/{job_id}`。
-- **小步**：作为 M1/M2 之后的延续。
+- ~~**范围**：`/api/venue-checklist/{job_id}`。~~
+- **已完成**：单端点迁到 `app/api/checklist_routes.py`，URL 不变；routes.py 移除已无用的 `from app.checklists import CHECKLISTS`；新模块顶部统一 httpx/json import；ruff/pytest 133 全过。
 
 ### M4. 解耦 ai_routes.py 对 routes.py 私有 helper 的 import
 

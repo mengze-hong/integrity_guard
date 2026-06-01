@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.96 (2026-06-01) — Split checklist_routes from routes.py
+- 拆分上帝文件第三刀：新增 `app/api/checklist_routes.py`，迁出 `POST /api/venue-checklist/{job_id}` 端点（ARR/NeurIPS 复现性 checklist AI 自动填充）
+- 新模块顶部统一 `import httpx` / `import json`（替换原有的内嵌惰性导入），LLM 系统提示和不变量保持不变（缺证据答 no、不臆造结论）
+- `routes.py` 删除该端点定义，并移除 `from app.checklists import CHECKLISTS` 这条已无用 import
+- `main.py` 挂载新 router；外部 URL 不变；纯结构性重构，pytest 133 项全过；通过 ruff、JS 检查、JS helper 测试 7 项、secret scan、隧道扫描
+
 ## v5.3.95 (2026-06-01) — Split tool_routes from routes.py
 - 拆分上帝文件第二刀：新增 `app/api/tool_routes.py`，迁出 5 个工具端点：`POST /api/bib-clean/{job_id}`、`GET /api/fetch-bib/{doi}`、`POST /api/reference-candidates/{job_id}`、`GET|POST /api/tidyup/{job_id}`、`POST /api/format-normalize/{job_id}`
 - 新模块顶部固定 `import httpx`（之前 5 处惰性导入冗余），统一 `from app.api.routes import _require_job_access, _get_report, _job_dirs` 复用权限/状态

@@ -76,6 +76,7 @@ Endpoint reference for ScholarLint · 投稿通, grouped by router. All API rout
 | POST | `/api/venue-checklist/{job_id}` | job read | Generate ARR or NeurIPS checklist with evidence and rewrite suggestions. |
 
 > As of v5.3.95, the bib/tidyup/format/reference-candidates endpoints live in `app/api/tool_routes.py`; URLs are unchanged.
+> As of v5.3.96, the venue-checklist endpoint lives in `app/api/checklist_routes.py`; URL unchanged.
 
 ## AI Router (`app/api/ai_routes.py`)
 
