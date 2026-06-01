@@ -4,7 +4,7 @@ Academic paper pre-submission integrity checker. Upload a LaTeX project ZIP and 
 
 ScholarLint is built as a commercializable SaaS, not a one-off demo. Strict checking is intentional: false positives are acceptable, missed integrity issues are not.
 
-- App version: `5.3.97` (see [CHANGELOG.md](CHANGELOG.md))
+- App version: `5.3.98` (see [CHANGELOG.md](CHANGELOG.md))
 - Stack: FastAPI + SQLite + a single-page HTML/JS frontend
 - LLM features are advisory only and never fabricate references
 

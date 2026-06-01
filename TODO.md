@@ -175,6 +175,7 @@
 - [x] 拆分 routes.py 第二刀：抽出 `app/api/tool_routes.py`（bib-clean / fetch-bib / reference-candidates / tidyup GET+POST / format-normalize 共 5 端点），URL 不变；引用候选 helper 不再借 routes 跳板；test_ai_integrity 改直接从 ai_guardrails 导入
 - [x] 拆分 routes.py 第三刀：抽出 `app/api/checklist_routes.py`（venue-checklist 单端点），URL 不变；routes.py 同步移除已无用的 CHECKLISTS import
 - [x] routes.py 模块级文档加固：完整 docstring 列出剩余端点清单/共享基础设施/三条不变量；权限/会话/缓存核心 helper 与关键端点（upload/status/report）加详细 docstring；状态变量 inline 注释指向 clear_route_state；零行为变化
+- [x] 抽出 `app/services/permissions.py`（M4）：9 个无状态权限/会话 helper 迁出（share-token / Secure cookie / owner_metadata_allows / can_access_report），通过 dependency injection 与 routes.py 模块级 state 解耦；新增 `tests/test_permissions_service.py` 17 项单元测试（pytest 133→150）
 
 ### 部署 & 运维
 - [x] Docker 化（Dockerfile + docker-compose.yml + requirements.txt）

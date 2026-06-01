@@ -95,6 +95,19 @@ from app.services.file_store import (
 from app.services.dimension_scores import build_dimension_scores
 from app.services.style_analysis import analyze_writing_style
 from app.services import edit_history
+from app.services.permissions import (  # noqa: F401  (re-exported for back-compat)
+    SESSION_COOKIE_NAME,
+    SESSION_COOKIE_MAX_AGE,
+    request_share_token as _request_share_token,
+    secure_session_cookie as _secure_session_cookie,
+    set_session_cookie_if_needed as _set_session_cookie_if_needed,
+    new_share_token as _new_share_token,
+    owner_metadata as _owner_metadata,
+    extract_owner_metadata as _extract_owner_metadata,
+    request_uses_valid_share_token as _request_uses_valid_share_token,
+    owner_metadata_allows as _owner_metadata_allows_impl,
+    can_access_report as _can_access_report_impl,
+)
 from app import storage
 from app.logging_config import logger
 
@@ -129,57 +142,19 @@ _job_locks: set[str] = set()  # job_ids currently running checks/rechecks
 BATCH_FIX_LIMIT = 5
 BATCH_FIX_ALLOWED_SUFFIXES = (".tex", ".bib")
 
-# Anonymous-session cookie. Logged-in users are identified by the JWT
-# cookie (``token``); pre-login uploads are still attributed to the
-# requester via ``sl_session``. See ``_secure_session_cookie`` for the
-# Secure-flag policy (mirrors ``auth_routes._secure_cookie``).
-SESSION_COOKIE_NAME = "sl_session"
-SESSION_COOKIE_MAX_AGE = 30 * 86400
+# Anonymous-session cookie. Stateless helpers and the cookie name/TTL
+# live in ``app.services.permissions`` (see M4 / v5.3.98). The names
+# are re-exported above next to the rest of the imports so existing
+# call sites in this module and any legacy importers keep working
+# unchanged.
 
 
-def _request_share_token(request: Request) -> str:
-    """Read a share token from the request.
-
-    Accepts either the ``?share=...`` query parameter (used by share
-    links emailed to supervisors) or the ``X-Share-Token`` header (used
-    by programmatic clients). Returns the empty string when no token is
-    present so callers can compare with ``token == ""``.
-    """
-    return (
-        request.query_params.get("share")
-        or request.headers.get("X-Share-Token")
-        or ""
-    ).strip()
-
-
-def _secure_session_cookie(request: Request) -> bool:
-    """Mirror auth_routes._secure_cookie so anonymous sessions get the same
-    Secure-flag policy as logged-in users: always Secure in prod, and Secure
-    whenever the request itself is HTTPS (directly or via reverse proxy)."""
-    if settings.app_env in {"prod", "production"}:
-        return True
-    return (
-        request.url.scheme == "https"
-        or request.headers.get("x-forwarded-proto", "").lower() == "https"
-    )
-
-
-def _set_session_cookie_if_needed(
-    response: Response | None,
-    session_id: str,
-    request: Request | None = None,
-) -> None:
-    """Persist a generated anonymous session id in an httpOnly cookie."""
-    if response is None:
-        return
-    response.set_cookie(
-        SESSION_COOKIE_NAME,
-        session_id,
-        httponly=True,
-        secure=_secure_session_cookie(request) if request is not None else False,
-        max_age=SESSION_COOKIE_MAX_AGE,
-        samesite="lax",
-    )
+# ── Owner / access helpers ───────────────────────────────────
+# The stateless share-token / cookie / owner-metadata helpers come from
+# ``app.services.permissions`` (imported above). The two helpers below
+# stay here because they bind to ``_get_request_owner``, which itself
+# must live in this module to avoid a permissions ↔ dependencies
+# circular import.
 
 
 async def _get_request_owner(
@@ -200,6 +175,10 @@ async def _get_request_owner(
         3. Anonymous: an ``sl_session`` cookie. If absent, a fresh random
            id is generated and written back to ``response`` (when given).
 
+    Stays in ``routes.py`` (not extracted to ``app.services.permissions``)
+    because it imports ``app.dependencies`` which would otherwise create a
+    permissions ↔ dependencies circular import.
+
     Returns a dict with ``owner_type`` ("user" | "session"), ``owner_id``,
     and (for sessions) the raw ``session_id`` so callers can stamp it
     on share-link metadata.
@@ -219,57 +198,6 @@ async def _get_request_owner(
     return {"owner_type": "session", "owner_id": session_id, "session_id": session_id}
 
 
-def _new_share_token() -> str:
-    """Generate a fresh share token (URL-safe random, ~32 chars)."""
-    return secrets.token_urlsafe(24)
-
-
-def _owner_metadata(owner: dict, share_token: str | None = None) -> dict:
-    """Build the persisted ownership block for a new job.
-
-    Stamped onto a report at upload time; later compared against the
-    request owner via ``_owner_metadata_allows``. ``share_token`` is
-    auto-generated so every new report gets a stable, sharable, never-
-    leaked-in-URL token by default.
-    """
-    metadata = {
-        "owner_type": owner["owner_type"],
-        "owner_id": owner["owner_id"],
-        "share_token": share_token or _new_share_token(),
-    }
-    if owner.get("session_id"):
-        metadata["session_id"] = owner["session_id"]
-    return metadata
-
-
-def _extract_owner_metadata(report_or_metadata) -> dict:
-    """Pull a normalized owner dict out of either a report or raw dict.
-
-    Tolerant of missing fields so older reports (or partial payloads)
-    do not raise; missing values come back as ``None``.
-    """
-    metadata = getattr(report_or_metadata, "metadata", report_or_metadata) or {}
-    return {
-        "owner_type": metadata.get("owner_type"),
-        "owner_id": metadata.get("owner_id"),
-        "session_id": metadata.get("session_id"),
-        "share_token": metadata.get("share_token"),
-    }
-
-
-def _request_uses_valid_share_token(report: FullReport, request: Request) -> bool:
-    """True if the request carries a share token matching this report.
-
-    Uses ``secrets.compare_digest`` to avoid timing side-channels on
-    the token comparison. Returns false when either side is missing.
-    """
-    request_share = _request_share_token(request)
-    share_token = _extract_owner_metadata(report).get("share_token")
-    if not request_share or not share_token:
-        return False
-    return secrets.compare_digest(request_share, str(share_token))
-
-
 async def _owner_metadata_allows(
     metadata: dict,
     request: Request,
@@ -278,47 +206,19 @@ async def _owner_metadata_allows(
     write: bool = False,
     allow_share: bool = True,
 ) -> bool:
-    """Decide whether a request may access a job with the given metadata.
-
-    Decision tree:
-        1. **Legacy job** (no ``owner_type``/``owner_id``): allowed in
-           local mode for back-compat with pre-ownership demo reports;
-           **denied in production** so a guessed job_id cannot grant
-           access (SECURE-S1 / v5.3.91).
-        2. **Owner match**: request owner equals the stamped owner →
-           full read & write.
-        3. **Share token**: when ``allow_share`` is true and a valid
-           share token is presented, **read-only** access is granted
-           (writes still rejected). Tokens are compared with
-           ``secrets.compare_digest``.
-        4. Otherwise: denied.
-
-    Callers asking for write access pass ``write=True``; callers that
-    want to forbid share-token viewers altogether pass
-    ``allow_share=False`` (e.g. external lookups, billable AI calls).
+    """Bind ``permissions.owner_metadata_allows`` to this module's
+    ``_get_request_owner`` so existing call sites do not need to thread
+    the loader through. Pure delegation; see the underlying helper for
+    the access-decision tree.
     """
-    owner_type = metadata.get("owner_type")
-    owner_id = metadata.get("owner_id")
-    share_token = metadata.get("share_token")
-
-    # Legacy reports created before ownership metadata exist on local-demo
-    # installs and must stay accessible there for backward compatibility. In
-    # production, however, no-owner reports are treated as inaccessible —
-    # otherwise anyone who can guess a job_id would have full access.
-    if not owner_type or not owner_id:
-        if settings.app_env in {"prod", "production"}:
-            return False
-        return True
-
-    request_owner = await _get_request_owner(request, response)
-    if request_owner["owner_type"] == owner_type and request_owner["owner_id"] == str(owner_id):
-        return True
-
-    request_share = _request_share_token(request)
-    if allow_share and request_share and share_token and secrets.compare_digest(request_share, str(share_token)):
-        return not write
-
-    return False
+    return await _owner_metadata_allows_impl(
+        metadata,
+        request,
+        response,
+        request_owner_loader=_get_request_owner,
+        write=write,
+        allow_share=allow_share,
+    )
 
 
 async def _can_access_report(
@@ -329,16 +229,13 @@ async def _can_access_report(
     mode: str = "read",
     allow_share: bool = True,
 ) -> bool:
-    """Convenience wrapper: ask ``_owner_metadata_allows`` for a report.
-
-    ``mode`` is ``"read"`` (default) or ``"write"``; using a string mode
-    instead of a boolean keeps call sites readable.
-    """
-    return await _owner_metadata_allows(
-        _extract_owner_metadata(report),
+    """Bind ``permissions.can_access_report`` to this module's owner loader."""
+    return await _can_access_report_impl(
+        report,
         request,
         response,
-        write=(mode == "write"),
+        request_owner_loader=_get_request_owner,
+        mode=mode,
         allow_share=allow_share,
     )
 

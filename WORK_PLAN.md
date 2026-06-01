@@ -4,7 +4,7 @@
 >
 > 与 [TODO.md](TODO.md)（历史完成情况快照）和 [HANDOVER.md](HANDOVER.md)（项目状态总览）配合使用。
 >
-> **当前版本**：v5.3.97 · **当前节奏**：每轮一项，走完整流水线（验证 → CHANGELOG → commit → push）。
+> **当前版本**：v5.3.98 · **当前节奏**：每轮一项，走完整流水线（验证 → CHANGELOG → commit → push）。
 
 ---
 
@@ -53,10 +53,11 @@
 - ~~**范围**：`/api/venue-checklist/{job_id}`。~~
 - **已完成**：单端点迁到 `app/api/checklist_routes.py`，URL 不变；routes.py 移除已无用的 `from app.checklists import CHECKLISTS`；新模块顶部统一 httpx/json import；ruff/pytest 133 全过。
 
-### M4. 解耦 ai_routes.py 对 routes.py 私有 helper 的 import
+### M4. 解耦 ai_routes.py 对 routes.py 私有 helper 的 import ✅ v5.3.98
 
-- **现状**：`app/api/ai_routes.py` 仍 import `routes` 里的若干私有函数。
-- **要做**：把通用 helper（`_get_report`、`_require_job_access`、`_extract_owner_metadata` 等）抽到 `app/services/permissions.py` 或 `app/services/jobs.py`，两个 router 都用 service。
+- ~~**现状**：`app/api/ai_routes.py` 仍 import `routes` 里的若干私有函数。~~
+- **第一阶段已完成**：抽出 `app/services/permissions.py`，把 9 个**无状态**权限/会话 helper 集中。`owner_metadata_allows` / `can_access_report` 通过 dependency-injected `request_owner_loader` 解耦模块级 state；routes.py 改为薄 wrapper。新增 17 个单元测试。
+- **后续可选**：把 ``_get_report`` / ``_require_job_access`` 进一步抽到 `app/services/jobs.py`（依赖模块级 state，需更细致的状态注入），但当前 ai_routes 通过 `legacy._require_job_access` 调用已经够清晰。优先级降低。
 
 ### M5. 给 routes.py 未拆分区段加分段注释 + 函数 docstring ✅ v5.3.97
 

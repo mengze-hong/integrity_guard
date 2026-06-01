@@ -1,5 +1,13 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.98 (2026-06-01) — Extract permissions service
+- 拆分上帝文件最后一刀（M4）：新增 `app/services/permissions.py`，把 `routes.py` 的**无状态**权限/会话 helper 集中到正式的 service 模块
+- 迁出 9 个纯函数：`request_share_token`、`secure_session_cookie`、`set_session_cookie_if_needed`、`new_share_token`、`owner_metadata`、`extract_owner_metadata`、`request_uses_valid_share_token`、`owner_metadata_allows`、`can_access_report`；以及 `SESSION_COOKIE_NAME` / `SESSION_COOKIE_MAX_AGE` 两个常量
+- 关键设计：`owner_metadata_allows` 与 `can_access_report` 通过 dependency injection 接收 `request_owner_loader` 参数，让新模块完全不依赖 routes.py 模块级状态（`_jobs` / `_job_owners` / etc.）；这样未来其它 router 可以直接 import permissions 而不用借 routes 跳板
+- routes.py 改为薄 wrapper（`_owner_metadata_allows` / `_can_access_report` 绑定到本地 `_get_request_owner`），原 9 个 helper 名通过 `from … import … as _xxx` re-export 保持向后兼容；`_get_request_owner` 留在 routes.py（它必须 import `app.dependencies`，否则会形成 permissions ↔ dependencies 循环依赖）
+- 新增 `tests/test_permissions_service.py` 17 项：share-token 解析（header / 缺失 / strip 空白）、Secure flag 决策矩阵（prod / 别名 / local / x-forwarded-proto）、owner_metadata 自动生成 / 显式 token / 保留 session_id、extract 容错、决策树（legacy local 放行 / production 拒绝 / owner 写权限 / share 只读 / allow_share=False / 错误 token）
+- 通过 ruff、JS 检查、JS helper 测试 7 项、secret scan、隧道扫描、pytest 133→150（新增 17 个 permissions 单元测试）
+
 ## v5.3.97 (2026-06-01) — routes.py Module-Level Documentation
 - 给 `app/api/routes.py` 写完整的模块级 docstring：列出剩余端点（upload/status/report/edit-history/recheck/dismiss/export/history/compare/score-trend/analysis/job-delete/AI batch）、共享基础设施（进程级状态、权限/会话/速率限制/LLM 网关 helper），并明确兄弟 router（file_routes/tool_routes/checklist_routes/ai_routes）依赖此处提供的单一权威来源
 - 显式记录三条安全/操作不变量：legacy job 在 prod 拒绝（S1）、reference-authenticity 不调 LLM、日志走 `redact()` 脱敏
