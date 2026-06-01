@@ -240,6 +240,74 @@ async def _can_access_report(
     )
 
 
+async def _is_owner(
+    report: FullReport,
+    request: Request,
+    response: Response | None = None,
+) -> bool:
+    """True when the request is from the report's actual owner.
+
+    Share-token viewers return ``False`` here even though they pass
+    ``_can_access_report`` — used to decide whether to send the full
+    payload or the share-redacted variant.
+    """
+    metadata = _extract_owner_metadata(report)
+    owner_type = metadata.get("owner_type")
+    owner_id = metadata.get("owner_id")
+    if not owner_type or not owner_id:
+        return False
+    request_owner = await _get_request_owner(request, response)
+    return (
+        request_owner["owner_type"] == owner_type
+        and request_owner["owner_id"] == str(owner_id)
+    )
+
+
+# Fields stripped from the report payload when a share-token viewer
+# (mentor / supervisor with the read-only link) calls ``/api/report``.
+# Owners always get the unredacted payload.
+_SHARE_REPORT_REDACTED_METADATA_KEYS = (
+    "owner_type",
+    "owner_id",
+    "session_id",
+    "share_token",
+)
+
+
+def _share_readonly_report_payload(payload: dict) -> dict:
+    """Strip owner-only fields from a serialized FullReport.
+
+    What share viewers should still see: gate results, scores,
+    dismiss-list **counts** (so their justifications were considered),
+    and the high-level paper metadata (filename, timestamps, status).
+
+    What gets redacted:
+
+    * ``project_dir`` — server-side filesystem path.
+    * ``metadata.owner_type`` / ``owner_id`` / ``session_id`` — caller
+      identifiers; share users only need to know whose paper they
+      review, not the internal id.
+    * ``metadata.share_token`` — never echo a share token back over the
+      wire (defence in depth: even though the viewer sent it, the
+      response could be cached / logged in front of TLS).
+    * ``dismissed_issues`` — student-authored justifications are
+      author-internal; share viewers see the dismiss summary inside
+      the markdown export instead.
+
+    The function does not mutate the input.
+    """
+    if not isinstance(payload, dict):
+        return payload
+    redacted = dict(payload)
+    redacted["project_dir"] = ""
+    redacted["dismissed_issues"] = []
+    metadata = dict(redacted.get("metadata") or {})
+    for key in _SHARE_REPORT_REDACTED_METADATA_KEYS:
+        metadata.pop(key, None)
+    redacted["metadata"] = metadata
+    return redacted
+
+
 async def _require_job_access(
     job_id: str,
     request: Request,
@@ -578,6 +646,13 @@ async def get_report(job_id: str, request: Request, response: Response):
     so the UI can keep polling. Dimension scores are computed on the fly
     so they always reflect the latest gate results without an extra
     persistence step.
+
+    Share-readonly viewers (i.e. callers presenting a valid share token
+    rather than being the owner) get a redacted payload that omits
+    ownership identifiers, the share token itself, the on-disk
+    ``project_dir``, and the dismiss audit trail (which includes
+    student-written justifications and is owner-only). See
+    ``_share_readonly_report_payload`` for the exact field policy.
     """
     report = await _require_job_access(job_id, request, response)
     if not report:
@@ -587,6 +662,8 @@ async def get_report(job_id: str, request: Request, response: Response):
         raise HTTPException(status_code=404, detail="Report not found")
     payload = report.model_dump()
     payload["dimension_scores"] = build_dimension_scores(report)
+    if _request_uses_valid_share_token(report, request) and not await _is_owner(report, request, response):
+        payload = _share_readonly_report_payload(payload)
     return payload
 
 

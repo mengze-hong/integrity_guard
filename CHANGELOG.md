@@ -1,5 +1,13 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.4.0 (2026-06-01) — Share-Token Report Redaction
+- **安全修复**：`/api/report/{job_id}` 在 share-token 访问时会原样返回 `report.model_dump()`，导致 share-readonly 用户能拿到 `metadata.owner_id` / `owner_type` / `session_id` / `share_token` 与 `project_dir`，以及含学生私人理由的 `dismissed_issues` 列表
+- 新增 `_share_readonly_report_payload()`：仅在 share-token 访问且非 owner 时启用——剥离 owner 标识、share token 自身、服务器内部 `project_dir`、整个 dismiss 审计列表；保留 gate 结果、得分、维度评分等导师审稿真正需要的字段
+- 新增 `_is_owner()` helper 区分"通过 share-token 访问"vs"自己是 owner"，因为后者需保留完整 metadata 才能继续操作（编辑、撤销 dismiss 等）
+- 不影响 markdown 导出 (`/api/export/{job_id}`)，导出本就走 share 模板（`SHARE_REPORT_TYPE`），这次修补的是 JSON API 路径
+- 新增 `tests/test_share_report_redaction.py` 5 项：owner 看到完整字段 / share 看到脱敏字段 / 无 token 拒绝 / 错 token 拒绝 / redact helper 不修改输入（pytest 150→155）
+- 通过 ruff、JS 检查、JS helper 测试 7 项、secret scan、隧道扫描
+
 ## v5.3.99 (2026-06-01) — File-Tree Render O(1) Per File
 - 文件树渲染性能优化：`renderFileItem` 与 `getFileStatus` 原本为每个文件都遍历所有 gate × issue 调用 `issueMatchesFile`，复杂度 O(files × gates × issues)；改为 per-report 预建 `_fileIssueIndex`（basename → 错误/已驳回 计数）后变成 O(1) 查询
 - 大型项目（多文件 × 多问题）文件树渲染明显更快；尤其与 v5.3.86（图片质检）+ v5.3.89（dismissed Map）形成完整的"O(n²)→O(n)"卡顿修复链
