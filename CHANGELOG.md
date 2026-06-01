@@ -1,5 +1,13 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.97 (2026-06-01) — routes.py Module-Level Documentation
+- 给 `app/api/routes.py` 写完整的模块级 docstring：列出剩余端点（upload/status/report/edit-history/recheck/dismiss/export/history/compare/score-trend/analysis/job-delete/AI batch）、共享基础设施（进程级状态、权限/会话/速率限制/LLM 网关 helper），并明确兄弟 router（file_routes/tool_routes/checklist_routes/ai_routes）依赖此处提供的单一权威来源
+- 显式记录三条安全/操作不变量：legacy job 在 prod 拒绝（S1）、reference-authenticity 不调 LLM、日志走 `redact()` 脱敏
+- 关键 helper 加详细 docstring：`_get_request_owner` 三步解析顺序、`_owner_metadata_allows` 决策树、`_require_job_access` 的 403/404/None 三种返回路径、`_get_report` 缓存 rehydrate 行为、`_owner_metadata` / `_extract_owner_metadata` / `_request_uses_valid_share_token`（明确 `compare_digest` 防时序侧信道）
+- 关键端点加 docstring：`/upload`（4 步流水线含计费扣减与背景任务）、`/status`（轮询语义）、`/report`（202 still-processing 行为，dimension_scores 即时计算）
+- 模块级状态变量加 inline 注释说明用途与由 `clear_route_state` 清理；`__all__` 加注释说明跨模块调用的隐式公共界面
+- 纯文档/可读性改动，零行为变化；通过 ruff、JS 检查、JS helper 测试 7 项、secret scan、隧道扫描、pytest 133 项
+
 ## v5.3.96 (2026-06-01) — Split checklist_routes from routes.py
 - 拆分上帝文件第三刀：新增 `app/api/checklist_routes.py`，迁出 `POST /api/venue-checklist/{job_id}` 端点（ARR/NeurIPS 复现性 checklist AI 自动填充）
 - 新模块顶部统一 `import httpx` / `import json`（替换原有的内嵌惰性导入），LLM 系统提示和不变量保持不变（缺证据答 no、不臆造结论）

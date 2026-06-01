@@ -4,7 +4,7 @@
 >
 > 与 [TODO.md](TODO.md)（历史完成情况快照）和 [HANDOVER.md](HANDOVER.md)（项目状态总览）配合使用。
 >
-> **当前版本**：v5.3.96 · **当前节奏**：每轮一项，走完整流水线（验证 → CHANGELOG → commit → push）。
+> **当前版本**：v5.3.97 · **当前节奏**：每轮一项，走完整流水线（验证 → CHANGELOG → commit → push）。
 
 ---
 
@@ -58,10 +58,10 @@
 - **现状**：`app/api/ai_routes.py` 仍 import `routes` 里的若干私有函数。
 - **要做**：把通用 helper（`_get_report`、`_require_job_access`、`_extract_owner_metadata` 等）抽到 `app/services/permissions.py` 或 `app/services/jobs.py`，两个 router 都用 service。
 
-### M5. 给 routes.py 未拆分区段加分段注释 + 函数 docstring
+### M5. 给 routes.py 未拆分区段加分段注释 + 函数 docstring ✅ v5.3.97
 
-- **目标**：纯可读性提升。每段 `# ─── 区域名 ───` 起点写一两句职责说明，关键函数补 docstring。
-- **零风险**，适合在拆分间隙做。
+- ~~**目标**：纯可读性提升。每段 `# ─── 区域名 ───` 起点写一两句职责说明，关键函数补 docstring。~~
+- **已完成**：模块顶部新增完整 docstring（端点清单 + 共享基础设施 + 三条不变量）；`_get_request_owner` / `_owner_metadata_allows` / `_require_job_access` / `_get_report` 等核心 helper 加详细 docstring；`/upload` `/status` `/report` 端点补 docstring；模块级状态变量加 inline 注释指向 `clear_route_state`。零行为变化，pytest 133 全过。
 
 ### M6. 给 services/ 各模块写一行职责注释
 

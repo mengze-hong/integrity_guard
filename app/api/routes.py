@@ -1,4 +1,64 @@
-"""API routes for integrity checks + file editor + human-in-the-loop."""
+"""Core API routes for ScholarLint.
+
+After three rounds of structural splits (v5.3.94 file_routes, v5.3.95
+tool_routes, v5.3.96 checklist_routes) this module owns only the
+endpoints that touch the central ``FullReport`` lifecycle and the
+shared infrastructure that every other router still imports from here:
+
+Endpoints (in source order):
+    Upload & status
+        POST   /api/upload                        upload + extract + run gates
+        GET    /api/status/{job_id}               polling for the upload job
+        GET    /api/report/{job_id}               full report JSON
+    Edit history (per-job timeline + revert)
+        GET    /api/history-edits/{job_id}
+        GET    /api/history-edits/{job_id}/{entry_id}
+        POST   /api/history-edits/{job_id}/{entry_id}/revert
+    Re-check / dismiss / export
+        POST   /api/recheck/{job_id}              re-run gates after edits
+        POST   /api/dismiss/{job_id}              human-in-the-loop suppression
+        GET    /api/export/{job_id}               branded markdown report
+    Job-level browsing
+        GET    /api/history                       recent jobs (per owner)
+        GET    /api/compare/{job_id}              diff vs previous run
+        GET    /api/score-trend/{job_id}          score history for a job lineage
+        GET    /api/analysis/{job_id}             style analysis snapshot
+        DELETE /api/job/{job_id}                  remove job + history
+    AI batch fixes
+        POST   /api/ai-batch-suggest-fix/{job_id}
+        ...   (rest live in the AI Batch section)
+
+Shared infrastructure exported from this module:
+    Process-level state — ``_jobs``, ``_job_status``, ``_job_dirs``,
+        ``_job_progress``, ``_job_owners``, ``_job_locks``.
+        Tests reset these via ``tests.conftest.clear_route_state``.
+    Permission/session helpers — ``_get_request_owner``,
+        ``_owner_metadata_allows``, ``_require_job_access``,
+        ``_secure_session_cookie``, ``_set_session_cookie_if_needed``.
+    Persistence helpers — ``_get_report``.
+    Rate-limit helpers — ``_rate_limit``, ``_check_rate_limit``,
+        ``_llm_calls_by_ip``, ``_llm_calls_global``, ``_llm_usage_guard``.
+    LLM gateway helper — ``_llm_chat_post`` (used by ``ai_routes``,
+        ``checklist_routes``, and the AI-batch endpoints below).
+    AI-batch helper — ``_collect_batch_fix_candidates``.
+
+The split sibling routers (``file_routes``, ``tool_routes``,
+``checklist_routes``, ``ai_routes``) intentionally import these helpers
+from here to keep a single source of truth for permission and state
+management. A future M4 may extract them into ``app/services/permissions.py``
+to break the import direction; until then, prefer adding new shared
+helpers here rather than copying them.
+
+Security/operational invariants worth keeping:
+    * ``_require_job_access`` returns the report; per-job gating uses
+      ``_owner_metadata_allows`` which denies legacy no-owner reports
+      in production (see SECURE-S1 / v5.3.91).
+    * Reference-authenticity issues never invoke the LLM (see
+      ``app.services.ai_guardrails``); the AI-batch path filters them
+      out via ``_is_reference_authenticity_issue``.
+    * Logged exception strings go through ``app.secrets_manager.redact``
+      so JWTs / Bearer tokens / PEM blocks do not leak into logs.
+"""
 
 import secrets
 import time
@@ -40,6 +100,9 @@ from app.logging_config import logger
 
 router = APIRouter()
 
+# Names whose call sites span multiple modules (sibling routers, tests).
+# Anything in __all__ is part of the implicit public-within-package API
+# of this module and should not be renamed without a sweep.
 __all__ = [
     "_ai_fix_provenance",
     "_collect_batch_fix_candidates",
@@ -48,23 +111,40 @@ __all__ = [
     "router",
 ]
 
-# In-memory caches (authoritative data is on disk via storage module)
+# ── Process-level state ──────────────────────────────────────
+# Authoritative persistence is on disk (see ``app.storage``). These
+# dicts are caches and ephemeral coordination flags; tests reset them
+# via ``tests.conftest.clear_route_state`` so cross-test contamination
+# is impossible.
 _jobs: dict[str, FullReport] = {}
 _job_status: dict[str, str] = {}
 _job_dirs: dict[str, Path] = {}  # job_id → extracted project directory
 _job_progress: dict[str, list[str]] = {}  # job_id → list of completed gate names
-_job_owners: dict[str, dict] = {}  # job_id → owner/share metadata while processing
-_job_locks: set[str] = set()  # job_id currently running checks/rechecks
+_job_owners: dict[str, dict] = {}  # job_id → owner/share metadata during a run
+_job_locks: set[str] = set()  # job_ids currently running checks/rechecks
 
+# AI-batch caps. The LLM is allowed at most BATCH_FIX_LIMIT suggestions
+# per request to bound cost; only text-source files are eligible because
+# binary edits cannot be safely diffed/applied.
 BATCH_FIX_LIMIT = 5
 BATCH_FIX_ALLOWED_SUFFIXES = (".tex", ".bib")
 
+# Anonymous-session cookie. Logged-in users are identified by the JWT
+# cookie (``token``); pre-login uploads are still attributed to the
+# requester via ``sl_session``. See ``_secure_session_cookie`` for the
+# Secure-flag policy (mirrors ``auth_routes._secure_cookie``).
 SESSION_COOKIE_NAME = "sl_session"
 SESSION_COOKIE_MAX_AGE = 30 * 86400
 
 
 def _request_share_token(request: Request) -> str:
-    """Read share token from query string or header."""
+    """Read a share token from the request.
+
+    Accepts either the ``?share=...`` query parameter (used by share
+    links emailed to supervisors) or the ``X-Share-Token`` header (used
+    by programmatic clients). Returns the empty string when no token is
+    present so callers can compare with ``token == ""``.
+    """
     return (
         request.query_params.get("share")
         or request.headers.get("X-Share-Token")
@@ -107,7 +187,23 @@ async def _get_request_owner(
     response: Response | None = None,
     current_user=None,
 ) -> dict:
-    """Return the authenticated user owner or anonymous session owner."""
+    """Resolve the request's logical owner (user or anonymous session).
+
+    The result drives both ``_owner_metadata_allows`` (per-request access
+    decisions) and the ownership metadata stamped onto new jobs at upload
+    time.
+
+    Resolution order:
+        1. The injected ``current_user`` (callers that already loaded one).
+        2. ``app.dependencies.get_current_user_optional`` — recognises
+           cookie JWT, Bearer JWT, and ``sl_api_`` API tokens (S2/v5.3.92).
+        3. Anonymous: an ``sl_session`` cookie. If absent, a fresh random
+           id is generated and written back to ``response`` (when given).
+
+    Returns a dict with ``owner_type`` ("user" | "session"), ``owner_id``,
+    and (for sessions) the raw ``session_id`` so callers can stamp it
+    on share-link metadata.
+    """
     if current_user is None:
         from app.dependencies import get_current_user_optional
 
@@ -124,10 +220,18 @@ async def _get_request_owner(
 
 
 def _new_share_token() -> str:
+    """Generate a fresh share token (URL-safe random, ~32 chars)."""
     return secrets.token_urlsafe(24)
 
 
 def _owner_metadata(owner: dict, share_token: str | None = None) -> dict:
+    """Build the persisted ownership block for a new job.
+
+    Stamped onto a report at upload time; later compared against the
+    request owner via ``_owner_metadata_allows``. ``share_token`` is
+    auto-generated so every new report gets a stable, sharable, never-
+    leaked-in-URL token by default.
+    """
     metadata = {
         "owner_type": owner["owner_type"],
         "owner_id": owner["owner_id"],
@@ -139,6 +243,11 @@ def _owner_metadata(owner: dict, share_token: str | None = None) -> dict:
 
 
 def _extract_owner_metadata(report_or_metadata) -> dict:
+    """Pull a normalized owner dict out of either a report or raw dict.
+
+    Tolerant of missing fields so older reports (or partial payloads)
+    do not raise; missing values come back as ``None``.
+    """
     metadata = getattr(report_or_metadata, "metadata", report_or_metadata) or {}
     return {
         "owner_type": metadata.get("owner_type"),
@@ -149,7 +258,11 @@ def _extract_owner_metadata(report_or_metadata) -> dict:
 
 
 def _request_uses_valid_share_token(report: FullReport, request: Request) -> bool:
-    """Return true only when the request share token matches the report."""
+    """True if the request carries a share token matching this report.
+
+    Uses ``secrets.compare_digest`` to avoid timing side-channels on
+    the token comparison. Returns false when either side is missing.
+    """
     request_share = _request_share_token(request)
     share_token = _extract_owner_metadata(report).get("share_token")
     if not request_share or not share_token:
@@ -165,6 +278,25 @@ async def _owner_metadata_allows(
     write: bool = False,
     allow_share: bool = True,
 ) -> bool:
+    """Decide whether a request may access a job with the given metadata.
+
+    Decision tree:
+        1. **Legacy job** (no ``owner_type``/``owner_id``): allowed in
+           local mode for back-compat with pre-ownership demo reports;
+           **denied in production** so a guessed job_id cannot grant
+           access (SECURE-S1 / v5.3.91).
+        2. **Owner match**: request owner equals the stamped owner →
+           full read & write.
+        3. **Share token**: when ``allow_share`` is true and a valid
+           share token is presented, **read-only** access is granted
+           (writes still rejected). Tokens are compared with
+           ``secrets.compare_digest``.
+        4. Otherwise: denied.
+
+    Callers asking for write access pass ``write=True``; callers that
+    want to forbid share-token viewers altogether pass
+    ``allow_share=False`` (e.g. external lookups, billable AI calls).
+    """
     owner_type = metadata.get("owner_type")
     owner_id = metadata.get("owner_id")
     share_token = metadata.get("share_token")
@@ -197,6 +329,11 @@ async def _can_access_report(
     mode: str = "read",
     allow_share: bool = True,
 ) -> bool:
+    """Convenience wrapper: ask ``_owner_metadata_allows`` for a report.
+
+    ``mode`` is ``"read"`` (default) or ``"write"``; using a string mode
+    instead of a boolean keeps call sites readable.
+    """
     return await _owner_metadata_allows(
         _extract_owner_metadata(report),
         request,
@@ -214,7 +351,22 @@ async def _require_job_access(
     write: bool = False,
     allow_share: bool = True,
 ) -> FullReport | None:
-    """Require read/write access to a job; returns report when one exists."""
+    """Require access to ``job_id``; raise 403/404 otherwise.
+
+    Returns the report when one is on disk (loaded into the cache as a
+    side-effect of ``_get_report``). Returns ``None`` when the job is
+    still running and only ``_job_owners`` / ``_job_status`` knows about
+    it — callers that need the report should re-check after the run
+    finishes.
+
+    Behaviour:
+        * No record in any cache or status table → 404.
+        * Report exists but caller is not the owner / has no valid
+          share token → 403.
+        * Report exists and access checks pass → return the report.
+        * Job still pending (status only) but caller is the owner →
+          return ``None``.
+    """
     report = _get_report(job_id)
     if report:
         if not await _can_access_report(
@@ -245,7 +397,21 @@ async def _require_job_access(
 
 
 def _get_report(job_id: str) -> FullReport | None:
-    """Get report from memory cache, falling back to disk."""
+    """Fetch a report from the in-memory cache, falling back to disk.
+
+    On a disk hit, also rehydrates the related caches so subsequent
+    requests in the same process do not re-read disk:
+
+    * ``_jobs[job_id]`` ← the report itself
+    * ``_job_status[job_id]`` ← persisted status (or ``"completed"``)
+    * ``_job_dirs[job_id]`` ← extracted project directory if it still
+      exists (gone after manual cleanup or container restart on
+      ephemeral volumes — the caller has to handle ``None``)
+    * ``_job_owners[job_id]`` ← ownership metadata (so access checks
+      survive a process restart without reloading the full report)
+
+    Returns ``None`` when nothing exists on disk; never raises.
+    """
     if job_id in _jobs:
         return _jobs[job_id]
     # Try loading from disk
@@ -413,7 +579,22 @@ async def upload_paper(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
 ):
-    """Upload a zip file and start integrity checks."""
+    """Upload a LaTeX project ZIP and kick off integrity checks.
+
+    The endpoint is the entry point of the entire pipeline:
+
+    1. Validate the upload (size cap, ZIP magic bytes, rate-limit per IP).
+    2. Extract the archive into ``settings.upload_dir`` and stamp the
+       owner / share-token metadata onto the new job.
+    3. For logged-in users, deduct one check credit before queueing the
+       background gates (so a failed billing attempt cannot start work).
+    4. Schedule the gate runner as a background task and return the
+       ``job_id`` so the client can poll ``/api/status/{job_id}``.
+
+    Failures during validation or billing return synchronously with a
+    descriptive error; failures inside the background task are persisted
+    via ``_save_failed_report`` so polling still works after a restart.
+    """
     from app.dependencies import get_current_user_optional
     from app.credits import deduct_check_credit, InsufficientCredits
     from app.database import SessionLocal
@@ -475,6 +656,12 @@ async def upload_paper(
 
 @router.get("/status/{job_id}")
 async def get_status(job_id: str, request: Request, response: Response):
+    """Polling endpoint used while ``/api/upload`` is still running.
+
+    Returns the current ``status`` (``processing`` / ``completed`` /
+    ``failed``) and the list of gate names finished so far so the UI
+    can show a progress bar.
+    """
     await _require_job_access(job_id, request, response)
     status = _job_status.get(job_id)
     if not status:
@@ -488,6 +675,13 @@ async def get_status(job_id: str, request: Request, response: Response):
 
 @router.get("/report/{job_id}")
 async def get_report(job_id: str, request: Request, response: Response):
+    """Return the full report JSON, including dimension scores.
+
+    Returns ``202 Still processing`` if the gates have not finished yet
+    so the UI can keep polling. Dimension scores are computed on the fly
+    so they always reflect the latest gate results without an extra
+    persistence step.
+    """
     report = await _require_job_access(job_id, request, response)
     if not report:
         status = _job_status.get(job_id, "not_found")
