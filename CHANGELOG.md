@@ -1,5 +1,12 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.93 (2026-06-01) — Anonymous Session Cookie Secure Alignment
+- 匿名 `sl_session` cookie 的 Secure 标志原本写死 `False`，与登录 cookie 的"生产/HTTPS 自动 Secure"行为不一致
+- 新增 `_secure_session_cookie(request)` 判断（与 `auth_routes._secure_cookie` 同款逻辑）：`app_env=prod/production`、`request.url.scheme=https`、或 `x-forwarded-proto=https` 任一成立即设 Secure
+- 本地默认仍不带 Secure，避免开发场景被浏览器丢弃；公网部署/反向代理 HTTPS 时自动启用，Cookie 不会再以明文穿越 HTTP
+- 新增 `tests/test_session_cookie_secure.py` 6 项：local 不 Secure、production/prod 强制 Secure、`x-forwarded-proto=https` 触发、helper 决策矩阵（pytest 127→133）
+- 通过 ruff、JS 检查、JS helper 测试 7 项、secret scan、隧道扫描
+
 ## v5.3.92 (2026-06-01) — API Token Authentication
 - Pro/Team API Token 真正接入业务接口鉴权：`get_current_user_optional` 在 `Authorization: Bearer sl_api_…` 时按 SHA-256 hash 查 `api_tokens` 表，命中且未撤销则返回对应用户；其他 Bearer 值仍按 JWT 解码（向后兼容）
 - 命中后写 `last_used_at` 时间戳，便于审计；未知/已撤销 token 静默返回 None（不泄露存在性）

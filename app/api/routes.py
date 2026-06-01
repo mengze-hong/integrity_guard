@@ -83,7 +83,23 @@ def _request_share_token(request: Request) -> str:
     ).strip()
 
 
-def _set_session_cookie_if_needed(response: Response | None, session_id: str) -> None:
+def _secure_session_cookie(request: Request) -> bool:
+    """Mirror auth_routes._secure_cookie so anonymous sessions get the same
+    Secure-flag policy as logged-in users: always Secure in prod, and Secure
+    whenever the request itself is HTTPS (directly or via reverse proxy)."""
+    if settings.app_env in {"prod", "production"}:
+        return True
+    return (
+        request.url.scheme == "https"
+        or request.headers.get("x-forwarded-proto", "").lower() == "https"
+    )
+
+
+def _set_session_cookie_if_needed(
+    response: Response | None,
+    session_id: str,
+    request: Request | None = None,
+) -> None:
     """Persist a generated anonymous session id in an httpOnly cookie."""
     if response is None:
         return
@@ -91,7 +107,7 @@ def _set_session_cookie_if_needed(response: Response | None, session_id: str) ->
         SESSION_COOKIE_NAME,
         session_id,
         httponly=True,
-        secure=False,  # Set True behind HTTPS in production.
+        secure=_secure_session_cookie(request) if request is not None else False,
         max_age=SESSION_COOKIE_MAX_AGE,
         samesite="lax",
     )
@@ -114,7 +130,7 @@ async def _get_request_owner(
     session_id = (request.cookies.get(SESSION_COOKIE_NAME) or "").strip()
     if not session_id:
         session_id = secrets.token_urlsafe(32)
-        _set_session_cookie_if_needed(response, session_id)
+        _set_session_cookie_if_needed(response, session_id, request)
     return {"owner_type": "session", "owner_id": session_id, "session_id": session_id}
 
 

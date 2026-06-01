@@ -4,7 +4,7 @@
 >
 > 与 [TODO.md](TODO.md)（历史完成情况快照）和 [HANDOVER.md](HANDOVER.md)（项目状态总览）配合使用。
 >
-> **当前版本**：v5.3.92 · **当前节奏**：每轮一项，走完整流水线（验证 → CHANGELOG → commit → push）。
+> **当前版本**：v5.3.93 · **当前节奏**：每轮一项，走完整流水线（验证 → CHANGELOG → commit → push）。
 
 ---
 
@@ -25,11 +25,14 @@
 - ~~**现状**：`secrets_manager.redact()` 主要覆盖 LLM key/url。~~
 - **已完成**：扩展规则覆盖 JWT、Bearer token、PEM 块、API token 前缀；`_SENSITIVE_NAMES` 加入 JWT_SECRET / ADMIN_KEY / ALIPAY_*；新增 `tests/test_redact.py` 8 项断言每种模式被替换且正常文本不误伤。
 
-### S4. 匿名 sl_session cookie 的 secure 行为对齐
+### S4. 匿名 sl_session cookie 的 secure 行为对齐 ✅ v5.3.93
 
-- **现状**：登录 cookie 在 HTTPS/生产下会自动 `Secure`，匿名 `sl_session` 没对齐。
-- **要做**：在 `_get_request_owner` 写 cookie 处也按 `app_env`/HTTPS 设置 `secure`。
-- **验证**：测试断言生产配置下匿名 cookie 也带 Secure。
+- ~~**现状**：登录 cookie 在 HTTPS/生产下会自动 `Secure`，匿名 `sl_session` 没对齐。~~
+- **已完成**：新增 `_secure_session_cookie()` 与 `auth_routes._secure_cookie` 同款判定（prod/scheme=https/x-forwarded-proto=https），`_set_session_cookie_if_needed` 接收 request 并按它设 Secure。新增 `tests/test_session_cookie_secure.py` 6 项。
+
+---
+
+🎉 **P0 安全基线全部完成（S1/S2/S3/S4）**。下一步推进 P1 可维护性。
 
 ---
 
