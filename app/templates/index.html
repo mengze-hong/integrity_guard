@@ -1648,23 +1648,92 @@ function isDismissed(gateName, idx) {
     return _dismissedCacheSet.has(`${gateName}::${idx}`);
 }
 
+// Per-report file-issue index. Walks every gate × issue once and buckets each
+// issue into the file basename(s) it belongs to, so renderFileTree can read
+// per-file error counts in O(1) instead of re-running issueMatchesFile for
+// every (file, issue) pair (which was O(files × gates × issues)).
+//
+// Returns:
+//   { byBasename: Map<basename, {err, dismissedOnly}>,
+//     bib: {err, dismissedOnly} }
+// "bib" applies to any .bib file (issues with location "bib:...") and is
+// merged in at lookup time when the path ends in .bib.
+let _fileIssueIndexReport = null;
+let _fileIssueIndex = null;
+function _getFileIssueIndex() {
+    if (!report) return null;
+    if (_fileIssueIndexReport === report && _fileIssueIndex) return _fileIssueIndex;
+
+    const byBasename = new Map();
+    const bib = {err: 0, dismissedOnly: 0};
+    const bump = (bucket, dismissed, severity) => {
+        if (dismissed) bucket.dismissedOnly++;
+        else if (severity === 'error') bucket.err++;
+    };
+    const ensure = (bn) => {
+        let b = byBasename.get(bn);
+        if (!b) { b = {err: 0, dismissedOnly: 0}; byBasename.set(bn, b); }
+        return b;
+    };
+
+    for (const gate of report.gate_results || []) {
+        gate.issues.forEach((issue, idx) => {
+            const dismissed = isDismissed(gate.gate_name, idx);
+            // Mirror the issueMatchesFile rules so behaviour stays identical:
+            //   1. Explicit issue.file (basename match).
+            if (issue.file) {
+                bump(ensure(issue.file.split('/').pop()), dismissed, issue.severity);
+                return;
+            }
+            //   2. bib-scoped issues belong to all .bib files.
+            if (issue.location && issue.location.startsWith('bib:')) {
+                bump(bib, dismissed, issue.severity);
+                return;
+            }
+            //   3. Filename tokens inside issue.location (e.g. "main.tex:42").
+            if (issue.location) {
+                const tokens = issue.location.split(/[\s,:]+/);
+                let matchedAny = false;
+                for (const t of tokens) {
+                    if (t && (t.endsWith('.tex') || t.endsWith('.bib') || t.endsWith('.cls') || t.endsWith('.sty'))) {
+                        bump(ensure(t), dismissed, issue.severity);
+                        matchedAny = true;
+                    }
+                }
+                if (matchedAny) return;
+            }
+            // 4. Otherwise it's a global / cross-file issue — not attributed to
+            //    any single file (matches issueMatchesFile returning false).
+        });
+    }
+
+    _fileIssueIndex = {byBasename, bib};
+    _fileIssueIndexReport = report;
+    return _fileIssueIndex;
+}
+
+function _statsForPath(path) {
+    const idx = _getFileIssueIndex();
+    if (!idx) return {err: 0, dismissedOnly: 0};
+    const bn = path.split('/').pop();
+    const own = idx.byBasename.get(bn) || {err: 0, dismissedOnly: 0};
+    if (path.endsWith('.bib')) {
+        return {
+            err: own.err + idx.bib.err,
+            dismissedOnly: own.dismissedOnly + idx.bib.dismissedOnly,
+        };
+    }
+    return own;
+}
+
 function renderFileItem(f, indented) {
     const st = getFileStatus(f.path);
     const statusCls = st==='ok'?'file-status-ok':st==='warn'?'file-status-warn':'file-status-err';
     const icon = f.type==='bib' ? '📚' : f.type==='tex' ? '📄' : '📎';
     const indentStyle = indented ? ' style="padding-left:24px;"' : '';
-    // Count errors for this file
-    let errCount = 0;
-    if (report) {
-        for (const gate of report.gate_results) {
-            gate.issues.forEach((issue, idx) => {
-                if (issueMatchesFile(issue, f.path) && issue.severity === 'error') {
-                    const dismissed = isDismissed(gate.gate_name, idx);
-                    if (!dismissed) errCount++;
-                }
-            });
-        }
-    }
+    // O(1) per file: read pre-indexed counts instead of scanning every gate
+    // × issue × dismissed entry.
+    const errCount = report ? _statsForPath(f.path).err : 0;
     const badge = errCount > 0 ? `<span style="background:#ef4444;color:#fff;font-size:10px;padding:1px 5px;border-radius:8px;font-weight:600;">${errCount}</span>` : '';
     return `<div class="file-item" data-action="open-file" data-path="${esc(f.path)}"${indentStyle}>
         <span class="file-icon">${icon}</span>
@@ -1676,17 +1745,9 @@ function renderFileItem(f, indented) {
 
 function getFileStatus(path) {
     if (!report) return 'none';
-    let hasErr=false, hasDismissed=false;
-    for (const gate of report.gate_results) {
-        gate.issues.forEach((issue,idx) => {
-            if (!issueMatchesFile(issue,path)) return;
-            const dismissed = isDismissed(gate.gate_name, idx);
-            if (dismissed) hasDismissed=true;
-            else if (issue.severity==='error') hasErr=true;
-        });
-    }
-    if (hasErr) return 'err';
-    if (hasDismissed) return 'warn';
+    const stats = _statsForPath(path);
+    if (stats.err) return 'err';
+    if (stats.dismissedOnly) return 'warn';
     return 'ok';
 }
 

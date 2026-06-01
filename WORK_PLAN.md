@@ -4,7 +4,7 @@
 >
 > 与 [TODO.md](TODO.md)（历史完成情况快照）和 [HANDOVER.md](HANDOVER.md)（项目状态总览）配合使用。
 >
-> **当前版本**：v5.3.98 · **当前节奏**：每轮一项，走完整流水线（验证 → CHANGELOG → commit → push）。
+> **当前版本**：v5.3.99 · **当前节奏**：每轮一项，走完整流水线（验证 → CHANGELOG → commit → push）。
 
 ---
 
@@ -77,6 +77,7 @@
 - **场景**：项目文件非常多时（200+），`renderFileTree` 一次渲染 DOM 仍卡。
 - **方案**：先做最简单的"超过 N 个文件时按目录折叠+按需展开"，不上虚拟列表库。
 - **风险**：低（默认行为不变，只在文件多时收起）。
+- **第一阶段已完成（v5.3.99）**：把 `renderFileItem` / `getFileStatus` 从 O(files × gates × issues) 降到 O(1) per file（per-report 预建 `_fileIssueIndex`）。文件树本身的 DOM 一次性渲染量没变，但每个 file-item 的统计计算消失了。如果文件 200+ 仍卡，再上"目录折叠/虚拟列表"二阶段。
 
 ### X2. markIssuesInEditor 的 token 搜索优化
 

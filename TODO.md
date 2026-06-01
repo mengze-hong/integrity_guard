@@ -176,6 +176,7 @@
 - [x] 拆分 routes.py 第三刀：抽出 `app/api/checklist_routes.py`（venue-checklist 单端点），URL 不变；routes.py 同步移除已无用的 CHECKLISTS import
 - [x] routes.py 模块级文档加固：完整 docstring 列出剩余端点清单/共享基础设施/三条不变量；权限/会话/缓存核心 helper 与关键端点（upload/status/report）加详细 docstring；状态变量 inline 注释指向 clear_route_state；零行为变化
 - [x] 抽出 `app/services/permissions.py`（M4）：9 个无状态权限/会话 helper 迁出（share-token / Secure cookie / owner_metadata_allows / can_access_report），通过 dependency injection 与 routes.py 模块级 state 解耦；新增 `tests/test_permissions_service.py` 17 项单元测试（pytest 133→150）
+- [x] 文件树渲染 O(1) per file：per-report 预建 `_fileIssueIndex`（basename → 错误/已驳回 计数），`renderFileItem` / `getFileStatus` 从 O(files × gates × issues) 降为 O(1) 查询，与 v5.3.86/v5.3.89 形成完整的卡顿修复链
 
 ### 部署 & 运维
 - [x] Docker 化（Dockerfile + docker-compose.yml + requirements.txt）

@@ -1,5 +1,11 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.3.99 (2026-06-01) — File-Tree Render O(1) Per File
+- 文件树渲染性能优化：`renderFileItem` 与 `getFileStatus` 原本为每个文件都遍历所有 gate × issue 调用 `issueMatchesFile`，复杂度 O(files × gates × issues)；改为 per-report 预建 `_fileIssueIndex`（basename → 错误/已驳回 计数）后变成 O(1) 查询
+- 大型项目（多文件 × 多问题）文件树渲染明显更快；尤其与 v5.3.86（图片质检）+ v5.3.89（dismissed Map）形成完整的"O(n²)→O(n)"卡顿修复链
+- 新索引严格沿用 `issueMatchesFile` 的归属规则（explicit `issue.file` / `bib:` 前缀适用所有 .bib / `issue.location` 中的文件名 token），并在 path 以 .bib 结尾时合并通用 `bib:` 桶
+- 纯前端渲染优化，无 API/行为变化；通过 ruff、JS 检查、JS helper 测试 7 项、secret scan、pytest 150 项
+
 ## v5.3.98 (2026-06-01) — Extract permissions service
 - 拆分上帝文件最后一刀（M4）：新增 `app/services/permissions.py`，把 `routes.py` 的**无状态**权限/会话 helper 集中到正式的 service 模块
 - 迁出 9 个纯函数：`request_share_token`、`secure_session_cookie`、`set_session_cookie_if_needed`、`new_share_token`、`owner_metadata`、`extract_owner_metadata`、`request_uses_valid_share_token`、`owner_metadata_allows`、`can_access_report`；以及 `SESSION_COOKIE_NAME` / `SESSION_COOKIE_MAX_AGE` 两个常量
