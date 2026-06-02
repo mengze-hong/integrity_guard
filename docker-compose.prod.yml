@@ -1,0 +1,34 @@
+# Production overlay for Tencent Cloud Lighthouse / CVM deployments.
+#
+# Use together with the base docker-compose.yml:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# This overlay:
+#   * pins the binding to localhost (already in base; reinforced here)
+#   * loads .env from disk so secrets stay on the host, not in git
+#   * adds a JSON-file log driver bounded in size so the host disk does
+#     not fill up
+#   * keeps restart=always (base says unless-stopped; for production
+#     boxes that reboot we want auto-start)
+#   * uses absolute paths under /srv/scholarlint so an OS reinstall on
+#     the system disk leaves customer data on the data disk untouched
+#
+# DO NOT commit a populated .env. The repo's .gitignore blocks it; this
+# file only references it by name. Keep `.env.example` for the template.
+
+services:
+  integrityguard:
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - /srv/scholarlint/data:/app/data
+      - /srv/scholarlint/uploads:/app/uploads
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"

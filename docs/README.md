@@ -12,6 +12,7 @@ Use this directory as the starting point for local operation, release checks, an
 - [Release Checklist](RELEASE_CHECKLIST.md) — pre-release checks for tests, scans, docs, and version alignment.
 - [Do Not Do](DO_NOT_DO.md) — operational guardrails for research integrity, repository hygiene, secrets, and public exposure.
 - [Safe Production Deployment](DEPLOY_SAFE.md) — Docker, reverse proxy, HTTPS, production switches, secrets, upload safety, probes, backups, and public exposure checks.
+- [Tencent Cloud Lighthouse Deployment](DEPLOY_TENCENT.md) — concrete walkthrough for hosting on Tencent Cloud Lighthouse: instance sizing, secret injection, Nginx + Tencent SSL, ICP filing, COS-backed backups.
 - [Backup And Restore](BACKUP.md) — local backup script usage, upload backup boundaries, encrypted storage reminders, and restore smoke checks.
 
 For a top-level project overview and quick start, see the [root README](../README.md). For handover notes and next steps, see [HANDOVER.md](../HANDOVER.md).

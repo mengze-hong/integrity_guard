@@ -1,5 +1,14 @@
 # ScholarLint · 投稿通 Changelog
 
+## v5.4.1 (2026-06-02) — Tencent Cloud Lighthouse Deployment Bundle
+- 新增 `docs/DEPLOY_TENCENT.md`：腾讯云 Lighthouse 一站式部署指南——实例选型（MVP/成长/扩展三档）、Ubuntu 22.04 + Docker 引导、目录布局（`/srv/scholarlint`，数据盘分离）、SSH 注入 `.env`（强调 secret 永不 git 化）、Nginx + 腾讯云 SSL 反代（含 `X-Forwarded-Proto` 触发 Secure cookie）、ICP 备案策略（mainland 必备 / 港新可绕过）、COS 加密备份、上线前自检清单、回滚步骤
+- 新增 `docker-compose.prod.yml` overlay：localhost 绑定 + `env_file: .env` + 绝对数据卷路径（`/srv/scholarlint/data` 与 `/srv/scholarlint/uploads`）+ 有界 JSON-file 日志驱动（20MB×5）+ `restart: always`，与基础 compose 叠加使用
+- 新增 `.env.example` 模板：所有生产环境变量（APP_ENV / PAYMENT_SANDBOX / LLM_* / JWT_SECRET / ADMIN_KEY / ALIPAY_* / 速率限制）含安全说明，明确指出 JWT_SECRET / ADMIN_KEY 留空让应用首次启动自动生成（持久化在 `data/.jwt_secret` / `data/.admin_key`）
+- 新增 `scripts/check-no-secrets.mjs` + `npm run scan:tracked`：50ms 本地预推送自检，按文件名规则拒绝 `.env` / `data/secrets.enc` / `data/.jwt_secret` / `data/.admin_key` / `uploads/` / `*.pem` / `*private_key*` 进入 git index；`.env.example` 在白名单
+- `.gitignore` 显式 `!.env.example` 例外，让模板能进库；docs/README.md 与根 README 索引同步加入新文档
+- 安全边界硬性确认：现有 `.gitignore` 已经覆盖 `.env` / `.env.*` / `data/secrets.enc` / `data/.jwt_secret` / `data/.admin_key` / `uploads/`；本轮验证仓库当前没有任何 secret 入库
+- 纯运维文档与配置补齐，无应用行为变化；通过 ruff、JS 检查、JS helper 测试 7 项、secret scan、新增 scan:tracked、隧道扫描、pytest 155 项
+
 ## v5.4.0 (2026-06-01) — Share-Token Report Redaction
 - **安全修复**：`/api/report/{job_id}` 在 share-token 访问时会原样返回 `report.model_dump()`，导致 share-readonly 用户能拿到 `metadata.owner_id` / `owner_type` / `session_id` / `share_token` 与 `project_dir`，以及含学生私人理由的 `dismissed_issues` 列表
 - 新增 `_share_readonly_report_payload()`：仅在 share-token 访问且非 owner 时启用——剥离 owner 标识、share token 自身、服务器内部 `project_dir`、整个 dismiss 审计列表；保留 gate 结果、得分、维度评分等导师审稿真正需要的字段

@@ -28,6 +28,8 @@ data/.admin_key
 data/secrets.enc
 .env
 .env.*
+# .env.example is a template (no real secrets); allow it through.
+!.env.example
 
 # IDE
 .cursor/

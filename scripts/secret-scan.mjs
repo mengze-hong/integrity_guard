@@ -3,12 +3,15 @@ import fs from "node:fs";
 
 const selfPath = "scripts/secret-scan.mjs";
 // Files that legitimately define or test secret-handling patterns. They have
-// no real secrets but carry pattern literals (e.g. sk-uin… prefixes) that
-// would otherwise trigger this scan.
+// no real secrets but carry pattern literals (e.g. sk-uin… prefixes,
+// LLM_BASE_URL=__paste_here__ in deployment docs) that would otherwise
+// trigger this scan.
 const excludedPaths = new Set([
   selfPath,
   "app/secrets_manager.py",
   "tests/test_redact.py",
+  ".env.example",
+  "docs/DEPLOY_TENCENT.md",
 ]);
 
 const excludedPrefixes = [

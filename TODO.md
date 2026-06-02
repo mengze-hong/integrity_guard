@@ -178,6 +178,7 @@
 - [x] 抽出 `app/services/permissions.py`（M4）：9 个无状态权限/会话 helper 迁出（share-token / Secure cookie / owner_metadata_allows / can_access_report），通过 dependency injection 与 routes.py 模块级 state 解耦；新增 `tests/test_permissions_service.py` 17 项单元测试（pytest 133→150）
 - [x] 文件树渲染 O(1) per file：per-report 预建 `_fileIssueIndex`（basename → 错误/已驳回 计数），`renderFileItem` / `getFileStatus` 从 O(files × gates × issues) 降为 O(1) 查询，与 v5.3.86/v5.3.89 形成完整的卡顿修复链
 - [x] **安全**：`/api/report` share-token 路径脱敏——share-readonly 用户不再能拿到 owner_id / owner_type / session_id / share_token / project_dir / dismissed_issues 学生理由；保留 gate 结果与得分供导师审稿；新增 `tests/test_share_report_redaction.py` 5 项
+- [x] **运维**：腾讯云 Lighthouse 部署套件——`docs/DEPLOY_TENCENT.md`（实例选型/环境变量/Nginx+SSL/ICP/COS备份/上线自检/回滚） + `docker-compose.prod.yml` overlay（绝对数据卷+有界日志+restart=always） + `.env.example` 模板 + `scripts/check-no-secrets.mjs`（npm run scan:tracked 预推送自检）；`.gitignore` 已覆盖 .env / secrets.enc / .jwt_secret / .admin_key
 
 ### 部署 & 运维
 - [x] Docker 化（Dockerfile + docker-compose.yml + requirements.txt）

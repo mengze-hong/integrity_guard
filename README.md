@@ -4,7 +4,7 @@ Academic paper pre-submission integrity checker. Upload a LaTeX project ZIP and 
 
 ScholarLint is built as a commercializable SaaS, not a one-off demo. Strict checking is intentional: false positives are acceptable, missed integrity issues are not.
 
-- App version: `5.4.0` (see [CHANGELOG.md](CHANGELOG.md))
+- App version: `5.4.1` (see [CHANGELOG.md](CHANGELOG.md))
 - Stack: FastAPI + SQLite + a single-page HTML/JS frontend
 - LLM features are advisory only and never fabricate references
 
@@ -110,6 +110,7 @@ See [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md) for focused commands by chang
 - [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md) — test commands by change type
 - [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md) — pre-release checks
 - [docs/DEPLOY_SAFE.md](docs/DEPLOY_SAFE.md) — safe production deployment
+- [docs/DEPLOY_TENCENT.md](docs/DEPLOY_TENCENT.md) — Tencent Cloud Lighthouse walkthrough
 - [docs/BACKUP.md](docs/BACKUP.md) — backup and restore
 - [docs/DO_NOT_DO.md](docs/DO_NOT_DO.md) — operational guardrails
 - [HANDOVER.md](HANDOVER.md) — handover notes for the next maintainer
