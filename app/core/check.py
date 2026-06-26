@@ -35,6 +35,7 @@ from app.checks.gate_references import ReferenceAuthenticityGate
 from app.checks.gate_structure import StructureGate
 from app.checks.gate_writing import WritingQualityGate
 from app.models import FullReport
+from app.parsers.bbl_parser import parse_all_bbl_files
 from app.parsers.bib_parser import parse_all_bib_files
 from app.parsers.tex_parser import parse_all_tex_files
 from app.parsers.zip_parser import identify_project_structure
@@ -97,9 +98,15 @@ async def check_folder(
     if not project_dir.is_dir():
         raise FileNotFoundError(f"Not a directory: {project_dir}")
 
-    paper, tex_paths, bib_paths = identify_project_structure(project_dir)
+    paper, tex_paths, bib_paths, bbl_paths = identify_project_structure(project_dir)
     paper.tex_files = parse_all_tex_files(tex_paths)
     paper.bib_entries = parse_all_bib_files(bib_paths)
+    # Fall back to .bbl when no .bib entries were found (common on arxiv)
+    bbl_used = False
+    if not paper.bib_entries and bbl_paths:
+        paper.bib_entries = parse_all_bbl_files(bbl_paths)
+        bbl_used = True
+        paper.bib_entries = parse_all_bbl_files(bbl_paths)
 
     active_gates = gates if gates is not None else default_gates()
 
@@ -121,6 +128,7 @@ async def check_folder(
         "page_estimate": round(total_words / 500, 1),
         "bib_count": len(paper.bib_entries),
         "tex_count": len(paper.tex_files),
+        "bbl_used": bbl_used,
     }
 
     report.compute_overall()

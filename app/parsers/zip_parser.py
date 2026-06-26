@@ -126,9 +126,12 @@ def identify_project_structure(project_dir: Path) -> ParsedPaper:
     all_files: list[Path] = []
     tex_files: list[Path] = []
     bib_files: list[Path] = []
+    bbl_files: list[Path] = []
     figure_files: list[Path] = []
 
     figure_extensions = {".png", ".jpg", ".jpeg", ".pdf", ".eps", ".svg"}
+
+    bbl_files: list[Path] = []
 
     for f in project_dir.rglob("*"):
         if f.is_file():
@@ -138,6 +141,8 @@ def identify_project_structure(project_dir: Path) -> ParsedPaper:
                 tex_files.append(f)
             elif suffix == ".bib":
                 bib_files.append(f)
+            elif suffix == ".bbl":
+                bbl_files.append(f)
             elif suffix in figure_extensions:
                 figure_files.append(f)
 
@@ -151,4 +156,4 @@ def identify_project_structure(project_dir: Path) -> ParsedPaper:
     if bib_files:
         paper.bib_file_path = bib_files[0]
 
-    return paper, tex_files, bib_files
+    return paper, tex_files, bib_files, bbl_files

@@ -1,5 +1,18 @@
 # ScholarLint · 投稿通 Changelog
 
+## 2026-06-26 — Fix: .bbl 解析 + title 匹配误报修复
+- **新增 `app/parsers/bbl_parser.py`**：解析 BibTeX 编译输出的 `.bbl` 文件（arxiv 投稿主流格式）
+  - 支持 natbib 传统格式（`\bibitem[]{key}` + `\newblock`）和 biblatex refsection 格式（`\entry{}`）
+  - 自动提取 key / title / authors / year / doi / url / venue
+  - BERT (1810.04805) .bbl：56 条，54/56 有 year；GPT-3 (2005.14165) .bbl：144 条，全部有 year
+- **`app/parsers/zip_parser.py`**：`identify_project_structure()` 新增收集 `.bbl` 文件，返回四元组 `(paper, tex_paths, bib_paths, bbl_paths)`
+- **`app/core/check.py`**：当 `.bib` 为空时自动 fallback 到 `.bbl`，并在 metadata 写入 `bbl_used` 标志
+- **`app/api/routes.py`**：同步应用 bbl fallback 逻辑（与 check.py 保持一致）
+- **`app/checks/gate_references.py`**：
+  - 新增 `_title_matches(a, b, threshold=0.85)`：先精确匹配，再 SequenceMatcher，再去空格 fallback（解决 "Socialiqa" ≠ "Social IQa" 的误报）
+  - Step 4 标题验证、`_search_by_title` 三个 API 搜索处均改用 `_title_matches`
+- 测试：pytest 7/7 绿（check_folder 全套）
+
 ## 2026-06-26 — Headless Check Pipeline (`app.core.check`)
 - 新增 `app/core/check.py`：纯函数 `check_folder(folder, *, filename, job_id, gates) -> FullReport`，把"已解压目录 → 6 gate → FullReport"的核心检查链从 web 服务里独立出来；不依赖 FastAPI、不写盘、不动全局 dict、不修改文件夹
 - 用途：CLI / 实验脚本 / 未来对外 API client 直接 `from app.core.check import check_folder` 三行调用，得到可序列化 `FullReport`（`.model_dump()` 转 JSON）

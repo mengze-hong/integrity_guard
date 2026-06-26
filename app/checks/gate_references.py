@@ -35,6 +35,31 @@ def _normalize_title(s: str) -> str:
     return s
 
 
+def _title_matches(a: str, b: str, threshold: float = 0.85) -> bool:
+    """Return True if two normalized titles are close enough.
+
+    Handles cases like 'socialiqa' vs 'social iqa' where spaces are stripped
+    from a stylized title — we compare both the spaced and spaceless forms.
+    """
+    if not a or not b:
+        return False
+    if a == b:
+        return True
+    # substring containment (subtitle truncation)
+    if a in b or b in a:
+        return True
+    sim = SequenceMatcher(None, a, b).ratio()
+    if sim >= threshold:
+        return True
+    # spaceless fallback: "socialiqa" ≈ "social iqa"
+    a_ns = a.replace(" ", "")
+    b_ns = b.replace(" ", "")
+    if a_ns == b_ns:
+        return True
+    sim_ns = SequenceMatcher(None, a_ns, b_ns).ratio()
+    return sim_ns >= threshold
+
+
 def _extract_family_name(name: str) -> str:
     """提取作者姓氏。支持 'Last, First' 和 'First Last' 两种格式。"""
     import unicodedata
@@ -411,25 +436,19 @@ class ReferenceAuthenticityGate(BaseGate):
         cr_title_norm = _normalize_title(cr_title)
 
         if bib_title_norm and cr_title_norm:
-            if bib_title_norm == cr_title_norm:
+            if _title_matches(bib_title_norm, cr_title_norm):
                 meta["title_match"] = True
             else:
                 sim = SequenceMatcher(None, bib_title_norm, cr_title_norm).ratio()
-                # Check if one contains the other (subtitle truncation)
-                contains = bib_title_norm in cr_title_norm or cr_title_norm in bib_title_norm
-                if sim >= 0.85 or contains:
-                    # Close enough — likely formatting/subtitle difference
-                    meta["title_match"] = True
-                else:
-                    meta["title_match"] = False
-                    severity = Severity.WARNING if sim >= 0.60 else Severity.ERROR
-                    issues.append(Issue(
-                        severity=severity,
-                        message=f"[{entry.key}] 标题不匹配（相似度 {sim:.0%}）",
-                        location=location, file=issue_file, line=issue_line,
-                        evidence=f"BIB 标题: {entry.title}\n数据库标题: {cr_title}",
-                        suggestion=f"请修正 .bib 中的标题，使其与数据库记录一致。\n🔗 数据库原文: https://doi.org/{doi}",
-                    ))
+                severity = Severity.WARNING if sim >= 0.60 else Severity.ERROR
+                meta["title_match"] = False
+                issues.append(Issue(
+                    severity=severity,
+                    message=f"[{entry.key}] 标题不匹配（相似度 {sim:.0%}）",
+                    location=location, file=issue_file, line=issue_line,
+                    evidence=f"BIB 标题: {entry.title}\n数据库标题: {cr_title}",
+                    suggestion=f"请修正 .bib 中的标题，使其与数据库记录一致。\n🔗 数据库原文: https://doi.org/{doi}",
+                ))
         elif bib_title_norm and not cr_title_norm:
             meta["title_match"] = True
             issues.append(Issue(
@@ -665,7 +684,7 @@ class ReferenceAuthenticityGate(BaseGate):
                         item_titles = item.get("title", [])
                         if item_titles:
                             item_norm = _normalize_title(item_titles[0])
-                            if item_norm == norm_title:
+                            if _title_matches(item_norm, norm_title):
                                 doi = item.get("DOI", "")
                                 result = {"title": item_titles[0], "url": f"https://doi.org/{doi}" if doi else ""}
                                 _TITLE_CACHE[norm_title] = result
@@ -685,7 +704,7 @@ class ReferenceAuthenticityGate(BaseGate):
                     papers = resp.json().get("data", [])
                     for paper in papers:
                         paper_title = paper.get("title", "")
-                        if _normalize_title(paper_title) == norm_title:
+                        if _title_matches(_normalize_title(paper_title), norm_title):
                             ext_ids = paper.get("externalIds", {})
                             doi = ext_ids.get("DOI", "")
                             url = f"https://doi.org/{doi}" if doi else f"https://www.semanticscholar.org/paper/{paper.get('paperId','')}"
@@ -707,7 +726,7 @@ class ReferenceAuthenticityGate(BaseGate):
                     results = resp.json().get("results", [])
                     for work in results:
                         work_title = work.get("title", "")
-                        if _normalize_title(work_title) == norm_title:
+                        if _title_matches(_normalize_title(work_title), norm_title):
                             doi = work.get("doi", "")
                             url = doi if doi else work.get("id", "")
                             result = {"title": work_title, "url": url}
