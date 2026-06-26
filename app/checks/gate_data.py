@@ -94,15 +94,31 @@ def _extract_tables(tex_files: list[TexFile]) -> list[dict]:
 
 
 def _check_duplicate_rows(table: dict) -> list[dict]:
-    """Check for duplicate rows in a table."""
+    """Check for duplicate rows in a table.
+
+    Only flags rows with >= 3 numeric columns (2-column tables are too common
+    in survey/demographic results to be suspicious). Reports one finding per
+    unique duplicate group rather than every pairwise combination.
+    """
+    from collections import defaultdict
+
     findings = []
     rows = table["rows"]
-    for i, j in combinations(range(len(rows)), 2):
-        if rows[i] == rows[j] and any(x is not None for x in rows[i]):
+
+    # Build groups keyed by the tuple of non-None numeric values
+    groups: dict[tuple, list[int]] = defaultdict(list)
+    for i, row in enumerate(rows):
+        nums = tuple(x for x in row if x is not None)
+        if len(nums) >= 3:  # need at least 3 numeric cols to be suspicious
+            groups[nums].append(i)
+
+    for key, indices in groups.items():
+        if len(indices) >= 2:
+            idx_str = ", ".join(str(i + 1) for i in indices)
             findings.append({
                 "type": "duplicate_row",
-                "message": f"第 {i+1} 行和第 {j+1} 行数据完全相同",
-                "evidence": f"行数据: {[x for x in rows[i] if x is not None]}",
+                "message": f"第 {idx_str} 行数据完全相同（{len(indices)} 行重复）",
+                "evidence": f"行数据: {list(key)}",
             })
     return findings
 
@@ -239,22 +255,29 @@ def _check_benford_law(table: dict) -> list[dict]:
     """Check if first-digit distribution deviates from Benford's Law.
 
     Only applies to tables with enough numeric data (>= 30 values).
-    Skips values 0-9 (single digit) and percentage-like values (0.xx).
+    Skips values 0-9 (single digit), percentage-like values (0.xx), and
+    columns where all values are in [0, 100] (score/percentage columns).
     """
     findings = []
     rows = table["rows"]
+    num_cols = table["num_cols"]
 
-    # Collect all numeric values across the table
+    # Per-column check: skip if column looks like percentages or scores
+    pct_cols: set[int] = set()
+    for col_idx in range(num_cols):
+        col_vals = [r[col_idx] for r in rows if col_idx < len(r) and r[col_idx] is not None]
+        if col_vals and all(0.0 <= v <= 100.0 for v in col_vals):
+            pct_cols.add(col_idx)
+
     all_values = []
     for row in rows:
-        for v in row:
-            if v is not None and abs(v) >= 10:  # Only multi-digit numbers
+        for col_idx, v in enumerate(row):
+            if v is not None and col_idx not in pct_cols and abs(v) >= 10:
                 all_values.append(abs(v))
 
     if len(all_values) < 30:
         return findings
 
-    # Extract first digits
     first_digits = []
     for v in all_values:
         s = f"{v:.0f}" if v == int(v) else f"{v}"
@@ -265,7 +288,6 @@ def _check_benford_law(table: dict) -> list[dict]:
     if len(first_digits) < 30:
         return findings
 
-    # Chi-squared test against Benford distribution
     n = len(first_digits)
     counter = Counter(first_digits)
     chi_sq = 0
@@ -274,14 +296,13 @@ def _check_benford_law(table: dict) -> list[dict]:
         expected = _BENFORD_EXPECTED[d] * n
         chi_sq += (observed - expected) ** 2 / expected
 
-    # Chi-squared critical value for 8 degrees of freedom at p=0.01 is 20.09
+    # Chi-squared critical value for 8 df at p=0.01 is 20.09
     if chi_sq > 20.09:
-        # Build distribution summary
         dist_str = ", ".join(f"{d}:{counter.get(d,0)}" for d in range(1, 10))
         findings.append({
             "type": "benford_violation",
             "message": f"首位数字分布异常（χ²={chi_sq:.1f}，p<0.01），不符合 Benford 定律",
-            "evidence": f"分布: [{dist_str}]，共 {n} 个数值",
+            "evidence": f"分布: [{dist_str}]，共 {n} 个数值（已跳过百分比列）",
         })
 
     return findings
@@ -333,6 +354,7 @@ class DataIntegrityGate(BaseGate):
 
             for f in findings:
                 total_findings += 1
+                # duplicate_row and offset are serious (ERROR); others are WARNING
                 severity = Severity.ERROR if f["type"] in ("duplicate_row", "offset") else Severity.WARNING
                 issues.append(Issue(
                     severity=severity,
@@ -372,8 +394,10 @@ class DataIntegrityGate(BaseGate):
                 line=cf.get("line"),
             ))
 
-        score = max(0, 100 - total_findings * 15)
         error_count = sum(1 for i in issues if i.severity == Severity.ERROR)
+        warn_count = sum(1 for i in issues if i.severity == Severity.WARNING)
+        # Errors cost 20 pts each, warnings 5 pts each — cap at 0
+        score = max(0, 100 - error_count * 20 - warn_count * 5)
         passed = error_count == 0
 
         return CheckResult(

@@ -1317,13 +1317,15 @@ async def _run_checks_from_dir(
     """Run checks from an already-extracted directory."""
     try:
         from app.parsers.zip_parser import identify_project_structure
-        from app.parsers.bbl_parser import parse_all_bbl_files
+        from app.parsers.bbl_parser import parse_all_bbl_files, extract_inline_bib_entries
 
         paper, tex_paths, bib_paths, bbl_paths = identify_project_structure(project_dir)
         paper.tex_files = parse_all_tex_files(tex_paths)
         paper.bib_entries = parse_all_bib_files(bib_paths)
         if not paper.bib_entries and bbl_paths:
             paper.bib_entries = parse_all_bbl_files(bbl_paths)
+        if not paper.bib_entries:
+            paper.bib_entries = extract_inline_bib_entries(paper.tex_files)
 
         gates = [
             StructureGate(),

@@ -297,3 +297,37 @@ def parse_all_bbl_files(bbl_paths: list[Path]) -> list[BibEntry]:
                 seen_keys.add(entry.key)
                 all_entries.append(entry)
     return all_entries
+
+
+def parse_inline_bibliography(tex_raw: str, source_label: str = "inline") -> list[BibEntry]:
+    """Extract entries from an inline \\begin{thebibliography}...\\end{thebibliography} block.
+
+    Some papers (especially single-file submissions) embed the bibliography
+    directly in the .tex file instead of using a separate .bib or .bbl.
+    This is functionally identical to the traditional .bbl format.
+    """
+    # Extract the thebibliography block
+    m = re.search(
+        r"\\begin\{thebibliography\}[^\n]*\n(.*?)\\end\{thebibliography\}",
+        tex_raw,
+        re.DOTALL,
+    )
+    if not m:
+        return []
+
+    # Reuse traditional bbl parser on the extracted block
+    block = "\\begin{thebibliography}{}\n" + m.group(1) + "\\end{thebibliography}"
+    entries = _parse_traditional_bbl(block, source_label)
+    return [e for e in entries if e.key]
+
+
+def extract_inline_bib_entries(tex_files) -> list[BibEntry]:
+    """Scan a list of TexFile objects for inline thebibliography blocks."""
+    seen_keys: set[str] = set()
+    all_entries: list[BibEntry] = []
+    for tex_file in tex_files:
+        for entry in parse_inline_bibliography(tex_file.raw_text, tex_file.path.name):
+            if entry.key not in seen_keys:
+                seen_keys.add(entry.key)
+                all_entries.append(entry)
+    return all_entries

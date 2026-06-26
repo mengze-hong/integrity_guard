@@ -1,5 +1,19 @@
 # ScholarLint · 投稿通 Changelog
 
+## 2026-06-26 — Fix: 误报大幅优化（data_integrity / writing_quality / reference_authenticity / inline bib）
+- **`gate_data.py`**
+  - 重复行检测：改为 per-group 报告（不再 pairwise 爆炸），且要求 ≥3 列才触发（2列的调查表格不报）
+  - Benford 检测：跳过所有值在 [0,100] 区间的列（百分比/得分列），降误报
+  - 评分公式：`total_findings * 15` → `error_count * 20 + warn_count * 5`，严格区分 severity
+- **`gate_writing.py`**
+  - AI marker 检测（"as an AI"/"I cannot"）：新增上下文过滤，引号内、verbatim 内、AI-response 引用语境中的匹配不触发 ERROR；解决 RealityTest 类论文的大量误报
+- **`gate_references.py`**
+  - 无 DOI 的 AI 模型卡片/技术报告（key 含 chatgpt/claude/gpt/gemini/llama 等，或 note 有 "technical report"/"blog" 字样）从 ERROR 降为 WARNING
+- **`app/parsers/bbl_parser.py`**
+  - 新增 `parse_inline_bibliography()` 和 `extract_inline_bib_entries()`：解析 `.tex` 文件中内联的 `\\begin{thebibliography}` 块
+- **`app/core/check.py`** / **`app/api/routes.py`**
+  - 加第三级 fallback：.bib → .bbl → inline thebibliography；解决单文件投稿无法解析引用的问题
+
 ## 2026-06-26 — Fix: .bbl 解析 + title 匹配误报修复
 - **新增 `app/parsers/bbl_parser.py`**：解析 BibTeX 编译输出的 `.bbl` 文件（arxiv 投稿主流格式）
   - 支持 natbib 传统格式（`\bibitem[]{key}` + `\newblock`）和 biblatex refsection 格式（`\entry{}`）

@@ -35,7 +35,7 @@ from app.checks.gate_references import ReferenceAuthenticityGate
 from app.checks.gate_structure import StructureGate
 from app.checks.gate_writing import WritingQualityGate
 from app.models import FullReport
-from app.parsers.bbl_parser import parse_all_bbl_files
+from app.parsers.bbl_parser import extract_inline_bib_entries, parse_all_bbl_files
 from app.parsers.bib_parser import parse_all_bib_files
 from app.parsers.tex_parser import parse_all_tex_files
 from app.parsers.zip_parser import identify_project_structure
@@ -101,12 +101,15 @@ async def check_folder(
     paper, tex_paths, bib_paths, bbl_paths = identify_project_structure(project_dir)
     paper.tex_files = parse_all_tex_files(tex_paths)
     paper.bib_entries = parse_all_bib_files(bib_paths)
-    # Fall back to .bbl when no .bib entries were found (common on arxiv)
     bbl_used = False
     if not paper.bib_entries and bbl_paths:
         paper.bib_entries = parse_all_bbl_files(bbl_paths)
         bbl_used = True
-        paper.bib_entries = parse_all_bbl_files(bbl_paths)
+    # Third fallback: inline \begin{thebibliography} inside .tex files
+    if not paper.bib_entries:
+        paper.bib_entries = extract_inline_bib_entries(paper.tex_files)
+        if paper.bib_entries:
+            bbl_used = True  # treat inline same as bbl for metadata
 
     active_gates = gates if gates is not None else default_gates()
 

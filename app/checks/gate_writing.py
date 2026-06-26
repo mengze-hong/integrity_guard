@@ -16,10 +16,11 @@ from app.models import CheckResult, Issue, ParsedPaper, Severity
 
 # AI signature words/phrases
 _AI_MARKERS = [
-    "as an ai", "as a language model", "i cannot", "i can't help",
+    "as an ai", "as a language model",
+    "i can't help",  # "i cannot" alone is too broad (e.g. "things AI cannot do")
     "here is a", "here's a", "certainly!", "absolutely!",
     "it's worth noting", "it is worth noting",
-    "in conclusion,", "in summary,",  # these are ok alone, but flagged with others
+    "in conclusion,", "in summary,",
 ]
 
 _AI_CONNECTOR_WORDS = [
@@ -141,21 +142,44 @@ class WritingQualityGate(BaseGate):
                     suggestion="这些词在 AI 生成文本中出现频率远高于人类写作。建议替换为更自然的表达。",
                 ))
 
-            # 3. Prompt leakage
+            # 3. Prompt leakage — only fire when not inside quotes or citations
+            # Papers that study AI output often legitimately contain these phrases
+            _QUOTE_RE = re.compile(
+                r"``.*?''|\".*?\"|`.*?'|\{[^}]*\}|\[.*?\]|https?://\S+",
+                re.DOTALL,
+            )
             for i, line in enumerate(lines, 1):
                 line_lower = line.lower()
                 for marker in _AI_MARKERS:
-                    if marker in line_lower:
-                        issues.append(Issue(
-                            severity=Severity.ERROR,
-                            message=f"疑似 AI prompt 残留: \"{marker}\"",
-                            location=f"{tex_file.path.name}:{i}",
-                            file=tex_file.path.name,
-                            line=i,
-                            evidence=line.strip()[:100],
-                            suggestion="这段文字包含明显的 AI 生成痕迹，请删除或重写。",
-                        ))
-                        break  # One per line is enough
+                    if marker not in line_lower:
+                        continue
+                    stripped = line.strip()
+                    if stripped.startswith("%"):
+                        break
+                    # Skip if inside quotes, braces, brackets, or a URL
+                    masked = _QUOTE_RE.sub("", line_lower)
+                    if marker not in masked:
+                        break
+                    # Skip if line context suggests it's an AI response being quoted
+                    ctx_words = {"response:", "output:", "example:", "replies:", "generated:",
+                                 "answered:", "replied:", "query:", "prompt:", "caption:"}
+                    prev_lines = lines[max(0, i-3):i-1]
+                    prev_text = " ".join(prev_lines).lower()
+                    if any(w in prev_text for w in ctx_words):
+                        break
+                    # Skip table/verbatim lines (lots of & or \\)
+                    if line.count("&") >= 2 or line.count("\\\\") >= 1:
+                        break
+                    issues.append(Issue(
+                        severity=Severity.ERROR,
+                        message=f"疑似 AI prompt 残留: \"{marker}\"",
+                        location=f"{tex_file.path.name}:{i}",
+                        file=tex_file.path.name,
+                        line=i,
+                        evidence=line.strip()[:100],
+                        suggestion="这段文字包含明显的 AI 生成痕迹，请删除或重写。",
+                    ))
+                    break  # One per line
 
             # === Paragraph Duplication ===
             paragraphs = self._extract_paragraphs(text)
@@ -507,7 +531,10 @@ class WritingQualityGate(BaseGate):
         # Compute score
         error_count = sum(1 for i in issues if i.severity == Severity.ERROR)
         warn_count = sum(1 for i in issues if i.severity == Severity.WARNING)
-        score = max(0, 100 - error_count * 20 - warn_count * 5)
+        # Cap warnings contribution so a large paper with many minor warnings
+        # doesn't collapse to 0. Warnings beyond 10 have diminishing weight.
+        warn_penalty = min(warn_count, 10) * 5 + max(0, warn_count - 10) * 1
+        score = max(0, 100 - error_count * 20 - warn_penalty)
         passed = error_count == 0
 
         # Generate writing tips based on detected patterns

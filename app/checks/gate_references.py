@@ -22,6 +22,19 @@ _DOI_CACHE: dict[str, tuple[dict | None, str]] = {}
 _TITLE_CACHE: dict[str, dict | None] = {}
 _TRANSIENT_SOURCES = {"crossref_unavailable", "datacite_unavailable", "s2_unavailable"}
 
+# Key patterns that indicate AI model cards / tech reports (no DOI expected)
+_TECH_REPORT_KEY_RE = re.compile(
+    r"(?:chatgpt|claude|gpt[-_]?\d|gemini|llama|mistral|palm|bard|copilot|"
+    r"qwen|deepseek|phi[-_]?\d|falcon|bloom|codex|dalle|midjourney|"
+    r"openai|anthropic|google|meta[-_]?ai|microsoft)[-_]?\d*",
+    re.IGNORECASE,
+)
+_TECH_REPORT_FIELDS = re.compile(
+    r"technical\s+report|blog\s+post|model\s+card|white\s*paper|"
+    r"system\s+report|press\s+release|private\s+communication|personal\s+communication",
+    re.IGNORECASE,
+)
+
 
 def _normalize_title(s: str) -> str:
     """标准化标题用于精确比较。去除大小写、标点、LaTeX格式、多余空格。"""
@@ -341,7 +354,25 @@ class ReferenceAuthenticityGate(BaseGate):
                         ))
                         return issues, meta
 
-                # 搜索也找不到 → error
+                # 搜索也找不到 → 判断是否技术报告，降级为 WARNING
+                raw_fields_text = " ".join(str(v) for v in entry.raw_fields.values())
+                is_tech_report = (
+                    _TECH_REPORT_KEY_RE.search(entry.key)
+                    or _TECH_REPORT_FIELDS.search(raw_fields_text)
+                    or entry.entry_type in ("misc", "online", "software")
+                    and _TECH_REPORT_KEY_RE.search(entry.title or "")
+                )
+                if is_tech_report:
+                    issues.append(Issue(
+                        severity=Severity.WARNING,
+                        message=f"[{entry.key}] 技术报告/模型卡片缺少 DOI（无法自动验证）",
+                        location=location, file=issue_file, line=issue_line,
+                        evidence=f"标题: {entry.title or '无'}",
+                        suggestion="技术报告和模型卡片通常无正式 DOI。建议在 note/url 字段添加官方链接以便读者查阅。",
+                    ))
+                    meta["status"] = "tech_report_no_doi"
+                    return issues, meta
+
                 issues.append(Issue(
                     severity=Severity.ERROR,
                     message=f"[{entry.key}] 缺少 DOI 且无可信来源，标题搜索未找到匹配",
