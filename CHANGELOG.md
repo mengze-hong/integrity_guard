@@ -1,5 +1,13 @@
 # ScholarLint · 投稿通 Changelog
 
+## 2026-06-26 — Headless Check Pipeline (`app.core.check`)
+- 新增 `app/core/check.py`：纯函数 `check_folder(folder, *, filename, job_id, gates) -> FullReport`，把"已解压目录 → 6 gate → FullReport"的核心检查链从 web 服务里独立出来；不依赖 FastAPI、不写盘、不动全局 dict、不修改文件夹
+- 用途：CLI / 实验脚本 / 未来对外 API client 直接 `from app.core.check import check_folder` 三行调用，得到可序列化 `FullReport`（`.model_dump()` 转 JSON）
+- 不动现有 web 路径：`app/api/routes.py` 的上传/解压/危险文件清理/进程级 dict / 持久化逻辑完全保留，向后兼容
+- 新增 `app/core/__init__.py` 暴露 `check_folder` / `default_gates`
+- 新增 `tests/test_check_folder.py`（7 项）：返回 FullReport / metadata 完整 / JSON 可序列化 / 自定义 filename+job_id / gate 子集 / 缺失目录抛错 / 不修改源文件夹
+- 验证：ruff、pytest 162 项（原 155 + 新 7）全绿
+
 ## 2026-06-26 — Repo Root Cleanup
 - 整理根目录：把营销/截图/Playwright 历史日志移入 `_Archive/`（policy: 永不删除，只 move），根目录现在只保留运行时代码、文档、配置
   - `_Archive/marketing/`：`IntegrityGuard_Demo.pptx` / `IntegrityGuard_Pitch_Deck.pptx` / `logo.png` / `create_ppt.py` / `create_ppt.js` / `take_screenshots.py`
