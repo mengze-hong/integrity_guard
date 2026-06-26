@@ -18,8 +18,6 @@ import httpx
 from app.checks.base import BaseGate
 from app.models import BibEntry, CheckResult, Issue, ParsedPaper, Severity
 
-_DOI_CACHE: dict[str, tuple[dict | None, str]] = {}
-_TITLE_CACHE: dict[str, dict | None] = {}
 _TRANSIENT_SOURCES = {"crossref_unavailable", "datacite_unavailable", "s2_unavailable"}
 
 # Key patterns that indicate AI model cards / tech reports (no DOI expected)
@@ -106,9 +104,16 @@ class ReferenceAuthenticityGate(BaseGate):
     DATACITE_BASE = "https://api.datacite.org"
     S2_BASE = "https://api.semanticscholar.org/graph/v1"
     OPENALEX_BASE = "https://api.openalex.org"
+    OPENREVIEW_BASE = "https://api.openreview.net"
     HEADERS = {"User-Agent": "ScholarLint/5.3 (mailto:integrity@check.org)"}
     MAX_CONCURRENT = 5
     TIMEOUT = 15.0
+
+    def __init__(self):
+        # Per-instance caches: prevent cross-paper cache pollution when multiple
+        # papers are verified in the same process (e.g., run_demo.py loops).
+        self._doi_cache: dict[str, tuple[dict | None, str]] = {}
+        self._title_cache: dict[str, dict | None] = {}
 
     async def check(self, paper: ParsedPaper) -> CheckResult:
         issues: list[Issue] = []
@@ -183,8 +188,8 @@ class ReferenceAuthenticityGate(BaseGate):
         Returns: (metadata_dict, source) where source is 'crossref'/'datacite'/'s2'/'none'
         """
         cache_key = doi.lower().strip()
-        if cache_key in _DOI_CACHE:
-            return _DOI_CACHE[cache_key]
+        if cache_key in self._doi_cache:
+            return self._doi_cache[cache_key]
 
         transient_failure = False
 
@@ -198,7 +203,7 @@ class ReferenceAuthenticityGate(BaseGate):
                 )
                 if resp.status_code == 200:
                     result = (resp.json().get("message", {}), "crossref")
-                    _DOI_CACHE[cache_key] = result
+                    self._doi_cache[cache_key] = result
                     return result
                 if resp.status_code == 429 or resp.status_code >= 500:
                     transient_failure = True
@@ -213,7 +218,7 @@ class ReferenceAuthenticityGate(BaseGate):
                 )
                 if resp.status_code == 200:
                     result = (resp.json().get("data", {}).get("attributes", {}), "datacite")
-                    _DOI_CACHE[cache_key] = result
+                    self._doi_cache[cache_key] = result
                     return result
                 if resp.status_code == 429 or resp.status_code >= 500:
                     transient_failure = True
@@ -230,7 +235,7 @@ class ReferenceAuthenticityGate(BaseGate):
                 )
                 if resp.status_code == 200:
                     result = (resp.json(), "s2")
-                    _DOI_CACHE[cache_key] = result
+                    self._doi_cache[cache_key] = result
                     return result
                 if resp.status_code == 429 or resp.status_code >= 500:
                     transient_failure = True
@@ -238,7 +243,7 @@ class ReferenceAuthenticityGate(BaseGate):
                 transient_failure = True
 
         result = (None, "unavailable" if transient_failure else "none")
-        _DOI_CACHE[cache_key] = result
+        self._doi_cache[cache_key] = result
         return result
 
     def _extract_metadata(self, data: dict, source: str) -> tuple[str, list[dict], str]:
@@ -697,8 +702,8 @@ class ReferenceAuthenticityGate(BaseGate):
         norm_title = _normalize_title(title)
         if not norm_title or len(norm_title) < 10:
             return None
-        if norm_title in _TITLE_CACHE:
-            return _TITLE_CACHE[norm_title]
+        if norm_title in self._title_cache:
+            return self._title_cache[norm_title]
 
         async with semaphore:
             # Try Crossref title search
@@ -718,7 +723,7 @@ class ReferenceAuthenticityGate(BaseGate):
                             if _title_matches(item_norm, norm_title):
                                 doi = item.get("DOI", "")
                                 result = {"title": item_titles[0], "url": f"https://doi.org/{doi}" if doi else ""}
-                                _TITLE_CACHE[norm_title] = result
+                                self._title_cache[norm_title] = result
                                 return result
             except (httpx.TimeoutException, httpx.HTTPError):
                 pass
@@ -740,7 +745,30 @@ class ReferenceAuthenticityGate(BaseGate):
                             doi = ext_ids.get("DOI", "")
                             url = f"https://doi.org/{doi}" if doi else f"https://www.semanticscholar.org/paper/{paper.get('paperId','')}"
                             result = {"title": paper_title, "url": url}
-                            _TITLE_CACHE[norm_title] = result
+                            self._title_cache[norm_title] = result
+                            return result
+            except (httpx.TimeoutException, httpx.HTTPError):
+                pass
+
+            # Try OpenReview (ICLR, NeurIPS, ICML workshops, COLM, etc.)
+            try:
+                resp = await client.get(
+                    f"{self.OPENREVIEW_BASE}/notes/search",
+                    params={"term": title, "limit": 3, "source": "forum", "offset": 0},
+                    headers=self.HEADERS,
+                    timeout=self.TIMEOUT,
+                )
+                if resp.status_code == 200:
+                    notes = resp.json().get("notes", [])
+                    for note in notes:
+                        note_title = note.get("content", {}).get("title", "")
+                        if isinstance(note_title, dict):
+                            note_title = note_title.get("value", "")
+                        if note_title and _title_matches(_normalize_title(note_title), norm_title):
+                            forum_id = note.get("forum", note.get("id", ""))
+                            url = f"https://openreview.net/forum?id={forum_id}" if forum_id else "https://openreview.net"
+                            result = {"title": note_title, "url": url}
+                            self._title_cache[norm_title] = result
                             return result
             except (httpx.TimeoutException, httpx.HTTPError):
                 pass
@@ -761,12 +789,12 @@ class ReferenceAuthenticityGate(BaseGate):
                             doi = work.get("doi", "")
                             url = doi if doi else work.get("id", "")
                             result = {"title": work_title, "url": url}
-                            _TITLE_CACHE[norm_title] = result
+                            self._title_cache[norm_title] = result
                             return result
             except (httpx.TimeoutException, httpx.HTTPError):
                 pass
 
-        _TITLE_CACHE[norm_title] = None
+        self._title_cache[norm_title] = None
         return None
 
     @staticmethod

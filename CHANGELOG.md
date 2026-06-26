@@ -1,5 +1,10 @@
 # ScholarLint · 投稿通 Changelog
 
+## 2026-06-26 14:50 — Fix: cache 隔离 + OpenReview 搜索补充
+- **`gate_references.py`**
+  - `_DOI_CACHE` / `_TITLE_CACHE` 从模块级全局变量改为 `ReferenceAuthenticityGate` 实例变量（`self._doi_cache` / `self._title_cache`），消除多论文串行检查时的跨论文缓存污染（同 key 在第一篇因超时缓存为 `None` 后，后续论文不再重试）
+  - `_search_by_title` 新增 OpenReview API（`https://api.openreview.net/notes/search`），在 Crossref/S2/OpenAlex 之后作为第三路搜索；覆盖 ICLR、COLM、NeurIPS Workshop 等不在 Crossref 数据库的论文
+
 ## 2026-06-26 — Fix: 误报大幅优化（data_integrity / writing_quality / reference_authenticity / inline bib）
 - **`gate_data.py`**
   - 重复行检测：改为 per-group 报告（不再 pairwise 爆炸），且要求 ≥3 列才触发（2列的调查表格不报）
