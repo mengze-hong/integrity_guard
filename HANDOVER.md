@@ -128,7 +128,7 @@ Forbidden tunnel provider policy scan for PowerShell:
 
 ```powershell
 $pattern = ('cloud' + 'flared|try' + 'cloud' + 'flare|cloud' + 'flare')
-$hits = @(git grep --untracked -n -i -E $pattern -- . ':!.cursor/**' ':!.git/**' ':!CHANGELOG.md' ':!data/**' ':!uploads/**' ':!screenshots/**' ':!screenshots_new/**' ':!.playwright-mcp/**')
+$hits = @(git grep --untracked -n -i -E $pattern -- . ':!.cursor/**' ':!.git/**' ':!_Archive/**' ':!CHANGELOG.md' ':!data/**' ':!uploads/**')
 if ($hits.Count) { $hits; Write-Error 'Forbidden tunnel provider pattern found'; exit 1 } else { 'No forbidden tunnel provider pattern found'; exit 0 }
 ```
 

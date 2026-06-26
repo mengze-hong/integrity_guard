@@ -18,10 +18,8 @@ const excludedPrefixes = [
   ".cursor/",
   ".workbuddy/",
   ".git/",
+  "_Archive/",
   "uploads/",
-  "screenshots/",
-  "screenshots_new/",
-  ".playwright-mcp/",
 ];
 
 const placeholderValue =

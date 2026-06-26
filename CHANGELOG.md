@@ -1,5 +1,15 @@
 # ScholarLint · 投稿通 Changelog
 
+## 2026-06-26 — Repo Root Cleanup
+- 整理根目录：把营销/截图/Playwright 历史日志移入 `_Archive/`（policy: 永不删除，只 move），根目录现在只保留运行时代码、文档、配置
+  - `_Archive/marketing/`：`IntegrityGuard_Demo.pptx` / `IntegrityGuard_Pitch_Deck.pptx` / `logo.png` / `create_ppt.py` / `create_ppt.js` / `take_screenshots.py`
+  - `_Archive/screenshots/v50-historical/`（原 `screenshots/`，19 张 v48-v50 历史截图）
+  - `_Archive/screenshots/v48-new/`（原 `screenshots_new/`，8 张早期 v48 截图）
+  - `_Archive/dev-logs/playwright-mcp/`（原 `.playwright-mcp/`，500+ 个 console/page 历史快照）
+- `.gitignore` 新增 `_Archive/`；`.gitignore` 中已经覆盖单文件名规则保持不变（向后兼容）
+- 同步更新隧道扫描排除路径，移除 stale 的 `screenshots/` `screenshots_new/` `.playwright-mcp/`，统一改为 `_Archive/**`：`.github/workflows/ci.yml`、`scripts/secret-scan.mjs`、`docs/TESTING_GUIDE.md`、`HANDOVER.md`
+- 验证：ruff、`npm run check:js`、`npm run scan:secrets`（114 文件 pass）、pytest 155 项全绿
+
 ## v5.4.1 (2026-06-02) — Tencent Cloud Lighthouse Deployment Bundle
 - 新增 `docs/DEPLOY_TENCENT.md`：腾讯云 Lighthouse 一站式部署指南——实例选型（MVP/成长/扩展三档）、Ubuntu 22.04 + Docker 引导、目录布局（`/srv/scholarlint`，数据盘分离）、SSH 注入 `.env`（强调 secret 永不 git 化）、Nginx + 腾讯云 SSL 反代（含 `X-Forwarded-Proto` 触发 Secure cookie）、ICP 备案策略（mainland 必备 / 港新可绕过）、COS 加密备份、上线前自检清单、回滚步骤
 - 新增 `docker-compose.prod.yml` overlay：localhost 绑定 + `env_file: .env` + 绝对数据卷路径（`/srv/scholarlint/data` 与 `/srv/scholarlint/uploads`）+ 有界 JSON-file 日志驱动（20MB×5）+ `restart: always`，与基础 compose 叠加使用

@@ -10,7 +10,7 @@ Run these from the repository root:
 ruff check app/ tests/ --select E,F,W --ignore E501
 npm run check:js
 npm run test:js
-$pattern = ('cloud' + 'flared|try' + 'cloud' + 'flare|cloud' + 'flare'); $hits = @(git grep --untracked -n -i -E $pattern -- . ':!.cursor/**' ':!.git/**' ':!.github/workflows/ci.yml' ':!CHANGELOG.md' ':!data/**' ':!uploads/**' ':!screenshots/**' ':!screenshots_new/**' ':!.playwright-mcp/**'); if ($hits.Count) { $hits; Write-Error 'Forbidden tunnel provider pattern found'; exit 1 } else { 'No forbidden tunnel provider pattern found'; exit 0 }
+$pattern = ('cloud' + 'flared|try' + 'cloud' + 'flare|cloud' + 'flare'); $hits = @(git grep --untracked -n -i -E $pattern -- . ':!.cursor/**' ':!.git/**' ':!.github/workflows/ci.yml' ':!_Archive/**' ':!CHANGELOG.md' ':!data/**' ':!uploads/**'); if ($hits.Count) { $hits; Write-Error 'Forbidden tunnel provider pattern found'; exit 1 } else { 'No forbidden tunnel provider pattern found'; exit 0 }
 npm run scan:secrets
 pip-audit -r requirements.txt
 python -m pytest -q --cov=app --cov-report=term-missing --cov-fail-under=20

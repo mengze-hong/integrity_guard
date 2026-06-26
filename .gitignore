@@ -52,6 +52,9 @@ create_ppt.js
 take_screenshots.py
 _test_syntax.js
 
+# Archived (moved out of root, kept on disk per project policy)
+_Archive/
+
 # OS
 .DS_Store
 Thumbs.db
