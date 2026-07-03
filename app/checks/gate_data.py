@@ -493,11 +493,20 @@ class DataIntegrityGate(BaseGate):
                 line=pf.get("line"),
             ))
 
-        # Text-table number consistency check
-        # NOTE: naive lexical matching without semantic scope causes too many
-        # false positives (unrelated numbers in text and table accidentally match).
-        # Disabled until the NCG (Numerical Claim Grounding) method is implemented.
-        # consistency_findings = self._check_text_table_consistency(paper.tex_files, tables)
+        # NCG: Numerical Claim Grounding (Tier 0 + Tier 1, rule-based)
+        # Replaces the old naive _check_text_table_consistency.
+        ncg_findings = self._ncg_check(paper.tex_files, tables)
+        for cf in ncg_findings:
+            total_findings += 1
+            issues.append(Issue(
+                severity=Severity.WARNING,
+                message=cf["message"],
+                location=cf.get("location", ""),
+                evidence=cf["evidence"],
+                suggestion="正文中引用的数值与表格数据不匹配。请核对原始实验数据，确认是否为笔误或数据更新后未同步。",
+                file=cf.get("file"),
+                line=cf.get("line"),
+            ))
 
         error_count = sum(1 for i in issues if i.severity == Severity.ERROR)
         warn_count = sum(1 for i in issues if i.severity == Severity.WARNING)
@@ -627,3 +636,189 @@ class DataIntegrityGate(BaseGate):
                             break
 
         return findings[:5]
+
+    # ------------------------------------------------------------------
+    # NCG — Numerical Claim Grounding (Tier 0 + Tier 1, rule-based)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _extract_claims(tex_files: list[TexFile]) -> list[dict]:
+        """Extract numerical claims from LaTeX text.
+
+        Returns list of dicts:
+          value      : float
+          value_str  : str as written (e.g. "92.3")
+          dp         : decimal places in value_str
+          claim_type : "absolute" | "comparative"
+          delta      : float | None  (for comparative: stated improvement)
+          scope      : dict{metric?, dataset?, method?}  — from surrounding context
+          file       : str
+          line       : int
+          context    : str  — the sentence fragment
+        """
+        # Metric names common in NLP / ML papers
+        _METRICS = {
+            "accuracy", "acc", "f1", "f-1", "bleu", "rouge", "precision", "recall",
+            "perplexity", "ppl", "em", "exact match", "map", "ndcg", "mrr",
+            "auc", "roc", "ap", "score", "performance", "result",
+        }
+        # Dataset shorthands (extend as needed)
+        _DATASETS = {
+            "squad", "mnli", "snli", "nli", "sst", "imdb", "glue", "superglue",
+            "cnn", "dailymail", "xsum", "trivia", "natural questions", "nq",
+            "mmlu", "hellaswag", "winogrande", "arc", "truthfulqa",
+        }
+
+        absolute_pat = re.compile(
+            r"(?:achiev|obtain|reach|attain|report|get|scores?)\w*"
+            r"(?:\s+(?:a|an|the))?"
+            r"(?:\s+\w+){0,3}?\s+"
+            r"(?:of\s+)?(\d+\.?\d*)\s*(?:%|pp|points?)?",
+            re.IGNORECASE,
+        )
+        comparative_pat = re.compile(
+            r"(?:outperform|surpass|exceed|improve|gain|better|higher|lower)\w*"
+            r"(?:\s+\w+){0,6}?\s+by\s+(\d+\.?\d*)\s*(?:%|pp|points?)?",
+            re.IGNORECASE,
+        )
+
+        def _scope_from_window(window: str) -> dict:
+            wl = window.lower()
+            metric = next((m for m in _METRICS if re.search(r"\b" + re.escape(m) + r"\b", wl)), None)
+            dataset = next((d for d in _DATASETS if re.search(r"\b" + re.escape(d) + r"\b", wl)), None)
+            return {"metric": metric, "dataset": dataset}
+
+        claims = []
+        for tex_file in tex_files:
+            lines = tex_file.raw_text.split("\n")
+            for lineno, line in enumerate(lines, 1):
+                # skip comment lines and table rows
+                stripped = line.strip()
+                if stripped.startswith("%") or line.count("&") >= 2:
+                    continue
+                window = " ".join(lines[max(0, lineno - 3):lineno + 1])
+
+                for m in absolute_pat.finditer(line):
+                    try:
+                        v = float(m.group(1))
+                    except ValueError:
+                        continue
+                    if v == 0 or v > 10_000:
+                        continue
+                    dp = len(m.group(1).split(".")[1]) if "." in m.group(1) else 0
+                    claims.append({
+                        "value": v, "value_str": m.group(1), "dp": dp,
+                        "claim_type": "absolute", "delta": None,
+                        "scope": _scope_from_window(window),
+                        "file": tex_file.path.name, "line": lineno,
+                        "context": stripped[:80],
+                    })
+
+                for m in comparative_pat.finditer(line):
+                    try:
+                        delta = float(m.group(1))
+                    except ValueError:
+                        continue
+                    if delta <= 0 or delta > 100:
+                        continue
+                    dp = len(m.group(1).split(".")[1]) if "." in m.group(1) else 0
+                    claims.append({
+                        "value": delta, "value_str": m.group(1), "dp": dp,
+                        "claim_type": "comparative", "delta": delta,
+                        "scope": _scope_from_window(window),
+                        "file": tex_file.path.name, "line": lineno,
+                        "context": stripped[:80],
+                    })
+
+        return claims
+
+    @staticmethod
+    def _scope_sim(claim_scope: dict, col_hdr: str, row_hdr: str, caption: str) -> float:
+        """Return 0–1 similarity between claim scope and a cell's semantic address."""
+        target = (col_hdr + " " + row_hdr + " " + caption).lower()
+        score = 0.0
+        if claim_scope.get("metric") and claim_scope["metric"] in target:
+            score += 0.6
+        if claim_scope.get("dataset") and claim_scope["dataset"] in target:
+            score += 0.4
+        return min(score, 1.0)
+
+    @staticmethod
+    def _ncg_check(tex_files: list[TexFile], tables: list[dict]) -> list[dict]:
+        """NCG Tier 0 + Tier 1: rule-based numerical claim grounding.
+
+        Tier 0 — scope-first:
+          Find the table cell whose (row_hdr, col_hdr, caption) best matches the
+          claim's metric/dataset scope. If the cell value disagrees with the claim
+          at stated precision → Contradicted.
+
+        Tier 1 — value-first cross-check:
+          If scope similarity is low (scope ambiguous), fall back to checking
+          whether ANY table cell has a value within 2% of the claim. If none
+          found → Ungroundable (skip). If found but disagreeing → flag.
+
+        Only high-confidence Contradicted findings are reported.
+        """
+        claims = DataIntegrityGate._extract_claims(tex_files)
+        if not claims or not tables:
+            return []
+
+        findings = []
+        seen: set[tuple] = set()  # deduplicate by (file, line, value_str)
+
+        for claim in claims:
+            v = claim["value"]
+            dp = claim["dp"]
+            key = (claim["file"], claim["line"], claim["value_str"])
+            if key in seen:
+                continue
+
+            # --- Tier 0: scope-first ---
+            best_cell = None
+            best_sim = 0.0
+            for table in tables:
+                caption = table.get("caption", "")
+                ci = table.get("cell_index", {})
+                for (rhdr, chdr), tv in ci.items():
+                    sim = DataIntegrityGate._scope_sim(claim["scope"], chdr, rhdr, caption)
+                    if sim > best_sim:
+                        best_sim = sim
+                        best_cell = {"value": tv, "row_hdr": rhdr, "col_hdr": chdr,
+                                     "caption": caption, "table": table}
+
+            if best_sim >= 0.6 and best_cell is not None:
+                tv = best_cell["value"]
+                tv_rounded = round(tv, dp)
+                claimed_rounded = round(v, dp)
+                if tv_rounded != claimed_rounded:
+                    diff = abs(v - tv)
+                    # Only flag if difference is meaningful (≥ 1 ULP at stated dp)
+                    if diff >= 10 ** -dp:
+                        seen.add(key)
+                        addr = f"{best_cell['row_hdr']} × {best_cell['col_hdr']}" if (
+                            best_cell["row_hdr"] or best_cell["col_hdr"]
+                        ) else best_cell["caption"][:30]
+                        findings.append({
+                            "message": (
+                                f"正文声称 {claim['value_str']}，"
+                                f"但对应表格 [{addr}] 中为 {tv}"
+                                f"（差 {diff:.{max(dp,2)}f}）"
+                            ),
+                            "evidence": f"行 {claim['line']}: {claim['context']}",
+                            "location": claim["file"],
+                            "file": claim["file"],
+                            "line": claim["line"],
+                            "confidence": "high",
+                        })
+                continue  # scope found — don't fall through to Tier 1
+
+            # --- Tier 1: value-first ---
+            # Without semantic scope, any "close but not equal" check has
+            # unacceptable false-positive rate (different models/settings with
+            # similar scores). Tier 1 is intentionally disabled here; it will
+            # be re-enabled once scope extraction covers these ambiguous claims.
+            pass  # noqa: placeholder
+
+        # Return high-confidence first, cap at 8 to avoid noise flood
+        findings.sort(key=lambda f: 0 if f["confidence"] == "high" else 1)
+        return findings[:8]

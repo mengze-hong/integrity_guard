@@ -411,3 +411,69 @@ async def test_data_integrity_detects_duplicate_rows():
     # sample_table.tex has duplicate rows (Baseline == Ours (dup))
     error_messages = [i.message for i in result.issues if i.severity == Severity.ERROR]
     assert any("相同" in m for m in error_messages)
+
+
+# ── NCG tests ────────────────────────────────────────────────────────────────
+
+def _ncg_paper(tex_body: str) -> "ParsedPaper":
+    """Helper: wrap raw tex body in a minimal ParsedPaper."""
+    tex = TexFile(path=Path("test.tex"), is_main=True, raw_text=tex_body, citations=[])
+    return ParsedPaper(project_dir=FIXTURES, tex_files=[tex], bib_entries=[], all_files=[], figure_files=[])
+
+
+@pytest.mark.asyncio
+async def test_ncg_tier0_detects_mismatch():
+    """Tier 0 scope-first: claim 89.3 F1 but table has 88.5."""
+    tex = (
+        r"\begin{table}" + "\n"
+        r"\caption{Main results}" + "\n"
+        r"\begin{tabular}{lcc}" + "\n"
+        r"Model & F1 & Accuracy \\" + "\n"
+        r"\hline" + "\n"
+        r"OurModel & 88.5 & 91.2 \\" + "\n"
+        r"Baseline & 85.1 & 88.0 \\" + "\n"
+        r"\end{tabular}" + "\n"
+        r"\end{table}" + "\n\n"
+        r"Our model achieves an F1 of 89.3 on the benchmark."
+    )
+    result = await DataIntegrityGate().check(_ncg_paper(tex))
+    ncg_issues = [i for i in result.issues if "89.3" in i.message or "88.5" in i.message]
+    assert ncg_issues, "NCG Tier 0 should detect F1 mismatch (89.3 claimed vs 88.5 in table)"
+
+
+@pytest.mark.asyncio
+async def test_ncg_no_fp_on_consistent_claim():
+    """No false positive when claim matches table exactly at stated precision."""
+    tex = (
+        r"\begin{table}" + "\n"
+        r"\caption{Results}" + "\n"
+        r"\begin{tabular}{lc}" + "\n"
+        r"Model & F1 \\" + "\n"
+        r"\hline" + "\n"
+        r"OurModel & 88.5 \\" + "\n"
+        r"\end{tabular}" + "\n"
+        r"\end{table}" + "\n\n"
+        r"Our model achieves an F1 of 88.5 on this task."
+    )
+    result = await DataIntegrityGate().check(_ncg_paper(tex))
+    ncg_issues = [i for i in result.issues if "88.5" in i.message]
+    assert not ncg_issues, f"Should not flag consistent claim: {[i.message for i in ncg_issues]}"
+
+
+@pytest.mark.asyncio
+async def test_ncg_no_fp_on_rounded_claim():
+    """No false positive: 88.50 in text vs 88.504 in table — agrees at 2dp."""
+    tex = (
+        r"\begin{table}" + "\n"
+        r"\caption{Results}" + "\n"
+        r"\begin{tabular}{lc}" + "\n"
+        r"Model & F1 \\" + "\n"
+        r"\hline" + "\n"
+        r"OurModel & 88.504 \\" + "\n"
+        r"\end{tabular}" + "\n"
+        r"\end{table}" + "\n\n"
+        r"Our model achieves an F1 of 88.50 on this task."
+    )
+    result = await DataIntegrityGate().check(_ncg_paper(tex))
+    ncg_issues = [i for i in result.issues if "88.50" in i.message or "88.504" in i.message]
+    assert not ncg_issues, f"Rounding should not trigger NCG: {[i.message for i in ncg_issues]}"
