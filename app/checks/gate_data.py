@@ -31,8 +31,43 @@ _CAPTION_PATTERN = re.compile(r"\\caption(?:\[[^\]]*\])?\{(.+?)\}", re.DOTALL)
 _NUMBER_PATTERN = re.compile(r"-?\d+\.\d+|-?\d+")
 
 
+def _clean_cell_text(cell: str) -> str:
+    """Strip LaTeX markup from a cell, returning plain text."""
+    cell = re.sub(r"\\(?:textbf|textit|emph|mathbf|mathrm|text)\{([^}]*)\}", r"\1", cell)
+    cell = re.sub(r"\\[a-zA-Z]+\{[^}]*\}", "", cell)
+    cell = re.sub(r"\\[a-zA-Z]+", "", cell)
+    cell = cell.replace("{", "").replace("}", "").replace("$", "").replace("\\", "")
+    return cell.strip()
+
+
+def _is_header_row(cells: list[str]) -> bool:
+    """Heuristic: a row is a header if most cells are non-numeric text."""
+    numeric_count = 0
+    text_count = 0
+    for c in cells:
+        cleaned = _clean_cell_text(c)
+        if not cleaned:
+            continue
+        nums = _NUMBER_PATTERN.findall(cleaned)
+        if nums:
+            numeric_count += 1
+        else:
+            text_count += 1
+    if not (numeric_count + text_count):
+        return False
+    return text_count > numeric_count
+
+
 def _extract_tables(tex_files: list[TexFile]) -> list[dict]:
-    """Extract all tables with their numeric data from tex files."""
+    """Extract all tables with their numeric data from tex files.
+
+    Each returned table dict contains:
+      rows        : list[list[float|None]]   (backward-compatible)
+      col_headers : list[str]                (column header labels, may be empty strings)
+      row_headers : list[str]                (first-column label for each data row)
+      cell_index  : dict[(row_hdr, col_hdr) -> float]   (semantic address → value)
+      value_index : dict[str -> list[dict]]  (str(round(v,2)) → [{row,col,value}])
+    """
     tables = []
 
     for tex_file in tex_files:
@@ -41,31 +76,57 @@ def _extract_tables(tex_files: list[TexFile]) -> list[dict]:
         for table_match in _TABLE_ENV_PATTERN.finditer(text):
             table_content = table_match.group(1)
 
-            # Get caption
             cap_match = _CAPTION_PATTERN.search(table_content)
             caption = cap_match.group(1).strip()[:100] if cap_match else "Unknown Table"
 
-            # Find tabular inside
             tab_match = _TABULAR_PATTERN.search(table_content)
             if not tab_match:
                 continue
 
             tabular_body = tab_match.group(1)
-            # Parse rows
-            rows = []
+
+            # --- Split into raw rows (skip rule lines) ---
+            raw_rows: list[list[str]] = []
             for line in tabular_body.split("\\\\"):
                 line = line.strip()
-                if not line or line.startswith("\\hline") or line.startswith("\\toprule") or line.startswith("\\midrule") or line.startswith("\\bottomrule"):
+                if not line:
                     continue
-                # Split by & (LaTeX column separator)
+                if re.match(r"\\(?:hline|toprule|midrule|bottomrule|cline|hdashline)", line):
+                    continue
                 cells = [c.strip() for c in line.split("&")]
-                # Extract numbers from each cell
-                row_numbers = []
-                for cell in cells:
-                    # Remove LaTeX commands
-                    cell_clean = re.sub(r"\\[a-zA-Z]+\{[^}]*\}", "", cell)
-                    cell_clean = re.sub(r"\\[a-zA-Z]+", "", cell_clean)
-                    cell_clean = cell_clean.replace("{", "").replace("}", "").replace("$", "").replace("\\", "")
+                raw_rows.append(cells)
+
+            if not raw_rows:
+                continue
+
+            # --- Detect header row (first row that is mostly text) ---
+            col_headers: list[str] = []
+            data_raw_rows = raw_rows
+            if raw_rows and _is_header_row(raw_rows[0]):
+                col_headers = [_clean_cell_text(c) for c in raw_rows[0]]
+                data_raw_rows = raw_rows[1:]
+
+            # --- Parse data rows; first cell treated as potential row header ---
+            rows: list[list[float | None]] = []
+            row_headers: list[str] = []
+
+            for raw_row in data_raw_rows:
+                if not raw_row:
+                    continue
+
+                # First cell: if non-numeric, treat as row header
+                first_clean = _clean_cell_text(raw_row[0])
+                first_nums = _NUMBER_PATTERN.findall(first_clean)
+                if first_nums:
+                    row_hdr = ""
+                    value_cells = raw_row
+                else:
+                    row_hdr = first_clean
+                    value_cells = raw_row[1:]
+
+                row_numbers: list[float | None] = []
+                for cell in value_cells:
+                    cell_clean = _clean_cell_text(cell)
                     nums = _NUMBER_PATTERN.findall(cell_clean)
                     if nums:
                         try:
@@ -77,18 +138,62 @@ def _extract_tables(tex_files: list[TexFile]) -> list[dict]:
 
                 if any(x is not None for x in row_numbers):
                     rows.append(row_numbers)
+                    row_headers.append(row_hdr)
 
-            if rows:
-                # Get line number
-                start_pos = table_match.start()
-                line_num = text[:start_pos].count("\n") + 1
-                tables.append({
-                    "caption": caption,
-                    "rows": rows,
-                    "file": tex_file.path.name,
-                    "line": line_num,
-                    "num_cols": max(len(r) for r in rows),
-                })
+            if not rows:
+                continue
+
+            num_cols = max(len(r) for r in rows)
+
+            # Align col_headers to value columns (drop the row-header column if present)
+            # col_headers may be longer by 1 if the first col is the row-header column
+            value_col_headers: list[str] = []
+            if col_headers:
+                # If we stripped the first data cell as row-header, also strip
+                # the first col_header (it was the row-label column header).
+                offset = 1 if any(h for h in row_headers) else 0
+                value_col_headers = col_headers[offset:]
+
+            # Pad/truncate to num_cols
+            while len(value_col_headers) < num_cols:
+                value_col_headers.append("")
+            value_col_headers = value_col_headers[:num_cols]
+
+            # --- Build cell_index and value_index ---
+            cell_index: dict[tuple[str, str], float] = {}
+            value_index: dict[str, list[dict]] = {}
+
+            for ri, (row, rhdr) in enumerate(zip(rows, row_headers)):
+                for ci, v in enumerate(row):
+                    if v is None:
+                        continue
+                    chdr = value_col_headers[ci] if ci < len(value_col_headers) else ""
+                    if rhdr or chdr:
+                        cell_index[(rhdr, chdr)] = v
+                    # value_index keyed by rounded string for fast lookup
+                    vkey = f"{v:.2f}"
+                    if vkey not in value_index:
+                        value_index[vkey] = []
+                    value_index[vkey].append({
+                        "row": ri, "col": ci,
+                        "row_hdr": rhdr, "col_hdr": chdr,
+                        "value": v,
+                    })
+
+            start_pos = table_match.start()
+            line_num = text[:start_pos].count("\n") + 1
+
+            tables.append({
+                "caption": caption,
+                "rows": rows,                        # backward-compatible
+                "col_headers": value_col_headers,
+                "row_headers": row_headers,
+                "cell_index": cell_index,
+                "value_index": value_index,
+                "file": tex_file.path.name,
+                "line": line_num,
+                "num_cols": num_cols,
+            })
 
     return tables
 
@@ -217,30 +322,38 @@ def _check_low_variance(table: dict) -> list[dict]:
 
 
 def _check_precision_inconsistency(table: dict) -> list[dict]:
-    """Check for inconsistent decimal precision within a column."""
+    """Check for inconsistent decimal precision within a column.
+
+    Only flags columns where ALL values have decimals but the precision spread
+    is large (≥4 positions). Columns that mix integers with decimals are common
+    in valid tables (e.g. counts alongside percentages) and are not flagged.
+    """
     findings = []
     rows = table["rows"]
     num_cols = table["num_cols"]
 
     for col_idx in range(num_cols):
         col_values = [r[col_idx] for r in rows if col_idx < len(r) and r[col_idx] is not None]
-        if len(col_values) < 3:
+        if len(col_values) < 4:
             continue
 
-        # Count decimal places
+        # Skip columns where any value is a whole number —
+        # mixing integers with decimals is legitimate (e.g. count + ratio columns).
+        if any(v == int(v) for v in col_values):
+            continue
+
         precisions = []
         for v in col_values:
-            s = str(v)
+            s = f"{v}"
             if "." in s:
-                precisions.append(len(s.split(".")[1].rstrip("0")) or 0)
+                precisions.append(len(s.split(".")[1].rstrip("0")) or 1)
             else:
                 precisions.append(0)
 
-        unique_prec = set(precisions)
-        if len(unique_prec) > 2 and max(precisions) - min(precisions) >= 3:
+        if len(set(precisions)) > 2 and max(precisions) - min(precisions) >= 4:
             findings.append({
                 "type": "precision_inconsistency",
-                "message": f"第 {col_idx+1} 列小数精度不一致（{min(precisions)}-{max(precisions)} 位）",
+                "message": f"第 {col_idx+1} 列小数精度差异异常（{min(precisions)}-{max(precisions)} 位）",
                 "evidence": f"精度分布: {dict(Counter(precisions))}",
             })
 
@@ -381,18 +494,10 @@ class DataIntegrityGate(BaseGate):
             ))
 
         # Text-table number consistency check
-        consistency_findings = self._check_text_table_consistency(paper.tex_files, tables)
-        for cf in consistency_findings:
-            total_findings += 1
-            issues.append(Issue(
-                severity=Severity.WARNING,
-                message=cf["message"],
-                location=cf.get("location", ""),
-                evidence=cf["evidence"],
-                suggestion="正文中引用的数值与表格数据不一致。请核对后修正。",
-                file=cf.get("file"),
-                line=cf.get("line"),
-            ))
+        # NOTE: naive lexical matching without semantic scope causes too many
+        # false positives (unrelated numbers in text and table accidentally match).
+        # Disabled until the NCG (Numerical Claim Grounding) method is implemented.
+        # consistency_findings = self._check_text_table_consistency(paper.tex_files, tables)
 
         error_count = sum(1 for i in issues if i.severity == Severity.ERROR)
         warn_count = sum(1 for i in issues if i.severity == Severity.WARNING)
@@ -451,47 +556,74 @@ class DataIntegrityGate(BaseGate):
 
     @staticmethod
     def _check_text_table_consistency(tex_files, tables) -> list[dict]:
-        """Check if numbers claimed in text match table values."""
+        """Check if numbers claimed in text match table values.
+
+        Flags cases where a claim value is *close to* a table value (same order
+        of magnitude) but does not agree at the claimed precision — a pattern
+        consistent with someone editing the text number without updating the table
+        (or vice versa).
+
+        Two-sided guard:
+        - lower bound: diff >= 0.5 ULP at claimed precision (not just float noise)
+        - upper bound: diff < 10% of the claimed value (actually close, same metric)
+
+        This prevents cross-matching completely unrelated numbers (e.g. 3.108 in
+        text vs 4.5 in a different table row/column).
+        """
         findings = []
         if not tables:
             return findings
 
-        # Collect all decimal numbers from tables
-        table_numbers = set()
+        table_values: list[float] = []
         for table in tables:
             for row in table["rows"]:
                 for v in row:
                     if v is not None and v != int(v):
-                        table_numbers.add(f"{v:.2f}")
-                        table_numbers.add(f"{v:.1f}")
+                        table_values.append(v)
 
-        if not table_numbers:
+        if not table_values:
             return findings
 
-        # Search for "achieve/obtain X" patterns in text
         claim_pattern = re.compile(
             r"(?:achiev|obtain|reach|attain|report)\w*\s+(?:an?\s+)?(?:\w+\s+)?(?:of\s+)?(\d+\.\d+)",
-            re.IGNORECASE
+            re.IGNORECASE,
         )
 
         for tex_file in tex_files:
             lines = tex_file.raw_text.split("\n")
             for i, line in enumerate(lines, 1):
                 for m in claim_pattern.finditer(line):
-                    claimed = m.group(1)
-                    for tn in table_numbers:
-                        try:
-                            diff = abs(float(claimed) - float(tn))
-                            if 0.001 < diff < 0.02:
-                                findings.append({
-                                    "message": f"正文中 {claimed} 与表格中 {tn} 不一致（差 {diff:.3f}）",
-                                    "evidence": f"行 {i}: {line.strip()[:60]}",
-                                    "location": tex_file.path.name,
-                                    "file": tex_file.path.name,
-                                    "line": i,
-                                })
-                                break
-                        except ValueError:
-                            pass
+                    claimed_str = m.group(1)
+                    try:
+                        claimed_val = float(claimed_str)
+                    except ValueError:
+                        continue
+                    if claimed_val == 0:
+                        continue
 
-        return findings[:3]
+                    claimed_dp = len(claimed_str.split(".")[1]) if "." in claimed_str else 0
+                    lower = 0.5 * (10 ** -claimed_dp)   # must be more than rounding noise
+                    # Upper bound: within 5% AND within 2.0 absolute units.
+                    # Tighter than 10% to avoid matching unrelated scores that happen
+                    # to be close (e.g. two different models' accuracy values).
+                    upper = min(claimed_val * 0.05, 2.0)
+
+                    for tv in table_values:
+                        tv_rounded = round(tv, claimed_dp)
+                        if tv_rounded == claimed_val:
+                            continue  # agrees at stated precision, not suspicious
+                        diff = abs(claimed_val - tv_rounded)
+                        if lower <= diff <= upper:
+                            findings.append({
+                                "message": (
+                                    f"正文中 {claimed_str} 与表格中 {tv} 接近但不一致"
+                                    f"（对齐到 {claimed_dp} 位后差 {diff:.{claimed_dp}f}）"
+                                ),
+                                "evidence": f"行 {i}: {line.strip()[:60]}",
+                                "location": tex_file.path.name,
+                                "file": tex_file.path.name,
+                                "line": i,
+                            })
+                            break
+
+        return findings[:5]

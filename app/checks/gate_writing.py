@@ -14,21 +14,45 @@ from app.checks.base import BaseGate
 from app.models import CheckResult, Issue, ParsedPaper, Severity
 
 
-# AI signature words/phrases
+# AI signature words/phrases — only near-certain signals kept as WARNING triggers.
+# Phrases that appear in normal academic writing are demoted or removed to reduce
+# false positives on non-native English writers (see Liang et al. 2023, Patterns).
 _AI_MARKERS = [
-    "as an ai", "as a language model",
-    "i can't help",  # "i cannot" alone is too broad (e.g. "things AI cannot do")
-    "here is a", "here's a", "certainly!", "absolutely!",
-    "it's worth noting", "it is worth noting",
-    "in conclusion,", "in summary,",
+    "as an ai",
+    "as a language model",
+    "i can't help",
+    "here is a summary",
+    "here's a summary",
+    "certainly!",
+    "absolutely!",
+    "of course!",
+    "sure!",
+    "i'd be happy to",
+    "i would be happy to",
 ]
 
+# Words that GPT overuses relative to academic writing — but individually common
+# enough to appear in legitimate papers.  Kept as a soft signal: only fire when
+# the COMBINED count is very high (≥20), and report as INFO not WARNING.
 _AI_CONNECTOR_WORDS = [
-    "additionally", "furthermore", "moreover", "consequently",
-    "nevertheless", "nonetheless", "subsequently", "henceforth",
-    "delve", "delving", "utilize", "utilizing", "utilization",
-    "facilitate", "facilitating", "comprehensive", "comprehensively",
-    "leveraging", "leverage", "paradigm", "multifaceted",
+    "delve", "delving",
+    "leverage", "leveraging",
+    "utilize", "utilizing", "utilization",
+    "facilitate", "facilitating",
+    "comprehensive", "comprehensively",
+    "multifaceted",
+    "paradigm",
+    "henceforth",
+]
+
+# These words are more distinctive of AI padding; keep as WARNING at a lower threshold.
+_AI_STRONG_MARKERS = [
+    "it's worth noting that",
+    "it is worth noting that",
+    "needless to say",
+    "it goes without saying that",
+    "in today's rapidly",
+    "in today's ever-",
 ]
 
 # Filler sentences that add no substance (common in AI-generated or padded text)
@@ -122,7 +146,9 @@ class WritingQualityGate(BaseGate):
                     suggestion="确认 en-dash 用途是否正确。数字范围用 --，破折号用 ---。",
                 ))
 
-            # 2. AI connector word frequency
+            # 2. AI connector word frequency — soft signal, report as INFO only
+            # when combined count is very high, to reduce false positives on
+            # non-native writers (Liang et al. 2023, Patterns).
             text_lower = text.lower()
             ai_word_count = 0
             found_ai_words = []
@@ -132,18 +158,38 @@ class WritingQualityGate(BaseGate):
                     ai_word_count += count
                     found_ai_words.append(f"{word}({count})")
 
-            if ai_word_count > 15:
+            if ai_word_count >= 20:
                 issues.append(Issue(
-                    severity=Severity.WARNING,
-                    message=f"AI 常用词频率偏高: {ai_word_count} 次",
+                    severity=Severity.INFO,
+                    message=f"GPT 常见词出现较多: 共 {ai_word_count} 次",
                     location=tex_file.path.name,
                     file=tex_file.path.name,
                     evidence=f"高频词: {', '.join(found_ai_words[:8])}",
-                    suggestion="这些词在 AI 生成文本中出现频率远高于人类写作。建议替换为更自然的表达。",
+                    suggestion="这些词在 AI 生成文本中出现频率偏高，但也可能出现在正常学术写作中。仅供参考，不作为确定性判断。",
+                ))
+
+            # 2.5 Strong AI padding phrases — higher confidence, report as WARNING
+            strong_count = 0
+            strong_examples = []
+            for i, line in enumerate(lines, 1):
+                ll = line.lower()
+                for pat in _AI_STRONG_MARKERS:
+                    if pat in ll and not line.strip().startswith("%"):
+                        strong_count += 1
+                        if len(strong_examples) < 3:
+                            strong_examples.append(f"L{i}: {line.strip()[:70]}")
+                        break
+            if strong_count >= 3:
+                issues.append(Issue(
+                    severity=Severity.WARNING,
+                    message=f"检测到 {strong_count} 处 AI 常见套语",
+                    location=tex_file.path.name,
+                    file=tex_file.path.name,
+                    evidence="\n".join(strong_examples),
+                    suggestion="这些短语在 AI 生成文本中高度典型，建议替换为更具体的表述。",
                 ))
 
             # 3. Prompt leakage — only fire when not inside quotes or citations
-            # Papers that study AI output often legitimately contain these phrases
             _QUOTE_RE = re.compile(
                 r"``.*?''|\".*?\"|`.*?'|\{[^}]*\}|\[.*?\]|https?://\S+",
                 re.DOTALL,
@@ -156,18 +202,15 @@ class WritingQualityGate(BaseGate):
                     stripped = line.strip()
                     if stripped.startswith("%"):
                         break
-                    # Skip if inside quotes, braces, brackets, or a URL
                     masked = _QUOTE_RE.sub("", line_lower)
                     if marker not in masked:
                         break
-                    # Skip if line context suggests it's an AI response being quoted
                     ctx_words = {"response:", "output:", "example:", "replies:", "generated:",
                                  "answered:", "replied:", "query:", "prompt:", "caption:"}
                     prev_lines = lines[max(0, i-3):i-1]
                     prev_text = " ".join(prev_lines).lower()
                     if any(w in prev_text for w in ctx_words):
                         break
-                    # Skip table/verbatim lines (lots of & or \\)
                     if line.count("&") >= 2 or line.count("\\\\") >= 1:
                         break
                     issues.append(Issue(
@@ -179,7 +222,7 @@ class WritingQualityGate(BaseGate):
                         evidence=line.strip()[:100],
                         suggestion="这段文字包含明显的 AI 生成痕迹，请删除或重写。",
                     ))
-                    break  # One per line
+                    break
 
             # === Paragraph Duplication ===
             paragraphs = self._extract_paragraphs(text)

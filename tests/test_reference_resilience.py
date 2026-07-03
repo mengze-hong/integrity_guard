@@ -30,11 +30,12 @@ class _FakeClient:
 
 @pytest.mark.asyncio
 async def test_resolve_doi_caches_successful_metadata():
-    gate_references._DOI_CACHE.clear()
     client = _FakeClient([
         _Response(200, {"message": {"title": ["Real Paper"]}}),
     ])
 
+    # Per-instance cache (see ReferenceAuthenticityGate.__init__): the gate must
+    # cache a successful DOI resolution so the second lookup hits no network.
     gate = ReferenceAuthenticityGate()
     result1 = await gate._resolve_doi("10.1234/real", client, asyncio.Semaphore(1))
     result2 = await gate._resolve_doi("10.1234/real", client, asyncio.Semaphore(1))
@@ -46,7 +47,6 @@ async def test_resolve_doi_caches_successful_metadata():
 
 @pytest.mark.asyncio
 async def test_transient_provider_failures_become_warning_not_fake():
-    gate_references._DOI_CACHE.clear()
     client = _FakeClient([
         _Response(429),
         _Response(503),
