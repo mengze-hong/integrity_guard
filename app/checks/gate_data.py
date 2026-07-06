@@ -9,6 +9,7 @@
 6. Benford's Law：首位数字分布异常
 """
 
+import json
 import math
 import re
 from collections import Counter
@@ -569,7 +570,7 @@ class DataIntegrityGate(BaseGate):
 
         # NCG: Numerical Claim Grounding (Tier 0 + Tier 1, rule-based)
         # Replaces the old naive _check_text_table_consistency.
-        ncg_findings = self._ncg_check(paper.tex_files, tables)
+        ncg_findings = await self._ncg_check(paper.tex_files, tables)
         for cf in ncg_findings:
             total_findings += 1
             issues.append(Issue(
@@ -998,23 +999,97 @@ class DataIntegrityGate(BaseGate):
                 score += 0.2
         return min(score, 1.0)
 
+    _LLM_CLAIM_PROMPT = (
+        "Extract ALL numeric performance claims from this LaTeX paper fragment. "
+        "A claim = sentence where authors state their model achieves a specific numeric result. "
+        "For each claim return: value (number as written), metric (e.g. F1/JGA/BLEU/accuracy), "
+        "method (model name or null), dataset (benchmark name or null), sentence (exact sentence). "
+        "Only include claims about THIS paper's own model. Skip table rows (lines with &). "
+        "Reply ONLY with a JSON array, e.g. "
+        '[{"value":"91.4","metric":"F1","method":"OurModel","dataset":"SST-2","sentence":"..."}] '
+        "or [] if none found."
+    )
+
     @staticmethod
-    def _ncg_check(tex_files: list[TexFile], tables: list[dict]) -> list[dict]:
-        """NCG Tier 0 + Tier 1: rule-based numerical claim grounding.
+    async def _extract_claims_llm(tex_files: list[TexFile]) -> list[dict] | None:
+        """LLM-assisted claim extraction. Returns None if LLM unavailable/fails."""
+        try:
+            from app.config import settings
+            if not settings.llm_api_key or not settings.llm_base_url:
+                return None
+            from app.services.llm import llm_check
+        except Exception:
+            return None
 
-        Tier 0 — scope-first:
-          Find the table cell whose (row_hdr, col_hdr, caption) best matches the
-          claim's metric/dataset scope. If the cell value disagrees with the claim
-          at stated precision → Contradicted.
+        # Build prose-only text: strip table rows
+        prose_lines = []
+        for tf in tex_files:
+            in_tab = False
+            for line in tf.stripped_text.splitlines():
+                if r"\begin{tabular" in line:
+                    in_tab = True
+                if r"\end{tabular" in line:
+                    in_tab = False
+                    continue
+                if in_tab:
+                    continue
+                prose_lines.append(line)
+        prose = "\n".join(prose_lines)[:5000]
 
-        Tier 1 — value-first cross-check:
-          If scope similarity is low (scope ambiguous), fall back to checking
-          whether ANY table cell has a value within 2% of the claim. If none
-          found → Ungroundable (skip). If found but disagreeing → flag.
+        try:
+            raw = await llm_check(
+                system_prompt=DataIntegrityGate._LLM_CLAIM_PROMPT,
+                user_prompt=prose,
+                temperature=0.0,
+                max_tokens=800,
+            )
+            raw = raw.strip()
+            import re as _re
+            raw = _re.sub(r"```(?:json)?\s*", "", raw).strip().rstrip("`").strip()
+            items = json.loads(raw)
+            if not isinstance(items, list):
+                return None
+            claims = []
+            for item in items:
+                vs = str(item.get("value", "")).strip()
+                if not vs:
+                    continue
+                try:
+                    v = float(vs)
+                except ValueError:
+                    continue
+                if v <= 0 or v > 10_000:
+                    continue
+                dp = len(vs.split(".")[1]) if "." in vs else 0
+                claims.append({
+                    "value": v, "value_str": vs, "dp": dp,
+                    "claim_type": "absolute", "delta": None,
+                    "scope": {
+                        "metric":  (item.get("metric")  or "").lower().strip() or None,
+                        "dataset": (item.get("dataset") or "").lower().strip() or None,
+                        "method":  (item.get("method")  or "").lower().strip() or None,
+                    },
+                    "file":    tf.path.name if tex_files else "unknown",
+                    "line":    0,
+                    "context": str(item.get("sentence", ""))[:80],
+                    "source":  "llm",
+                })
+            return claims or None
+        except Exception:
+            return None
 
-        Only high-confidence Contradicted findings are reported.
+    @staticmethod
+    async def _ncg_check(tex_files: list[TexFile], tables: list[dict]) -> list[dict]:
+        """NCG: LLM-first claim extraction + rule-based verification.
+
+        Claims are first extracted by LLM (structured {value,metric,method,dataset}).
+        Falls back to regex extraction if LLM is unavailable.
+        Verification (scope_sim + cell matching) is always rule-based.
         """
-        claims = DataIntegrityGate._extract_claims(tex_files)
+        # LLM-first; fallback to regex
+        claims = await DataIntegrityGate._extract_claims_llm(tex_files)
+        if not claims:
+            claims = DataIntegrityGate._extract_claims(tex_files)
         if not claims or not tables:
             return []
 
