@@ -423,10 +423,10 @@ def _ncg_paper(tex_body: str) -> "ParsedPaper":
 
 @pytest.mark.asyncio
 async def test_ncg_tier0_detects_mismatch():
-    """Tier 0 scope-first: claim 89.3 F1 but table has 88.5."""
+    """Tier 0 scope-first: claim 89.3 F1 for OurModel but table has 88.5."""
     tex = (
         r"\begin{table}" + "\n"
-        r"\caption{Main results}" + "\n"
+        r"\caption{Main results on SQuAD}" + "\n"
         r"\begin{tabular}{lcc}" + "\n"
         r"Model & F1 & Accuracy \\" + "\n"
         r"\hline" + "\n"
@@ -434,7 +434,7 @@ async def test_ncg_tier0_detects_mismatch():
         r"Baseline & 85.1 & 88.0 \\" + "\n"
         r"\end{tabular}" + "\n"
         r"\end{table}" + "\n\n"
-        r"Our model achieves an F1 of 89.3 on the benchmark."
+        r"Our model achieves an F1 of 89.3 on SQuAD benchmark."
     )
     result = await DataIntegrityGate().check(_ncg_paper(tex))
     ncg_issues = [i for i in result.issues if "89.3" in i.message or "88.5" in i.message]

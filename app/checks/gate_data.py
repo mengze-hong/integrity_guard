@@ -121,7 +121,7 @@ def _extract_tables(tex_files: list[TexFile]) -> list[dict]:
     tables = []
 
     for tex_file in tex_files:
-        text = tex_file.raw_text
+        text = tex_file.stripped_text
 
         for table_match in _TABLE_ENV_PATTERN.finditer(text):
             table_content = table_match.group(1)
@@ -825,7 +825,7 @@ class DataIntegrityGate(BaseGate):
             for lineno, line in enumerate(lines, 1):
                 # skip comment lines and table rows
                 stripped = line.strip()
-                if stripped.startswith("%") or line.count("&") >= 2:
+                if line.count("&") >= 2:  # comments already stripped
                     continue
                 window = " ".join(lines[max(0, lineno - 3):lineno + 1])
 
@@ -969,7 +969,7 @@ class DataIntegrityGate(BaseGate):
                         best_cell = {"value": tv, "row_hdr": rhdr, "col_hdr": chdr,
                                      "caption": caption, "table": table}
 
-            if best_sim >= 0.6 and best_cell is not None:
+            if best_sim >= 0.75 and best_cell is not None:
                 tv = best_cell["value"]
                 tv_rounded = round(tv, dp)
                 claimed_rounded = round(v, dp)

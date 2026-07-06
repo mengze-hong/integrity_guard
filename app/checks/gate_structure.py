@@ -179,7 +179,7 @@ class StructureGate(BaseGate):
 
         # Check 5: All \includegraphics{} files exist
         for tex_file in paper.tex_files:
-            graphic_dirs = _graphicspath_dirs(tex_file.raw_text, tex_file.path.parent)
+            graphic_dirs = _graphicspath_dirs(tex_file.stripped_text, tex_file.path.parent)
             for graphic in tex_file.graphics:
                 # Try with and without common extensions
                 # Normalize path separators (LaTeX uses / but Windows may have \)
@@ -196,7 +196,7 @@ class StructureGate(BaseGate):
                 # Inherit graphicspath from main tex file
                 if paper.tex_files:
                     main_dirs = _graphicspath_dirs(
-                        paper.tex_files[0].raw_text, paper.tex_files[0].path.parent
+                        paper.tex_files[0].stripped_text, paper.tex_files[0].path.parent
                     )
                     for gd in main_dirs:
                         candidates.append(gd / graphic_norm)
@@ -221,9 +221,9 @@ class StructureGate(BaseGate):
         # Check 5.5: \bibliography{} / \addbibresource{} points to existing .bib file
         for tex_file in paper.tex_files:
             bib_refs = []
-            for bib_match in _BIBLIOGRAPHY_PATTERN.finditer(tex_file.raw_text):
+            for bib_match in _BIBLIOGRAPHY_PATTERN.finditer(tex_file.stripped_text):
                 bib_refs.extend((b.strip(), "\\bibliography") for b in bib_match.group(1).split(",") if b.strip())
-            for bib_match in _ADDBIBRESOURCE_PATTERN.finditer(tex_file.raw_text):
+            for bib_match in _ADDBIBRESOURCE_PATTERN.finditer(tex_file.stripped_text):
                 bib_refs.append((bib_match.group(1).strip(), "\\addbibresource"))
 
             for bib_ref, command in bib_refs:
@@ -351,7 +351,7 @@ class StructureGate(BaseGate):
 
         # Check 9: Unmatched \begin{} / \end{} environments
         for tex_file in paper.tex_files:
-            text = tex_file.raw_text
+            text = tex_file.stripped_text
             # Strip comments
             clean_lines = []
             for line in text.split("\n"):

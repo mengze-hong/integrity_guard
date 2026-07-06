@@ -88,7 +88,8 @@ def parse_tex_file(file_path: Path) -> TexFile:
         includes=includes,
         graphics=graphics,
         sections=sections,
-        raw_text=raw_text,  # keep original (with comments) for editor display
+        raw_text=raw_text,        # original with comments — for editor display
+        stripped_text=text,       # comments removed — for all analysis
     )
 
 

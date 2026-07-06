@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import Enum
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 # --- Paper Structure Models ---
@@ -44,6 +44,27 @@ class TexFile(BaseModel):
     graphics: list[str] = Field(default_factory=list)  # \includegraphics paths
     sections: list[str] = Field(default_factory=list)  # section titles
     raw_text: str = ""
+    stripped_text: str = ""  # raw_text with LaTeX comments removed (for analysis)
+
+    @model_validator(mode="after")
+    def _auto_strip(self) -> "TexFile":
+        """If stripped_text not set, derive it from raw_text by removing % comments."""
+        if not self.stripped_text and self.raw_text:
+            lines = []
+            for line in self.raw_text.splitlines():
+                s = line.lstrip()
+                if s.startswith("%"):
+                    lines.append("")
+                else:
+                    out, i = [], 0
+                    while i < len(line):
+                        if line[i] == "%" and (i == 0 or line[i - 1] != "\\"):
+                            break
+                        out.append(line[i])
+                        i += 1
+                    lines.append("".join(out))
+            self.stripped_text = "\n".join(lines)
+        return self
 
 
 class ParsedPaper(BaseModel):

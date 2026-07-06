@@ -59,7 +59,7 @@ def _find_ref_locations(tex_files: list[TexFile]) -> dict[str, list[dict]]:
     ref_locations: dict[str, list[dict]] = {}
 
     for tex_file in tex_files:
-        lines = _strip_comments(tex_file.raw_text).splitlines()
+        lines = tex_file.stripped_text.splitlines()
         current_section = "Preamble"
 
         for line_num, line in enumerate(lines, 1):
@@ -92,7 +92,7 @@ def _extract_floats(tex_files: list[TexFile]) -> list[dict]:
 
     for tex_file in tex_files:
         # Strip comments to avoid matching commented-out environments
-        clean_text = _strip_comments(tex_file.raw_text)
+        clean_text = tex_file.stripped_text
 
         # Find position of \appendix command (if any)
         appendix_pos = None
