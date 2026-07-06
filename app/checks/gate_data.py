@@ -1061,12 +1061,6 @@ class DataIntegrityGate(BaseGate):
                                 f"表 [{table['caption'][:40]}] 第 {ri+1} 行",
                                 table["file"], table["line"],
                             )
-                        elif v < 0:
-                            _flag(
-                                f"表格列 [{chdr}] 中数值 {v} 为负（百分比指标不能为负）",
-                                f"表 [{table['caption'][:40]}] 第 {ri+1} 行",
-                                table["file"], table["line"],
-                            )
                     if _PPL_METRIC.search(chdr) and v < 1.0:
                         _flag(
                             f"表格列 [{chdr}] 中 perplexity={v} < 1（物理上不可能）",
