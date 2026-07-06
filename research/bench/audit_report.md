@@ -19,15 +19,14 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - `62×` \ref{fig
 - `31×` \ref{tab
 - `5×` Figure 1 (\label{fig
-- `3×` Figure 3 (\label{fig
-- `3×` Figure 4 (\label{fig
-- `3×` Table 3 (\label{tab
-- `3×` Figure 7 (\label{fig
-- `3×` Figure 19 (\label{fig
+- `3×` Figure 16 (\label{fig
+- `3×` Table 6 (\label{tab
 - `3×` Table 7 (\label{tab
-- `3×` Table 8 (\label{tab
+- `3×` Table 10 (\label{tab
 - `3×` Table 11 (\label{tab
-- `3×` Table 12 (\label{tab
+- `3×` Table 15 (\label{tab
+- `1×` Table 2 (\label{tab
+- `1×` Table 5 (\label{tab
 
 ### data_integrity — 0/39 papers with ≥1 error
 - (no errors)
@@ -43,16 +42,6 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 
 ### citation_bib_consistency
 - `4×` 孤立条目
-
-### data_integrity
-- `5×` [Blind human evaluation on 100 ] 第 1 列小数
-- `5×` [Blind human evaluation on 100 ] 第 7 列小数
-- `4×` 正文中 3.108 与表格中 4.5 不一致
-- `3×` 正文中 75.3 与表格中 71.3 不一致
-- `3×` 正文中 98.7 与表格中 71.3 不一致
-- `3×` 正文中 93.3 与表格中 71.3 不一致
-- `3×` 正文中 77.2 与表格中 71.3 不一致
-- `1×` 正文中 3.108 与表格中 0.5319 不一致
 
 ### writing_quality
 - `5×` 投稿模式为 [final]，double-blind 应使用 [review]
@@ -73,35 +62,31 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
 ### 07c3d865f33e
 - **structure_integrity**: score=96 pass=True errors=0 warnings=2
 - **citation_bib_consistency**: score=100 pass=True errors=0 warnings=1
-- **figure_table_crossref**: score=64 pass=False errors=10 warnings=0
-    - [E] Figure 3 (\label{fig:overview}) 在正文中从未被引用
-    - [E] Figure 4 (\label{fig:task1_leaderboard}) 在正文中从未被引用
-    - [E] Table 3 (\label{tab:task1_pointwise}) 在正文中从未被引用
-    - [E] Figure 7 (\label{fig:placeholder}) 在正文中从未被引用
-    - [E] Figure 19 (\label{fig:prompt_templates}) 在正文中从未被引用
-    - [E] Table 7 (\label{tab:ablation_summary}) 在正文中从未被引用
-    - [E] Table 8 (\label{tab:benchmark_comparison}) 在正文中从未被引用
-    - [E] Table 11 (\label{tab:task1_3class_ablation}) 在正文中从未被引用
-    - [E] Table 12 (\label{tab:task1_prompt_ablation}) 在正文中从未被引用
-    - [E] Table 16 (\label{tab:ablation_sysprompt}) 在正文中从未被引用
-- **data_integrity**: score=80 pass=True errors=0 warnings=4
+- **figure_table_crossref**: score=70 pass=False errors=6 warnings=0
+    - [E] Figure 16 (\label{fig:prompt_templates}) 在正文中从未被引用
+    - [E] Table 6 (\label{tab:ablation_summary}) 在正文中从未被引用
+    - [E] Table 7 (\label{tab:benchmark_comparison}) 在正文中从未被引用
+    - [E] Table 10 (\label{tab:task1_3class_ablation}) 在正文中从未被引用
+    - [E] Table 11 (\label{tab:task1_prompt_ablation}) 在正文中从未被引用
+    - [E] Table 15 (\label{tab:ablation_sysprompt}) 在正文中从未被引用
+- **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=90 pass=True errors=0 warnings=2
 
 ### 0b1ba81e
 - **structure_integrity**: score=100 pass=True errors=0 warnings=0
 - **citation_bib_consistency**: score=100 pass=True errors=0 warnings=0
-- **figure_table_crossref**: score=50 pass=False errors=1 warnings=0
+- **figure_table_crossref**: score=95 pass=False errors=1 warnings=0
     - [E] Figure 1 (\label{fig:overview}) 在正文中从未被引用
-- **data_integrity**: score=85 pass=True errors=0 warnings=3
+- **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=85 pass=True errors=0 warnings=3
 
 ### 0b278a29
@@ -113,9 +98,9 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
@@ -128,9 +113,9 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
@@ -143,18 +128,18 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
 ### 316dd0a3
 - **structure_integrity**: score=100 pass=True errors=0 warnings=0
 - **citation_bib_consistency**: score=100 pass=True errors=0 warnings=1
-- **figure_table_crossref**: score=50 pass=False errors=1 warnings=0
+- **figure_table_crossref**: score=95 pass=False errors=1 warnings=0
     - [E] Figure 1 (\label{fig:overview}) 在正文中从未被引用
-- **data_integrity**: score=85 pass=True errors=0 warnings=3
+- **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=85 pass=True errors=0 warnings=3
 
 ### 3254de2b4f62
@@ -166,9 +151,9 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
@@ -181,18 +166,18 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
 ### 4d44d6f4
 - **structure_integrity**: score=100 pass=True errors=0 warnings=0
 - **citation_bib_consistency**: score=100 pass=True errors=0 warnings=0
-- **figure_table_crossref**: score=50 pass=False errors=1 warnings=0
+- **figure_table_crossref**: score=95 pass=False errors=1 warnings=0
     - [E] Figure 1 (\label{fig:overview}) 在正文中从未被引用
-- **data_integrity**: score=85 pass=True errors=0 warnings=3
+- **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=85 pass=True errors=0 warnings=3
 
 ### 53edfcfb
@@ -204,9 +189,9 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
@@ -219,9 +204,9 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
@@ -234,27 +219,23 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
 ### 69e512db
 - **structure_integrity**: score=96 pass=True errors=0 warnings=2
 - **citation_bib_consistency**: score=100 pass=True errors=0 warnings=1
-- **figure_table_crossref**: score=64 pass=False errors=10 warnings=0
-    - [E] Figure 3 (\label{fig:overview}) 在正文中从未被引用
-    - [E] Figure 4 (\label{fig:task1_leaderboard}) 在正文中从未被引用
-    - [E] Table 3 (\label{tab:task1_pointwise}) 在正文中从未被引用
-    - [E] Figure 7 (\label{fig:placeholder}) 在正文中从未被引用
-    - [E] Figure 19 (\label{fig:prompt_templates}) 在正文中从未被引用
-    - [E] Table 7 (\label{tab:ablation_summary}) 在正文中从未被引用
-    - [E] Table 8 (\label{tab:benchmark_comparison}) 在正文中从未被引用
-    - [E] Table 11 (\label{tab:task1_3class_ablation}) 在正文中从未被引用
-    - [E] Table 12 (\label{tab:task1_prompt_ablation}) 在正文中从未被引用
-    - [E] Table 16 (\label{tab:ablation_sysprompt}) 在正文中从未被引用
-- **data_integrity**: score=80 pass=True errors=0 warnings=4
+- **figure_table_crossref**: score=70 pass=False errors=6 warnings=0
+    - [E] Figure 16 (\label{fig:prompt_templates}) 在正文中从未被引用
+    - [E] Table 6 (\label{tab:ablation_summary}) 在正文中从未被引用
+    - [E] Table 7 (\label{tab:benchmark_comparison}) 在正文中从未被引用
+    - [E] Table 10 (\label{tab:task1_3class_ablation}) 在正文中从未被引用
+    - [E] Table 11 (\label{tab:task1_prompt_ablation}) 在正文中从未被引用
+    - [E] Table 15 (\label{tab:ablation_sysprompt}) 在正文中从未被引用
+- **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=90 pass=True errors=0 warnings=2
 
 ### 6a7c8e94
@@ -266,9 +247,9 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
@@ -281,9 +262,9 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
@@ -296,9 +277,9 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
@@ -311,9 +292,9 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
@@ -326,9 +307,9 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
@@ -341,9 +322,9 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
@@ -356,9 +337,9 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
@@ -371,9 +352,9 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
@@ -386,9 +367,9 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
@@ -401,9 +382,9 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
@@ -416,9 +397,9 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
@@ -431,9 +412,9 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
@@ -446,9 +427,9 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
@@ -461,20 +442,20 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
 ### c5843edd
 - **structure_integrity**: score=95 pass=True errors=0 warnings=1
 - **citation_bib_consistency**: score=100 pass=True errors=0 warnings=0
-- **figure_table_crossref**: score=50 pass=False errors=3 warnings=0
+- **figure_table_crossref**: score=85 pass=False errors=3 warnings=0
     - [E] Figure 1 (\label{fig:overview}) 在正文中从未被引用
     - [E] Table 2 (\label{tab:diagnostic}) 在正文中从未被引用
     - [E] Table 5 (\label{tab:route_selection}) 在正文中从未被引用
-- **data_integrity**: score=85 pass=True errors=0 warnings=3
+- **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=85 pass=True errors=0 warnings=3
 
 ### c7dd4c03
@@ -486,9 +467,9 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
@@ -501,9 +482,9 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
@@ -516,9 +497,9 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
@@ -531,18 +512,18 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
 ### e237d467
 - **structure_integrity**: score=100 pass=True errors=0 warnings=0
 - **citation_bib_consistency**: score=100 pass=True errors=0 warnings=0
-- **figure_table_crossref**: score=50 pass=False errors=1 warnings=0
+- **figure_table_crossref**: score=95 pass=False errors=1 warnings=0
     - [E] Figure 1 (\label{fig:overview}) 在正文中从未被引用
-- **data_integrity**: score=85 pass=True errors=0 warnings=3
+- **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=85 pass=True errors=0 warnings=3
 
 ### ee6645e1
@@ -554,9 +535,9 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
@@ -569,9 +550,9 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
@@ -584,9 +565,9 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
@@ -599,25 +580,21 @@ Gates: structure, citations, figures, data, writing (reference authenticity skip
 - **citation_bib_consistency**: score=80 pass=False errors=1 warnings=0
     - [E] 未定义引用: \cite{nonexistent_key} → 编译后 PDF 中将显示 '?'
 - **figure_table_crossref**: score=100 pass=False errors=3 warnings=0
-    - [E] \ref{fig:architecture} points to non-existent figure/table
-    - [E] \ref{fig:missing} points to non-existent figure/table
-    - [E] \ref{tab:results} points to non-existent figure/table
+    - [E] \ref{fig:architecture} 引用了不存在的图表标签
+    - [E] \ref{fig:missing} 引用了不存在的图表标签
+    - [E] \ref{tab:results} 引用了不存在的图表标签
 - **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=100 pass=True errors=0 warnings=0
 
 ### test_real
 - **structure_integrity**: score=96 pass=True errors=0 warnings=2
 - **citation_bib_consistency**: score=100 pass=True errors=0 warnings=1
-- **figure_table_crossref**: score=64 pass=False errors=10 warnings=0
-    - [E] Figure 3 (\label{fig:overview}) 在正文中从未被引用
-    - [E] Figure 4 (\label{fig:task1_leaderboard}) 在正文中从未被引用
-    - [E] Table 3 (\label{tab:task1_pointwise}) 在正文中从未被引用
-    - [E] Figure 7 (\label{fig:placeholder}) 在正文中从未被引用
-    - [E] Figure 19 (\label{fig:prompt_templates}) 在正文中从未被引用
-    - [E] Table 7 (\label{tab:ablation_summary}) 在正文中从未被引用
-    - [E] Table 8 (\label{tab:benchmark_comparison}) 在正文中从未被引用
-    - [E] Table 11 (\label{tab:task1_3class_ablation}) 在正文中从未被引用
-    - [E] Table 12 (\label{tab:task1_prompt_ablation}) 在正文中从未被引用
-    - [E] Table 16 (\label{tab:ablation_sysprompt}) 在正文中从未被引用
-- **data_integrity**: score=80 pass=True errors=0 warnings=4
+- **figure_table_crossref**: score=70 pass=False errors=6 warnings=0
+    - [E] Figure 16 (\label{fig:prompt_templates}) 在正文中从未被引用
+    - [E] Table 6 (\label{tab:ablation_summary}) 在正文中从未被引用
+    - [E] Table 7 (\label{tab:benchmark_comparison}) 在正文中从未被引用
+    - [E] Table 10 (\label{tab:task1_3class_ablation}) 在正文中从未被引用
+    - [E] Table 11 (\label{tab:task1_prompt_ablation}) 在正文中从未被引用
+    - [E] Table 15 (\label{tab:ablation_sysprompt}) 在正文中从未被引用
+- **data_integrity**: score=100 pass=True errors=0 warnings=0
 - **writing_quality**: score=90 pass=True errors=0 warnings=2
