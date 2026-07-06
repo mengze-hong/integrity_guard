@@ -1,5 +1,16 @@
 # ScholarLint · 投稿通 Changelog
 
+## 2026-07-06 — feat: NCG scope 扩展 + 不可能值检测 + 模板残留检测
+- **`gate_data.py`**
+  - `_extract_claims`：`_METRICS` 扩展到 40+ 指标（BLEU-4/ROUGE-L/BERTScore/WER/pass@k 等）；`_DATASETS` 扩展到 30+ 数据集（GSM8K/HumanEval/WMT/CoNLL 等）；新增 `_MODEL_NAMES`（BERT/LLaMA/Mistral/Baseline 等方法名）
+  - `_scope_sim`：新增 method 维度权重（+0.2）；metric 独立可达阈值（0.6），method/dataset 额外加分
+  - `_check_impossible_values`（新）：表格列头含受限指标（accuracy/F1/precision/recall 等）且值 > 100 → ERROR；PPL < 1 → ERROR
+  - `_extract_tables` 修复：`\\hline` 与数据行同块时正确拆分（之前会把数据行当 hline 跳过）
+- **`gate_writing.py`**
+  - 新增 `_TEMPLATE_REMNANTS` 词表（26 项：lorem ipsum/TODO:/[citation needed]/under review 等）
+  - 扫描全文，发现模板残留 → ERROR，投稿前必须清除
+- **`tests/test_gates.py`**：+4 新测试（impossible values ×2, template remnants ×2）；共 169 passed
+
 ## 2026-06-26 14:50 — Fix: cache 隔离 + OpenReview 搜索补充
 - **`gate_references.py`**
   - `_DOI_CACHE` / `_TITLE_CACHE` 从模块级全局变量改为 `ReferenceAuthenticityGate` 实例变量（`self._doi_cache` / `self._title_cache`），消除多论文串行检查时的跨论文缓存污染（同 key 在第一篇因超时缓存为 `None` 后，后续论文不再重试）
