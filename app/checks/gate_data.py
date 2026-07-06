@@ -747,6 +747,12 @@ class DataIntegrityGate(BaseGate):
         # Metric names common in NLP / ML papers
         _METRICS = {
             "accuracy", "acc", "f1", "f-1", "f1-score", "micro-f1", "macro-f1",
+            "jga", "joint goal accuracy", "joint_goal_accuracy",
+            "ans-f1", "sup-f1", "answer f1", "support f1",
+            "slot-f1",
+            "bert", "bertscore",
+            "sp-f1",
+            "ans", "answer", "support",
             "bleu", "bleu-1", "bleu-2", "bleu-4", "sacrebleu",
             "rouge", "rouge-1", "rouge-2", "rouge-l", "rougel",
             "precision", "recall", "perplexity", "ppl",
@@ -771,6 +777,13 @@ class DataIntegrityGate(BaseGate):
             "conll", "conll-2003", "ontonotes",
             "coco", "vqa", "nocaps",
             "hotpotqa", "musique",
+            "tacred", "fewrel",
+            "multiwoz", "multiwoz2.1", "multiwoz 2.1",
+            "atis", "snips",
+            "imagenet",
+            "wikitext", "wikitext-103", "wikitext103", "ptb",
+            "mnli", "multinli",
+            "conll-2012", "conll2012", "ontonotes",
             "ag news", "ag_news", "dbpedia",
         }
         # Model/method names for scope matching against row headers
