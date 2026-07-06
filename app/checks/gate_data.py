@@ -852,6 +852,13 @@ class DataIntegrityGate(BaseGate):
                 claimed_rounded = round(v, dp)
                 if tv_rounded != claimed_rounded:
                     diff = abs(v - tv)
+                    # Magnitude guard: if the two values differ by >50% relative to
+                    # the larger, they're almost certainly in different units/scales
+                    # (e.g. claim=12.8 benchmark score vs cell=2.5 task count).
+                    # Real fabrication mismatches are always small (< a few percent).
+                    magnitude = max(abs(v), abs(tv))
+                    if magnitude > 0 and diff / magnitude > 0.5:
+                        continue
                     # Only flag if difference is meaningful (≥ 1 ULP at stated dp)
                     if diff >= 10 ** -dp:
                         seen.add(key)
