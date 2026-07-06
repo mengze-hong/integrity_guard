@@ -428,7 +428,7 @@ class WritingQualityGate(BaseGate):
             # Double spaces (cosmetic but sloppy)
             double_space_lines = [i for i, line in enumerate(lines, 1)
                                   if "  " in line and not line.strip().startswith("%")]
-            if len(double_space_lines) > 10:
+            if len(double_space_lines) > 30:
                 issues.append(Issue(
                     severity=Severity.INFO,
                     message=f"发现 {len(double_space_lines)} 行含有多余双空格",
@@ -449,7 +449,7 @@ class WritingQualityGate(BaseGate):
                             filler_examples.append(f"L{i}: {line.strip()[:60]}")
                         break
 
-            if filler_count >= 5:
+            if filler_count >= 8:
                 issues.append(Issue(
                     severity=Severity.WARNING,
                     message=f"检测到 {filler_count} 处套话/万金油句子",
@@ -477,7 +477,7 @@ class WritingQualityGate(BaseGate):
                         longest_line_num = i
                         longest_line = stripped
 
-            if long_sentences > 5:
+            if long_sentences > 10:
                 issues.append(Issue(
                     severity=Severity.WARNING,
                     message=f"发现 {long_sentences} 个超长句子（>50 词），最长 {longest_line_words} 词在行 {longest_line_num}",
@@ -493,7 +493,7 @@ class WritingQualityGate(BaseGate):
                 r"\b(?:is|are|was|were|been|being)\s+\w+ed\b",
                 text, re.IGNORECASE
             )
-            if len(passive_patterns) > 20:
+            if len(passive_patterns) > 35:
                 issues.append(Issue(
                     severity=Severity.INFO,
                     message=f"被动语态使用较多（约 {len(passive_patterns)} 处）",

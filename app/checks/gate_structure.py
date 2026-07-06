@@ -182,15 +182,30 @@ class StructureGate(BaseGate):
             graphic_dirs = _graphicspath_dirs(tex_file.raw_text, tex_file.path.parent)
             for graphic in tex_file.graphics:
                 # Try with and without common extensions
-                candidates = [paper.project_dir / graphic, tex_file.path.parent / graphic]
+                # Normalize path separators (LaTeX uses / but Windows may have \)
+                graphic_norm = graphic.replace("\\", "/")
+                candidates = [
+                    paper.project_dir / graphic_norm,
+                    tex_file.path.parent / graphic_norm,
+                    # Sub-files may use paths relative to project root
+                    *(paper.project_dir / p / graphic_norm
+                      for p in [".", "figures", "floats", "imgs", "images", "fig"]),
+                ]
                 for graphic_dir in graphic_dirs:
-                    candidates.append(graphic_dir / graphic)
-                if not Path(graphic).suffix:
+                    candidates.append(graphic_dir / graphic_norm)
+                # Inherit graphicspath from main tex file
+                if paper.tex_files:
+                    main_dirs = _graphicspath_dirs(
+                        paper.tex_files[0].raw_text, paper.tex_files[0].path.parent
+                    )
+                    for gd in main_dirs:
+                        candidates.append(gd / graphic_norm)
+                if not Path(graphic_norm).suffix:
                     for ext in [".png", ".pdf", ".jpg", ".jpeg", ".eps"]:
-                        candidates.append(paper.project_dir / f"{graphic}{ext}")
-                        candidates.append(tex_file.path.parent / f"{graphic}{ext}")
+                        candidates.append(paper.project_dir / f"{graphic_norm}{ext}")
+                        candidates.append(tex_file.path.parent / f"{graphic_norm}{ext}")
                         for graphic_dir in graphic_dirs:
-                            candidates.append(graphic_dir / f"{graphic}{ext}")
+                            candidates.append(graphic_dir / f"{graphic_norm}{ext}")
 
                 if not any(c.exists() for c in candidates):
                     issues.append(

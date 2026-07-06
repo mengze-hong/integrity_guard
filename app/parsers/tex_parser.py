@@ -70,7 +70,7 @@ def parse_tex_file(file_path: Path) -> TexFile:
     includes = [m.group(1) for m in _INCLUDE_PATTERN.finditer(text)]
 
     # Extract graphics paths
-    graphics = [m.group(1) for m in _GRAPHICS_PATTERN.finditer(text)]
+    graphics = [m.group(1).replace("\\", "/") for m in _GRAPHICS_PATTERN.finditer(text)]
 
     # Extract section titles
     sections = [m.group(1) for m in _SECTION_PATTERN.finditer(text)]

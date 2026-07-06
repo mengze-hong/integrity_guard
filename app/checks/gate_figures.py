@@ -206,9 +206,10 @@ class FigureTableGate(BaseGate):
             score = 100.0
             passed = len(issues) == 0
         else:
-            problems = sum(1 for f in crossref_table if not f["has_label"] or not f["is_referenced"] or not f["has_caption"])
-            score = max(0, (1 - problems / total_floats) * 100)
             error_count = sum(1 for i in issues if i.severity == Severity.ERROR)
+            # 5 pts per error, 2 pts per warning, minimum 0
+            warn_count = sum(1 for i in issues if i.severity == Severity.WARNING)
+            score = max(0, 100 - error_count * 5 - warn_count * 2)
             passed = error_count == 0
 
         return CheckResult(
