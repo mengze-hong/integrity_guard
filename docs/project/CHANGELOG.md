@@ -1,5 +1,12 @@
 # ScholarLint · 投稿通 Changelog
 
+## 2026-07-06 — fix: 全系统误报优化 + 路径规范化 + 图表评分修复
+- **`gate_structure.py`**：图片路径反斜杠规范化（`\\` -> `/`）；子文件继承主文件 `\graphicspath`；新增常见子目录候选（figures/floats/imgs）
+- **`gate_figures.py`**：dangling ref 错误信息改为中文；评分公式改为按 issue 扣分（5分/error + 2分/warning），真实论文 `figure_table_crossref` score 50→95
+- **`gate_writing.py`**：各噪音阈值提高（双空格 10→30，超长句 5→10，被动语态 20→35，套话 5→8）；INFO 数量从 14→4
+- **`tex_parser.py`**：图片路径在解析时规范化反斜杠
+- **`gate_data.py`**：`\multicolumn` 展开、多行表头合并、新增 `from A to B` + `直接 metric-value` claim pattern；真实论文 claims 9→30，metric coverage 7→28；magnitude guard 消除跨量级 FP
+
 ## 2026-07-06 — feat: NCG scope 扩展 + 不可能值检测 + 模板残留检测
 - **`gate_data.py`**
   - `_extract_claims`：`_METRICS` 扩展到 40+ 指标（BLEU-4/ROUGE-L/BERTScore/WER/pass@k 等）；`_DATASETS` 扩展到 30+ 数据集（GSM8K/HumanEval/WMT/CoNLL 等）；新增 `_MODEL_NAMES`（BERT/LLaMA/Mistral/Baseline 等方法名）
