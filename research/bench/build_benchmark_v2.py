@@ -206,7 +206,7 @@ We propose a new approach achieving ROUGE-L of 41.2 on CNN/DM \cite{jones2023ber
 \label{tab:summ}
 \begin{tabular}{lccc}
 \toprule
-Model & R-1 & R-2 & R-L \\
+Model & ROUGE-1 & ROUGE-2 & ROUGE-L \\
 \midrule
 PEGASUS & 43.9 & 21.1 & 40.9 \\
 BART & 44.2 & 21.3 & 41.0 \\

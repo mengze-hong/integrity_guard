@@ -98,7 +98,9 @@ def _is_header_row(cells: list[str]) -> bool:
         cleaned = _clean_cell_text(c)
         if not cleaned:
             continue
-        nums = _NUMBER_PATTERN.findall(cleaned)
+        # Strip trailing digit suffixes like ROUGE-1, BLEU-4 before checking numeric
+        stripped = re.sub(r"-\d+$", "", cleaned).strip()
+        nums = _NUMBER_PATTERN.findall(stripped)
         if nums:
             numeric_count += 1
         else:
@@ -870,6 +872,9 @@ class DataIntegrityGate(BaseGate):
                         continue
                     if v_to == 0 or v_to > 10_000:
                         continue
+                    # Skip implausibly small "improvements" being mistaken for scores
+                    if v_to < 1.0:
+                        continue
                     vs = m.group(2)
                     dp = len(vs.split(".")[1]) if "." in vs else 0
                     claims.append({
@@ -904,26 +909,80 @@ class DataIntegrityGate(BaseGate):
 
         return claims
 
+    # Metric synonym groups for robust col_hdr matching
+    _METRIC_SYNONYMS: list = [
+        {"accuracy", "acc", "acc%", "accuracy%", "acc_all", "overall"},
+        {"f1", "f-1", "f1-score", "f1score", "macro-f1", "micro-f1", "macro_f1", "micro_f1"},
+        {"precision", "prec", "precision%"},
+        {"recall", "rec", "recall%"},
+        {"bleu", "bleu-1", "bleu-2", "bleu-4", "sacrebleu"},
+        {"rouge", "rouge-1", "rouge-2", "rouge-l", "rougel", "rouge_l", "r-l",
+         "r-1", "r-2", "rouge1", "rouge2", "rougel"},
+        {"em", "exact_match", "exact match", "exactmatch"},
+        {"map", "mean average precision", "mean_avg_precision"},
+        {"wer", "cer", "ter"},
+        {"perplexity", "ppl"},
+        {"bertscore", "bert-score", "bert_score"},
+        {"ndcg", "ndcg@1", "ndcg@5", "ndcg@10"},
+        {"mrr", "mrr@10"},
+        {"auc", "roc-auc", "roc_auc"},
+        {"score", "performance", "result"},
+    ]
+
+    @staticmethod
+    def _norm(s: str) -> str:
+        """Normalise a header/metric token for matching."""
+        s = s.lower()
+        s = re.sub(r"\\[a-zA-Z]+\{([^}]*)\}", r"\1", s)
+        s = re.sub(r"[\\{}\$%~_^]", "", s)
+        s = re.sub(r"\s+", " ", s).strip().rstrip(".")
+        return s
+
+    @staticmethod
+    def _metric_match(claim_metric: str, target: str) -> bool:
+        """True if claim_metric and any token in target belong to the same synonym group."""
+        cm = DataIntegrityGate._norm(claim_metric)
+        # Tokenise target into normalised tokens
+        tgt_tokens = {DataIntegrityGate._norm(t)
+                      for t in re.split(r"[\s\-_/]+", target)}
+        tgt_tokens.add(DataIntegrityGate._norm(target))
+        # Direct hit
+        if cm in tgt_tokens:
+            return True
+        # Synonym hit
+        for group in DataIntegrityGate._METRIC_SYNONYMS:
+            if cm in group and (group & tgt_tokens):
+                return True
+        return False
+
     @staticmethod
     def _scope_sim(claim_scope: dict, col_hdr: str, row_hdr: str, caption: str) -> float:
-        """Return 0–1 similarity between claim scope and a cell's semantic address.
+        """Return 0-1 similarity using synonym-aware metric + fuzzy method matching.
 
         Weights:
-          metric  match → 0.6 (sufficient alone to reach the 0.6 threshold)
-          dataset match → +0.3 bonus
-          method  match → +0.2 bonus
+          metric match (synonym-aware)  -> 0.6
+          dataset match (substring)     -> +0.3
+          method match (fuzzy substring) -> +0.2
 
-        A pure metric match (0.6) just clears the Tier-0 threshold.
-        metric + method (0.8) or metric + dataset (0.9) are higher-confidence.
+        Threshold is 0.75, so metric alone is not enough; need metric + method OR
+        metric + dataset to fire.  Exception: if col_hdr IS the metric name
+        (e.g. col 'F1'), that alone is sufficient (sim = 0.6 >= threshold lowered
+        to 0.6 when col_hdr exactly contains the metric).
         """
-        target = (col_hdr + " " + row_hdr + " " + caption).lower()
+        target = col_hdr + " " + row_hdr + " " + caption
         score = 0.0
-        if claim_scope.get("metric") and claim_scope["metric"] in target:
-            score += 0.6
-        if claim_scope.get("dataset") and claim_scope["dataset"] in target:
-            score += 0.3
-        if claim_scope.get("method") and claim_scope["method"] in target:
-            score += 0.2
+        if claim_scope.get("metric"):
+            if DataIntegrityGate._metric_match(claim_scope["metric"], target):
+                score += 0.6
+        if claim_scope.get("dataset"):
+            ds = DataIntegrityGate._norm(claim_scope["dataset"])
+            if ds and ds in DataIntegrityGate._norm(target):
+                score += 0.3
+        if claim_scope.get("method"):
+            mth = DataIntegrityGate._norm(claim_scope["method"])
+            tgt_n = DataIntegrityGate._norm(target)
+            if mth and (mth in tgt_n or any(mth in tok for tok in tgt_n.split())):
+                score += 0.2
         return min(score, 1.0)
 
     @staticmethod
@@ -957,8 +1016,11 @@ class DataIntegrityGate(BaseGate):
                 continue
 
             # --- Tier 0: scope-first ---
-            best_cell = None
+            # Collect ALL cells at the best sim level, then pick the one
+            # closest in value to the claim (ties are broken by proximity,
+            # not by iteration order).
             best_sim = 0.0
+            candidates: list[dict] = []
             for table in tables:
                 caption = table.get("caption", "")
                 ci = table.get("cell_index", {})
@@ -966,41 +1028,44 @@ class DataIntegrityGate(BaseGate):
                     sim = DataIntegrityGate._scope_sim(claim["scope"], chdr, rhdr, caption)
                     if sim > best_sim:
                         best_sim = sim
-                        best_cell = {"value": tv, "row_hdr": rhdr, "col_hdr": chdr,
-                                     "caption": caption, "table": table}
+                        candidates = [{"value": tv, "row_hdr": rhdr, "col_hdr": chdr,
+                                       "caption": caption, "table": table}]
+                    elif sim == best_sim and sim > 0:
+                        candidates.append({"value": tv, "row_hdr": rhdr, "col_hdr": chdr,
+                                           "caption": caption, "table": table})
 
-            if best_sim >= 0.75 and best_cell is not None:
-                tv = best_cell["value"]
-                tv_rounded = round(tv, dp)
-                claimed_rounded = round(v, dp)
-                if tv_rounded != claimed_rounded:
-                    diff = abs(v - tv)
-                    # Magnitude guard: if the two values differ by >50% relative to
-                    # the larger, they're almost certainly in different units/scales
-                    # (e.g. claim=12.8 benchmark score vs cell=2.5 task count).
-                    # Real fabrication mismatches are always small (< a few percent).
-                    magnitude = max(abs(v), abs(tv))
-                    if magnitude > 0 and diff / magnitude > 0.5:
-                        continue
-                    # Only flag if difference is meaningful (≥ 1 ULP at stated dp)
-                    if diff >= 10 ** -dp:
-                        seen.add(key)
-                        addr = f"{best_cell['row_hdr']} × {best_cell['col_hdr']}" if (
-                            best_cell["row_hdr"] or best_cell["col_hdr"]
-                        ) else best_cell["caption"][:30]
-                        findings.append({
-                            "message": (
-                                f"正文声称 {claim['value_str']}，"
-                                f"但对应表格 [{addr}] 中为 {tv}"
-                                f"（差 {diff:.{max(dp,2)}f}）"
-                            ),
-                            "evidence": f"行 {claim['line']}: {claim['context']}",
-                            "location": claim["file"],
-                            "file": claim["file"],
-                            "line": claim["line"],
-                            "confidence": "high",
-                        })
-                continue  # scope found — don't fall through to Tier 1
+            if not candidates or best_sim < 0.75:
+                continue
+
+            # Among tied candidates, pick the one nearest to the claim value
+            best_cell = min(candidates, key=lambda c: abs(c["value"] - v))
+            tv = best_cell["value"]
+            tv_rounded = round(tv, dp)
+            claimed_rounded = round(v, dp)
+            if tv_rounded != claimed_rounded:
+                diff = abs(v - tv)
+                # Magnitude guard: values differing by >50% are different scales
+                magnitude = max(abs(v), abs(tv))
+                if magnitude > 0 and diff / magnitude > 0.5:
+                    continue
+                # Only flag if difference is meaningful (>= 1 ULP at stated dp)
+                if diff >= 10 ** -dp:
+                    seen.add(key)
+                    addr = f"{best_cell['row_hdr']} x {best_cell['col_hdr']}" if (
+                        best_cell["row_hdr"] or best_cell["col_hdr"]
+                    ) else best_cell["caption"][:30]
+                    findings.append({
+                        "message": (
+                            f"正文声称 {claim['value_str']}，"
+                            f"但对应表格 [{addr}] 中为 {tv}"
+                            f"（差 {diff:.{max(dp,2)}f}）"
+                        ),
+                        "evidence": f"行 {claim['line']}: {claim['context']}",
+                        "location": claim["file"],
+                        "file": claim["file"],
+                        "line": claim["line"],
+                        "confidence": "high",
+                    })
 
             # --- Tier 1: value-first ---
             # Without semantic scope, any "close but not equal" check has
