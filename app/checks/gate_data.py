@@ -32,12 +32,62 @@ _NUMBER_PATTERN = re.compile(r"-?\d+\.\d+|-?\d+")
 
 
 def _clean_cell_text(cell: str) -> str:
-    """Strip LaTeX markup from a cell, returning plain text."""
-    cell = re.sub(r"\\(?:textbf|textit|emph|mathbf|mathrm|text)\{([^}]*)\}", r"\1", cell)
+    """Strip LaTeX markup from a cell, returning plain text.
+
+    Handles NLP/ML table patterns: progressbar macros, multirow, 62.8\\%, thin space.
+    """
+    # Progress bar and medal macros: keep the numeric argument
+    cell = re.sub(r"\\(?:progressbar\w*|goldmedal|silvermedal|bronzemedal)\{([^}]*)\}", r"\1", cell)
+    # \multirow{n}{w}{text} -> text
+    cell = re.sub(r"\\multirow\{[^}]*\}\{[^}]*\}\{([^}]*)\}", r"\1", cell)
+    # \hspace / \vspace -> space
+    cell = re.sub(r"\\[hv]space\*?\{[^}]*\}", " ", cell)
+    # \quad etc -> space
+    cell = re.sub(r"\\(?:quad|qquad|enspace)\b", " ", cell)
+    # Strip \% (percent sign) and \, (thin space)
+    cell = cell.replace(r"\%", "").replace(r"\,", " ")
+    # Strip rank suffix: "62.8 (1)" -> "62.8"
+    cell = re.sub(r"(\d)\s*\(\d+\)\s*$", r"\1", cell.strip())
+    # Keep content of standard formatting commands
+    cell = re.sub(
+        r"\\(?:textbf|textit|emph|mathbf|mathrm|text|footnotesize|small|bf|it)\{([^}]*)\}",
+        r"\1", cell,
+    )
+    # Drop remaining LaTeX commands
     cell = re.sub(r"\\[a-zA-Z]+\{[^}]*\}", "", cell)
-    cell = re.sub(r"\\[a-zA-Z]+", "", cell)
+    cell = re.sub(r"\\[a-zA-Z@]+\*?", "", cell)
     cell = cell.replace("{", "").replace("}", "").replace("$", "").replace("\\", "")
     return cell.strip()
+
+
+def _expand_multicolumn(cells: list) -> list:
+    """Expand \\multicolumn{N}{spec}{text} into N cells (first has text, rest empty)."""
+    MC_PAT = re.compile(
+        r"\\multicolumn\{(\d+)\}\{[^}]*\}\{((?:[^{}]|\{[^{}]*\})*)\}", re.DOTALL
+    )
+    expanded = []
+    for cell in cells:
+        m = MC_PAT.match(cell.strip())
+        if m:
+            n = max(1, int(m.group(1)))
+            text = _clean_cell_text(m.group(2))
+            expanded.append(text)
+            expanded.extend([""] * (n - 1))
+        else:
+            expanded.append(cell)
+    return expanded
+
+
+def _is_section_separator(cells: list) -> bool:
+    """True for rows like \\multicolumn{N}{l}{\\textit{Group}} -- table section headers."""
+    non_empty = [c.strip() for c in cells if c.strip()]
+    if len(non_empty) != 1:
+        return False
+    cell = non_empty[0]
+    return bool(
+        re.match(r"\\multicolumn\{", cell)
+        and re.search(r"\\textit\{|\\itshape|\\emph\{", cell)
+    )
 
 
 def _is_header_row(cells: list[str]) -> bool:
@@ -88,27 +138,45 @@ def _extract_tables(tex_files: list[TexFile]) -> list[dict]:
             # --- Split into raw rows (skip rule lines) ---
             raw_rows: list[list[str]] = []
             for chunk in tabular_body.split("\\\\"):
-                # Each chunk may contain newlines with \hline etc. before the
-                # actual cell content — split sub-lines and handle independently.
-                for line in chunk.split("\n"):
-                    line = line.strip()
-                    if not line:
+                for sub in chunk.splitlines():
+                    sub = sub.strip()
+                    if not sub:
                         continue
-                    if re.match(r"\\(?:hline|toprule|midrule|bottomrule|cline|hdashline)", line):
+                    if re.match(r"\\(?:hline|toprule|midrule|bottomrule|cline|hdashline|cmidrule)", sub):
                         continue
-                    cells = [c.strip() for c in line.split("&")]
+                    cells = [c.strip() for c in sub.split("&")]
+                    cells = _expand_multicolumn(cells)
                     if any(c for c in cells):
                         raw_rows.append(cells)
 
             if not raw_rows:
                 continue
 
-            # --- Detect header row (first row that is mostly text) ---
+            # --- Collect header rows: consecutive leading all-text rows ---
+            # Multi-line headers (multirow/multicolumn) are merged column-by-column.
             col_headers: list[str] = []
-            data_raw_rows = raw_rows
-            if raw_rows and _is_header_row(raw_rows[0]):
-                col_headers = [_clean_cell_text(c) for c in raw_rows[0]]
-                data_raw_rows = raw_rows[1:]
+            header_row_count = 0
+            for row in raw_rows:
+                if _is_section_separator(row):
+                    break
+                if _is_header_row(row):
+                    header_row_count += 1
+                    if not col_headers:
+                        col_headers = [_clean_cell_text(c) for c in row]
+                    else:
+                        for i, c in enumerate(row):
+                            cleaned = _clean_cell_text(c)
+                            if i < len(col_headers):
+                                if cleaned and not col_headers[i]:
+                                    col_headers[i] = cleaned
+                                elif cleaned and col_headers[i]:
+                                    col_headers[i] += " " + cleaned
+                            else:
+                                col_headers.append(cleaned)
+                else:
+                    break
+
+            data_raw_rows = raw_rows[header_row_count:]
 
             # --- Parse data rows; first cell treated as potential row header ---
             rows: list[list[float | None]] = []
@@ -729,6 +797,20 @@ class DataIntegrityGate(BaseGate):
             r"(?:\s+\w+){0,6}?\s+by\s+(\d+\.?\d*)\s*(?:%|pp|points?)?",
             re.IGNORECASE,
         )
+        # 'improves X from A to B' -- emit destination value B
+        from_to_pat = re.compile(
+            r"(?:improv|increas|reduc|decreas|boost|drop|fall|rise)\w*"
+            r"(?:\s+\w+){0,4}?\s+from\s+(\d+\.?\d*)\s*(?:%|pp)?"
+            r"\s+to\s+(\d+\.?\d*)\s*(?:%|pp)?",
+            re.IGNORECASE,
+        )
+        # '62.8% accuracy' -- direct value + metric in same phrase
+        direct_metric_pat = re.compile(
+            r"(\d+\.?\d*)\s*(?:\\,)?\s*(?:%|pp)?\s*"
+            r"(?:accuracy|acc\b|f1\b|f-1\b|precision\b|recall\b|bleu\b|rouge\b|"
+            r"exact\s+match\b|em\b|ndcg\b|mrr\b|auc\b|wer\b|cer\b)",
+            re.IGNORECASE,
+        )
 
         def _scope_from_window(window: str) -> dict:
             wl = window.lower()
@@ -775,6 +857,47 @@ class DataIntegrityGate(BaseGate):
                         "value": delta, "value_str": m.group(1), "dp": dp,
                         "claim_type": "comparative", "delta": delta,
                         "scope": _scope_from_window(window),
+                        "file": tex_file.path.name, "line": lineno,
+                        "context": stripped[:80],
+                    })
+
+
+                # 'from A to B' -- emit destination value B
+                for m in from_to_pat.finditer(line):
+                    try:
+                        v_to = float(m.group(2))
+                    except ValueError:
+                        continue
+                    if v_to == 0 or v_to > 10_000:
+                        continue
+                    vs = m.group(2)
+                    dp = len(vs.split(".")[1]) if "." in vs else 0
+                    claims.append({
+                        "value": v_to, "value_str": vs, "dp": dp,
+                        "claim_type": "absolute", "delta": None,
+                        "scope": _scope_from_window(window),
+                        "file": tex_file.path.name, "line": lineno,
+                        "context": stripped[:80],
+                    })
+
+                # '62.8% accuracy' -- direct metric-value assertion
+                for m in direct_metric_pat.finditer(line):
+                    try:
+                        v = float(m.group(1))
+                    except ValueError:
+                        continue
+                    if v == 0 or v > 10_000:
+                        continue
+                    vs = m.group(1)
+                    dp = len(vs.split(".")[1]) if "." in vs else 0
+                    metric_word = m.group(0).lower().split()[-1].rstrip(".")
+                    sc = _scope_from_window(window)
+                    if not sc.get("metric"):
+                        sc["metric"] = metric_word
+                    claims.append({
+                        "value": v, "value_str": vs, "dp": dp,
+                        "claim_type": "absolute", "delta": None,
+                        "scope": sc,
                         "file": tex_file.path.name, "line": lineno,
                         "context": stripped[:80],
                     })
