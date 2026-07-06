@@ -477,3 +477,83 @@ async def test_ncg_no_fp_on_rounded_claim():
     result = await DataIntegrityGate().check(_ncg_paper(tex))
     ncg_issues = [i for i in result.issues if "88.50" in i.message or "88.504" in i.message]
     assert not ncg_issues, f"Rounding should not trigger NCG: {[i.message for i in ncg_issues]}"
+
+
+# ── Impossible value tests ─────────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_impossible_value_f1_over_100():
+    """F1 = 102.3 in a table column labelled F1 should be flagged as impossible."""
+    tex = (
+        r"\begin{table}" + "\n"
+        r"\caption{Main results}" + "\n"
+        r"\begin{tabular}{lcc}" + "\n"
+        r"Model & F1 & Accuracy \\" + "\n"
+        r"\hline" + "\n"
+        r"OurModel & 102.3 & 91.2 \\" + "\n"
+        r"\end{tabular}" + "\n"
+        r"\end{table}"
+    )
+    result = await DataIntegrityGate().check(_ncg_paper(tex))
+    impossible = [i for i in result.issues if "102.3" in i.message or "超过 100" in i.message]
+    assert impossible, "F1 > 100 should be flagged"
+    assert any(i.severity.value == "error" for i in impossible)
+
+
+@pytest.mark.asyncio
+async def test_no_impossible_flag_on_valid_values():
+    """Normal accuracy=91.2, F1=88.5 should not trigger impossible value check."""
+    tex = (
+        r"\begin{table}" + "\n"
+        r"\caption{Results}" + "\n"
+        r"\begin{tabular}{lcc}" + "\n"
+        r"Model & F1 & Accuracy \\" + "\n"
+        r"\hline" + "\n"
+        r"OurModel & 88.5 & 91.2 \\" + "\n"
+        r"\end{tabular}" + "\n"
+        r"\end{table}"
+    )
+    result = await DataIntegrityGate().check(_ncg_paper(tex))
+    impossible = [i for i in result.issues if "超过 100" in i.message or "不可能" in i.message]
+    assert not impossible, f"Valid values should not trigger impossible check: {[i.message for i in impossible]}"
+
+
+# ── Template remnant tests ─────────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_template_remnant_detected():
+    """'TODO:' and 'lorem ipsum' in text should be flagged as template remnants."""
+    tex = TexFile(
+        path=Path("test.tex"), is_main=True,
+        raw_text=(
+            r"\documentclass{article}\begin{document}"
+            "\nTODO: add experiments here.\nLorem ipsum dolor sit amet.\n"
+            r"\end{document}"
+        ),
+        citations=[],
+    )
+    from app.models import ParsedPaper
+    paper = ParsedPaper(project_dir=FIXTURES, tex_files=[tex], bib_entries=[], all_files=[], figure_files=[])
+    result = await __import__("app.checks.gate_writing", fromlist=["WritingQualityGate"]).WritingQualityGate().check(paper)
+    remnant_issues = [i for i in result.issues if "模板残留" in i.message]
+    assert remnant_issues, "Template remnants should be detected"
+
+
+@pytest.mark.asyncio
+async def test_no_template_remnant_on_clean_text():
+    """Normal academic text should not trigger template remnant detection."""
+    tex = TexFile(
+        path=Path("test.tex"), is_main=True,
+        raw_text=(
+            r"\documentclass{article}\begin{document}"
+            "\nWe propose a novel method for text classification. "
+            "Our approach achieves state-of-the-art results.\n"
+            r"\end{document}"
+        ),
+        citations=[],
+    )
+    from app.models import ParsedPaper
+    paper = ParsedPaper(project_dir=FIXTURES, tex_files=[tex], bib_entries=[], all_files=[], figure_files=[])
+    result = await __import__("app.checks.gate_writing", fromlist=["WritingQualityGate"]).WritingQualityGate().check(paper)
+    remnant_issues = [i for i in result.issues if "模板残留" in i.message]
+    assert not remnant_issues, f"Clean text should not trigger remnant check: {[i.message for i in remnant_issues]}"

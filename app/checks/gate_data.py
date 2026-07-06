@@ -87,14 +87,18 @@ def _extract_tables(tex_files: list[TexFile]) -> list[dict]:
 
             # --- Split into raw rows (skip rule lines) ---
             raw_rows: list[list[str]] = []
-            for line in tabular_body.split("\\\\"):
-                line = line.strip()
-                if not line:
-                    continue
-                if re.match(r"\\(?:hline|toprule|midrule|bottomrule|cline|hdashline)", line):
-                    continue
-                cells = [c.strip() for c in line.split("&")]
-                raw_rows.append(cells)
+            for chunk in tabular_body.split("\\\\"):
+                # Each chunk may contain newlines with \hline etc. before the
+                # actual cell content — split sub-lines and handle independently.
+                for line in chunk.split("\n"):
+                    line = line.strip()
+                    if not line:
+                        continue
+                    if re.match(r"\\(?:hline|toprule|midrule|bottomrule|cline|hdashline)", line):
+                        continue
+                    cells = [c.strip() for c in line.split("&")]
+                    if any(c for c in cells):
+                        raw_rows.append(cells)
 
             if not raw_rows:
                 continue
@@ -508,6 +512,20 @@ class DataIntegrityGate(BaseGate):
                 line=cf.get("line"),
             ))
 
+        # Impossible value check: metric values outside physically valid range
+        impossible_findings = self._check_impossible_values(paper.tex_files, tables)
+        for iv in impossible_findings:
+            total_findings += 1
+            issues.append(Issue(
+                severity=Severity.ERROR,
+                message=iv["message"],
+                location=iv.get("location", ""),
+                evidence=iv["evidence"],
+                suggestion="该数值超出指标的合法取值范围，请核查原始数据或单位换算。",
+                file=iv.get("file"),
+                line=iv.get("line"),
+            ))
+
         error_count = sum(1 for i in issues if i.severity == Severity.ERROR)
         warn_count = sum(1 for i in issues if i.severity == Severity.WARNING)
         # Errors cost 20 pts each, warnings 5 pts each — cap at 0
@@ -658,15 +676,45 @@ class DataIntegrityGate(BaseGate):
         """
         # Metric names common in NLP / ML papers
         _METRICS = {
-            "accuracy", "acc", "f1", "f-1", "bleu", "rouge", "precision", "recall",
-            "perplexity", "ppl", "em", "exact match", "map", "ndcg", "mrr",
+            "accuracy", "acc", "f1", "f-1", "f1-score", "micro-f1", "macro-f1",
+            "bleu", "bleu-1", "bleu-2", "bleu-4", "sacrebleu",
+            "rouge", "rouge-1", "rouge-2", "rouge-l", "rougel",
+            "precision", "recall", "perplexity", "ppl",
+            "em", "exact match", "exact_match",
+            "map", "ndcg", "mrr", "hit", "hits",
             "auc", "roc", "ap", "score", "performance", "result",
+            "bertscore", "bert-score", "meteor", "cider", "bleurt", "mauve",
+            "wer", "cer", "ter",
+            "spearman", "pearson", "kendall",
+            "pass@1", "pass@10", "pass@100",
         }
         # Dataset shorthands (extend as needed)
         _DATASETS = {
-            "squad", "mnli", "snli", "nli", "sst", "imdb", "glue", "superglue",
-            "cnn", "dailymail", "xsum", "trivia", "natural questions", "nq",
+            "squad", "squad2", "squadv2",
+            "mnli", "snli", "nli", "sst", "sst-2", "sst2", "imdb",
+            "glue", "superglue",
+            "cnn", "dailymail", "xsum",
+            "triviaqa", "natural questions", "nq",
             "mmlu", "hellaswag", "winogrande", "arc", "truthfulqa",
+            "gsm8k", "humaneval", "mbpp",
+            "wmt14", "wmt16", "wmt19", "wmt20", "wmt21",
+            "conll", "conll-2003", "ontonotes",
+            "coco", "vqa", "nocaps",
+            "hotpotqa", "musique",
+            "ag news", "ag_news", "dbpedia",
+        }
+        # Model/method names for scope matching against row headers
+        _MODEL_NAMES = {
+            "bert", "roberta", "albert", "electra", "deberta",
+            "gpt", "gpt2", "gpt-2", "gpt3", "gpt-3", "gpt4", "gpt-4",
+            "t5", "bart", "pegasus", "led", "longformer", "bigbird",
+            "xlnet", "xlm", "xlm-r", "xlm-roberta",
+            "llama", "llama2", "llama-2", "mistral", "falcon", "phi",
+            "gemma", "vicuna", "alpaca",
+            "chatgpt", "gemini", "palm",
+            "wav2vec", "hubert", "whisper",
+            "vit", "clip", "blip",
+            "baseline", "ours", "our model",
         }
 
         absolute_pat = re.compile(
@@ -686,7 +734,8 @@ class DataIntegrityGate(BaseGate):
             wl = window.lower()
             metric = next((m for m in _METRICS if re.search(r"\b" + re.escape(m) + r"\b", wl)), None)
             dataset = next((d for d in _DATASETS if re.search(r"\b" + re.escape(d) + r"\b", wl)), None)
-            return {"metric": metric, "dataset": dataset}
+            method = next((m for m in _MODEL_NAMES if re.search(r"\b" + re.escape(m) + r"\b", wl)), None)
+            return {"metric": metric, "dataset": dataset, "method": method}
 
         claims = []
         for tex_file in tex_files:
@@ -734,13 +783,24 @@ class DataIntegrityGate(BaseGate):
 
     @staticmethod
     def _scope_sim(claim_scope: dict, col_hdr: str, row_hdr: str, caption: str) -> float:
-        """Return 0–1 similarity between claim scope and a cell's semantic address."""
+        """Return 0–1 similarity between claim scope and a cell's semantic address.
+
+        Weights:
+          metric  match → 0.6 (sufficient alone to reach the 0.6 threshold)
+          dataset match → +0.3 bonus
+          method  match → +0.2 bonus
+
+        A pure metric match (0.6) just clears the Tier-0 threshold.
+        metric + method (0.8) or metric + dataset (0.9) are higher-confidence.
+        """
         target = (col_hdr + " " + row_hdr + " " + caption).lower()
         score = 0.0
         if claim_scope.get("metric") and claim_scope["metric"] in target:
             score += 0.6
         if claim_scope.get("dataset") and claim_scope["dataset"] in target:
-            score += 0.4
+            score += 0.3
+        if claim_scope.get("method") and claim_scope["method"] in target:
+            score += 0.2
         return min(score, 1.0)
 
     @staticmethod
@@ -822,3 +882,81 @@ class DataIntegrityGate(BaseGate):
         # Return high-confidence first, cap at 8 to avoid noise flood
         findings.sort(key=lambda f: 0 if f["confidence"] == "high" else 1)
         return findings[:8]
+
+    @staticmethod
+    def _check_impossible_values(tex_files: list[TexFile], tables: list[dict]) -> list[dict]:
+        """Detect metric values outside their physically valid range.
+
+        Rules:
+          - Bounded-[0,100] metrics (accuracy, F1, precision, recall, BLEU, ROUGE,
+            AUC, AP, Hits@K, Pass@K): value > 100 or value < 0 is impossible.
+          - Perplexity (PPL): must be ≥ 1.0 (by definition).
+          - p-value: must be in (0, 1].
+
+        Checks both table cells (reliable) and in-text claims (via _extract_claims).
+        """
+        _BOUNDED_METRICS = re.compile(
+            r"\b(?:accuracy|acc|f1|f-1|f1-score|micro-?f1|macro-?f1|"
+            r"precision|recall|bleu|rouge|rouge-?[12l]|auc|ap|"
+            r"hits?@\d+|pass@\d+|exact[\s_]?match|em|map|ndcg|mrr)\b",
+            re.IGNORECASE,
+        )
+        _PPL_METRIC = re.compile(r"\b(?:perplexity|ppl)\b", re.IGNORECASE)
+        _PVAL_METRIC = re.compile(r"\bp[\s-]?value\b|\bp\s*[=<]\s*", re.IGNORECASE)
+
+        findings = []
+        seen: set[tuple] = set()
+
+        def _flag(msg, evidence, file, line):
+            k = (file, line, msg[:40])
+            if k not in seen:
+                seen.add(k)
+                findings.append({
+                    "message": msg, "evidence": evidence,
+                    "location": file, "file": file, "line": line,
+                })
+
+        # Check table cells: col_hdr tells us the metric
+        for table in tables:
+            col_headers = table.get("col_headers", [])
+            for ri, row in enumerate(table["rows"]):
+                for ci, v in enumerate(row):
+                    if v is None:
+                        continue
+                    chdr = col_headers[ci] if ci < len(col_headers) else ""
+                    if _BOUNDED_METRICS.search(chdr):
+                        if v > 100.0 + 1e-3:
+                            _flag(
+                                f"表格列 [{chdr}] 中数值 {v} 超过 100（百分比指标上限）",
+                                f"表 [{table['caption'][:40]}] 第 {ri+1} 行",
+                                table["file"], table["line"],
+                            )
+                        elif v < 0:
+                            _flag(
+                                f"表格列 [{chdr}] 中数值 {v} 为负（百分比指标不能为负）",
+                                f"表 [{table['caption'][:40]}] 第 {ri+1} 行",
+                                table["file"], table["line"],
+                            )
+                    if _PPL_METRIC.search(chdr) and v < 1.0:
+                        _flag(
+                            f"表格列 [{chdr}] 中 perplexity={v} < 1（物理上不可能）",
+                            f"表 [{table['caption'][:40]}] 第 {ri+1} 行",
+                            table["file"], table["line"],
+                        )
+
+        # Check in-text claims via _extract_claims (scope carries metric name)
+        claims = DataIntegrityGate._extract_claims(tex_files)
+        for claim in claims:
+            v = claim["value"]
+            metric = (claim["scope"].get("metric") or "").lower()
+            if not metric:
+                continue
+            if _BOUNDED_METRICS.search(metric):
+                if v > 100.0 + 1e-3:
+                    _flag(
+                        f"正文声称 {claim['value_str']} ({metric})，超过 100",
+                        f"行 {claim['line']}: {claim['context']}",
+                        claim["file"], claim["line"],
+                    )
+
+        return findings[:6]

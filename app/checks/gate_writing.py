@@ -71,6 +71,34 @@ _FILLER_PATTERNS = [
     r"the rest of (?:this|the) paper is organized as follows",
 ]
 
+# Placeholder / template-remnant strings that should never appear in a real submission
+_TEMPLATE_REMNANTS = [
+    "lorem ipsum",
+    "your paper title",
+    "author name",
+    "author names",
+    "institution name",
+    "university name",
+    "city, country",
+    "your abstract here",
+    "insert abstract",
+    "todo:",
+    "fixme:",
+    "xxx:",
+    "fill in",
+    "tbd",
+    "[citation needed]",
+    "[figure here]",
+    "[table here]",
+    "[results here]",
+    "anonymous authors",
+    "blind submission",
+    "under review",
+    "do not cite",
+    "do not distribute",
+    "unpublished manuscript",
+]
+
 # Common academic typos
 _TYPO_DICT = {
     "acheive": "achieve", "acheived": "achieved", "acheiving": "achieving",
@@ -376,6 +404,25 @@ class WritingQualityGate(BaseGate):
                     file=tex_file.path.name,
                     evidence="\n".join(f"  {t}" for t in found_latex_typos),
                     suggestion="这些命令拼写错误会导致编译失败。请修正。",
+                ))
+
+            # Template remnant detection — placeholder text left in from a template
+            remnant_found = []
+            text_lower_full = raw_text.lower()
+            for remnant in _TEMPLATE_REMNANTS:
+                if remnant in text_lower_full:
+                    # Find line number
+                    idx = text_lower_full.find(remnant)
+                    rline = raw_text[:idx].count("\n") + 1
+                    remnant_found.append(f"L{rline}: \"{remnant}\"")
+            if remnant_found:
+                issues.append(Issue(
+                    severity=Severity.ERROR,
+                    message=f"发现 {len(remnant_found)} 处模板残留/占位文本",
+                    location=tex_file.path.name,
+                    file=tex_file.path.name,
+                    evidence="\n".join(remnant_found[:6]),
+                    suggestion="投稿前必须删除所有模板占位文本（如 'Lorem ipsum'、'TODO:'、'[citation needed]' 等）。",
                 ))
 
             # Double spaces (cosmetic but sloppy)
