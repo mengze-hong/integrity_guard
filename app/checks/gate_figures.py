@@ -26,12 +26,40 @@ _LABEL_IN_ENV = re.compile(r"\\label\{([^}]+)\}")
 _SECTION_PATTERN = re.compile(r"\\(section|subsection)\*?\{([^}]+)\}")
 
 
+def _strip_comments(text: str) -> str:
+    """Remove LaTeX comment lines/fragments while preserving line count.
+
+    Lines whose first non-space character is % are blanked entirely.
+    Inline comments (unescaped %) are stripped from the end of the line.
+    Line count is preserved so that line-number reporting stays accurate.
+    """
+    out_lines = []
+    for line in text.splitlines():
+        s = line.lstrip()
+        if s.startswith("%"):
+            out_lines.append("")
+        else:
+            # strip inline comment
+            result = []
+            i = 0
+            while i < len(line):
+                if line[i] == "%" and (i == 0 or line[i - 1] != "\\"):
+                    break
+                result.append(line[i])
+                i += 1
+            out_lines.append("".join(result))
+    return "\n".join(out_lines)
+
+
 def _find_ref_locations(tex_files: list[TexFile]) -> dict[str, list[dict]]:
-    """Find where each \\ref{key} appears (which section, line context)."""
+    """Find where each \\ref{key} appears (which section, line context).
+
+    Comments are stripped first so refs inside % blocks are ignored.
+    """
     ref_locations: dict[str, list[dict]] = {}
 
     for tex_file in tex_files:
-        lines = tex_file.raw_text.split("\n")
+        lines = _strip_comments(tex_file.raw_text).splitlines()
         current_section = "Preamble"
 
         for line_num, line in enumerate(lines, 1):
@@ -56,17 +84,23 @@ def _find_ref_locations(tex_files: list[TexFile]) -> dict[str, list[dict]]:
 
 
 def _extract_floats(tex_files: list[TexFile]) -> list[dict]:
-    """Extract all figure/table environments with their captions and labels."""
+    """Extract all figure/table environments with their captions and labels.
+
+    Comments are stripped first so commented-out environments are ignored.
+    """
     floats = []
 
     for tex_file in tex_files:
+        # Strip comments to avoid matching commented-out environments
+        clean_text = _strip_comments(tex_file.raw_text)
+
         # Find position of \appendix command (if any)
         appendix_pos = None
-        appendix_match = re.search(r"\\appendix\b", tex_file.raw_text)
+        appendix_match = re.search(r"\\appendix\b", clean_text)
         if appendix_match:
             appendix_pos = appendix_match.start()
 
-        for match in _ENV_PATTERN.finditer(tex_file.raw_text):
+        for match in _ENV_PATTERN.finditer(clean_text):
             env_type = match.group(1)  # "figure" or "table"
             env_content = match.group(2)
 
@@ -84,9 +118,9 @@ def _extract_floats(tex_files: list[TexFile]) -> list[dict]:
             label_match = _LABEL_IN_ENV.search(env_content)
             label = label_match.group(1) if label_match else None
 
-            # Determine position in file
+            # Determine position in file (line numbers preserved by _strip_comments)
             start_pos = match.start()
-            line_num = tex_file.raw_text[:start_pos].count("\n") + 1
+            line_num = clean_text[:start_pos].count("\n") + 1
 
             # Determine if this float is in the appendix
             in_appendix = appendix_pos is not None and start_pos > appendix_pos
@@ -132,8 +166,8 @@ class FigureTableGate(BaseGate):
 
             entry = {
                 "display_name": display_name,
-                "caption": flt["caption"] or "⚠️ NO CAPTION",
-                "label": flt["label"] or "⚠️ MISSING",
+                "caption": flt["caption"] or "NO CAPTION",
+                "label": flt["label"] or "MISSING",
                 "type": flt["type"],
                 "file": flt["file"],
                 "line": flt["line"],
@@ -183,7 +217,7 @@ class FigureTableGate(BaseGate):
                     suggestion=f"在正文合适位置添加 \\ref{{{flt['label']}}} 或 \\cref{{{flt['label']}}} 来引用此图表。",
                 ))
 
-        # Check for dangling \ref{fig:*} or \ref{tab:*} pointing to non-existent floats
+        # Check for dangling \ref{fig:*} or \ref{tab:*} pointing to non-existent labels
         fig_tab_ref_keys = {
             k for k in ref_locations.keys()
             if k.startswith(("fig:", "tab:", "figure:", "table:"))
@@ -194,20 +228,19 @@ class FigureTableGate(BaseGate):
             loc_str = ", ".join(f"{loc['section']}" for loc in locs[:3])
             issues.append(Issue(
                 severity=Severity.ERROR,
-                message=f"\\ref{{{key}}} points to non-existent figure/table",
+                message=f"\\ref{{{key}}} 引用了不存在的图表标签",
                 location=loc_str,
-                evidence=f"Referenced in: {', '.join(loc['file'] + ':' + str(loc['line']) for loc in locs[:3])}",
-                suggestion=f"Either create a figure/table with \\label{{{key}}} or fix the \\ref.",
+                evidence=f"引用位置: {', '.join(loc['file'] + ':' + str(loc['line']) for loc in locs[:3])}",
+                suggestion=f"请创建 \\label{{{key}}} 对应的图表，或修正 \\ref 中的标签名。",
             ))
 
-        # Compute score
+        # Compute score: 5 pts per error, 2 pts per warning
         total_floats = len(floats)
         if total_floats == 0:
             score = 100.0
             passed = len(issues) == 0
         else:
             error_count = sum(1 for i in issues if i.severity == Severity.ERROR)
-            # 5 pts per error, 2 pts per warning, minimum 0
             warn_count = sum(1 for i in issues if i.severity == Severity.WARNING)
             score = max(0, 100 - error_count * 5 - warn_count * 2)
             passed = error_count == 0
@@ -218,6 +251,10 @@ class FigureTableGate(BaseGate):
             passed=passed,
             score=score,
             issues=issues,
-            summary=f"{total_floats} floats ({sum(1 for f in floats if f['type'] == 'figure')} figures, {sum(1 for f in floats if f['type'] == 'table')} tables)",
+            summary=(
+                f"{total_floats} floats "
+                f"({sum(1 for f in floats if f['type'] == 'figure')} figures, "
+                f"{sum(1 for f in floats if f['type'] == 'table')} tables)"
+            ),
             metadata={"crossref_table": crossref_table},
         )
