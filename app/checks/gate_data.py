@@ -92,17 +92,21 @@ def _is_section_separator(cells: list) -> bool:
 
 
 def _is_header_row(cells: list[str]) -> bool:
-    """Heuristic: a row is a header if most cells are non-numeric text."""
+    """Heuristic: a row is a header if most cells are non-numeric text.
+
+    A cell is 'numeric' only if it is (or closely resembles) a standalone number,
+    e.g. '74.3', '100', '-0.5'.  Mixed tokens like 'Ans-F1', 'ROUGE-1', 'top-1'
+    must NOT be counted as numeric — they are metric/label names.
+    """
+    # Matches a cell whose *entire* content (after cleaning) is a number
+    _STANDALONE_NUM = re.compile(r"^-?\d+(\.\d+)?(%|pp|pts?)?$")
     numeric_count = 0
     text_count = 0
     for c in cells:
         cleaned = _clean_cell_text(c)
         if not cleaned:
             continue
-        # Strip trailing digit suffixes like ROUGE-1, BLEU-4 before checking numeric
-        stripped = re.sub(r"-\d+$", "", cleaned).strip()
-        nums = _NUMBER_PATTERN.findall(stripped)
-        if nums:
+        if _STANDALONE_NUM.match(cleaned):
             numeric_count += 1
         else:
             text_count += 1
@@ -189,10 +193,12 @@ def _extract_tables(tex_files: list[TexFile]) -> list[dict]:
                 if not raw_row:
                     continue
 
-                # First cell: if non-numeric, treat as row header
+                # First cell: treat as row header unless it looks like a standalone number.
+                # Model names like 'GPT-2', 'BERT-base', 'T5-large' contain digits but
+                # are NOT numeric row headers.
+                _STANDALONE_NUM_RE = re.compile(r"^-?\d+(\.\d+)?$")
                 first_clean = _clean_cell_text(raw_row[0])
-                first_nums = _NUMBER_PATTERN.findall(first_clean)
-                if first_nums:
+                if _STANDALONE_NUM_RE.match(first_clean):
                     row_hdr = ""
                     value_cells = raw_row
                 else:
@@ -948,7 +954,7 @@ class DataIntegrityGate(BaseGate):
         """Normalise a header/metric token for matching."""
         s = s.lower()
         s = re.sub(r"\\[a-zA-Z]+\{([^}]*)\}", r"\1", s)
-        s = re.sub(r"[\\{}\$%~_^]", "", s)
+        s = re.sub(r"[\\{}\$%~_^()\[\]]", "", s)
         s = re.sub(r"\s+", " ", s).strip().rstrip(".")
         return s
 
@@ -956,9 +962,9 @@ class DataIntegrityGate(BaseGate):
     def _metric_match(claim_metric: str, target: str) -> bool:
         """True if claim_metric and any token in target belong to the same synonym group."""
         cm = DataIntegrityGate._norm(claim_metric)
-        # Tokenise target into normalised tokens
-        tgt_tokens = {DataIntegrityGate._norm(t)
-                      for t in re.split(r"[\s\-_/]+", target)}
+        # Tokenise target into normalised tokens (also split compound tokens like "Ans-F1")
+        raw_tokens = re.split(r"[\s\-_/]+", target)
+        tgt_tokens = {DataIntegrityGate._norm(t) for t in raw_tokens}
         tgt_tokens.add(DataIntegrityGate._norm(target))
         # Direct hit
         if cm in tgt_tokens:
@@ -969,6 +975,14 @@ class DataIntegrityGate(BaseGate):
                 return True
         return False
 
+    # Column headers that indicate dataset statistics (not performance metrics)
+    _STATS_COL_HDRS = re.compile(
+        r"^\s*(train|test|dev|valid(?:ation)?|size|count|#|num|total|"
+        r"samples?|instances?|examples?|sent(?:ences?)?|tokens?|docs?|"
+        r"paragraphs?|split)\s*$",
+        re.IGNORECASE,
+    )
+
     @staticmethod
     def _scope_sim(claim_scope: dict, col_hdr: str, row_hdr: str, caption: str) -> float:
         """Return 0-1 similarity using synonym-aware metric + fuzzy method matching.
@@ -978,11 +992,14 @@ class DataIntegrityGate(BaseGate):
           dataset match (substring)     -> +0.3
           method match (fuzzy substring) -> +0.2
 
-        Threshold is 0.75, so metric alone is not enough; need metric + method OR
-        metric + dataset to fire.  Exception: if col_hdr IS the metric name
-        (e.g. col 'F1'), that alone is sufficient (sim = 0.6 >= threshold lowered
-        to 0.6 when col_hdr exactly contains the metric).
+        Threshold is 0.6 (metric match alone is sufficient).
+        Stats columns (Train/Test/Dev/Size) are excluded to avoid matching
+        dataset-statistics tables instead of result tables.
         """
+        # Exclude dataset-statistics columns — these hold counts, not performance scores
+        if DataIntegrityGate._STATS_COL_HDRS.match(col_hdr):
+            return 0.0
+
         target = col_hdr + " " + row_hdr + " " + caption
         score = 0.0
         if claim_scope.get("metric"):
@@ -1122,7 +1139,7 @@ class DataIntegrityGate(BaseGate):
                         candidates.append({"value": tv, "row_hdr": rhdr, "col_hdr": chdr,
                                            "caption": caption, "table": table})
 
-            if not candidates or best_sim < 0.75:
+            if not candidates or best_sim < 0.6:
                 continue
 
             # Among tied candidates, pick the one nearest to the claim value

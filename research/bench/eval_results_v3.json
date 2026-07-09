@@ -1040,7 +1040,7 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_b0": 1,
-    "pred_ours": 0
+    "pred_ours": 1
   },
   {
     "id": "t01_clf_f1_CLEAN_citation_bib_consistency_5",
@@ -1225,7 +1225,7 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_b0": 0,
-    "pred_ours": 0
+    "pred_ours": 1
   },
   {
     "id": "t07_re_tacred_CLEAN_citation_bib_consistency_101",
@@ -1971,7 +1971,7 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_b0": 0,
-    "pred_ours": 0
+    "pred_ours": 1
   },
   {
     "id": "t08_coref_CLEAN_citation_bib_consistency_115",
@@ -4170,7 +4170,7 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_b0": 1,
-    "pred_ours": 0
+    "pred_ours": 1
   },
   {
     "id": "t07_re_tacred_CLEAN_figure_table_crossref_105",
