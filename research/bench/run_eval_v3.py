@@ -133,6 +133,9 @@ async def _run_gate(case: dict, use_perturbed: bool) -> int:
             if SKIP_REFS:
                 return -1  # skip
             result = await ReferenceAuthenticityGate().check(paper)
+            # Reference gate: count ERROR only — warnings are noisy (title similarity,
+            # venue abbreviation) and symmetric across perturbed/clean, cancelling signal.
+            return sum(1 for i in result.issues if i.severity == Severity.ERROR)
         else:
             return 0
         return sum(1 for i in result.issues

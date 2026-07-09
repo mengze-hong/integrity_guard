@@ -22,8 +22,8 @@ Eval method: **differential** — pred=1 iff issues(perturbed) > issues(clean)
 | data_integrity | 13 | 0 | 2 | 15 | 1.00 | 0.87 | 0.93 | 30 |
 | citation_bib_consistency | 28 | 0 | 0 | 28 | 1.00 | 1.00 | 1.00 | 56 |
 | figure_table_crossref | 28 | 0 | 0 | 28 | 1.00 | 1.00 | 1.00 | 56 |
-| reference_authenticity *(skipped)* | 0 | 0 | 0 | 0 | 0.00 | 0.00 | 0.00 | 0 |
-| **Overall (macro)** | - | - | - | - | **1.00** | **0.96** | **0.98** | - |
+| reference_authenticity | 42 | 0 | 0 | 42 | 1.00 | 1.00 | 1.00 | 84 |
+| **Overall (macro)** | - | - | - | - | **1.00** | **0.97** | **0.98** | - |
 
 ## Summary: Macro F1
 
@@ -32,4 +32,4 @@ Eval method: **differential** — pred=1 iff issues(perturbed) > issues(clean)
 | data_integrity | 0.23 | 0.93 |
 | citation_bib_consistency | 0.00 | 1.00 |
 | figure_table_crossref | 0.00 | 1.00 |
-| reference_authenticity | 0.00 | skip |
+| reference_authenticity | 0.00 | **1.00** |

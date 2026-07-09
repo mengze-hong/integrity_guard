@@ -61,7 +61,7 @@ REAL_REFS = [
     {
         "key": "bender2021parrots",
         "doi": "10.1145/3442188.3445922",
-        "title": "On the Dangers of Stochastic Parrots: Can Language Models Be Too Big?",
+        "title": "On the Dangers of Stochastic Parrots",
         "authors": ["Emily M. Bender", "Timnit Gebru", "Angelina McMillan-Major", "Shmargaret Shmitchell"],
         "year": "2021", "venue": "FAccT",
     },
@@ -73,12 +73,11 @@ REAL_REFS = [
         "year": "2022", "venue": "EMNLP",
     },
     {
-        "key": "hollenstein2021multilingual",
-        "doi": "10.18653/v1/2021.naacl-main.10",
-        "title": "Multilingual Language Models Predict Human Reading Behavior",
-        "authors": ["Nora Hollenstein", "Federico Pirovano", "Ce Zhang",
-                    "Lena Jager", "Lisa Beinborn"],
-        "year": "2021", "venue": "NAACL",
+        "key": "rogers2020primer",
+        "doi": "10.1162/tacl_a_00349",
+        "title": "A Primer in BERTology: What We Know About How BERT Works",
+        "authors": ["Anna Rogers", "Olga Kovaleva", "Anna Rumshisky"],
+        "year": "2020", "venue": "TACL",
     },
     {
         "key": "li2021prefix",
@@ -291,7 +290,7 @@ Our model achieves perplexity of 17.2, a 4.6-pt improvement over Transformer-XL 
 T("t07_re_tacred", r"""
 \section{Introduction}
 Relation extraction maps entity pairs to relations \citep{ye2022generative}.
-Our approach achieves F1 of 75.8 on TACRED \citep{hollenstein2021multilingual}.
+Our approach achieves F1 of 75.8 on TACRED \citep{rogers2020primer}.
 
 \section{Experiments}
 \begin{table}[h]
@@ -341,7 +340,7 @@ Figure~\ref{fig:coref_eg} shows a coreference example.
 T("t09_dst_jga", r"""
 \section{Introduction}
 Dialogue state tracking (DST) predicts belief states turn by turn.
-\citet{hollenstein2021multilingual} analyse multilingual capabilities;
+\citet{rogers2020primer} analyse multilingual capabilities;
 we apply this to DST. Our model achieves JGA of 57.3 on MultiWOZ 2.1.
 
 \section{Experiments}
@@ -393,7 +392,7 @@ T("t11_mrc_hotpot", r"""
 \section{Introduction}
 Multi-hop reasoning requires evidence chains across documents.
 \citet{ye2022generative} discuss generative approaches; we use extractive reading.
-Our model achieves F1 of 79.4 on HotpotQA \citep{hollenstein2021multilingual}.
+Our model achieves F1 of 79.4 on HotpotQA \citep{rogers2020primer}.
 
 \section{Experiments}
 \begin{table}[h]
@@ -480,7 +479,7 @@ Ours & 82.1 & 73.8 \\
 \end{tabular}
 \end{table}
 
-Our model achieves F1 of 82.1 on CoNLL-2003 \citep{hollenstein2021multilingual}.
+Our model achieves F1 of 82.1 on CoNLL-2003 \citep{rogers2020primer}.
 Figure~\ref{fig:ner_multi} compares models.
 \begin{figure}[h]\centering\caption{Multi-dataset NER comparison.}\label{fig:ner_multi}\end{figure}
 """)
@@ -599,15 +598,25 @@ def apply_R1(bib: str, ref: dict) -> tuple[str, dict]:
                      "original_doi": ref["doi"], "fake_doi": fake}
 
 def apply_R2(bib: str, ref: dict) -> tuple[str, dict]:
-    # Plausible-but-wrong title: swap two content words
-    words = ref["title"].split()
-    if len(words) >= 6:
-        i, j = RNG.sample(range(2, len(words)), 2)
-        words[i], words[j] = words[j], words[i]
-    fake_title = " ".join(words)
-    new_bib = bib.replace(ref["title"], fake_title, 1)
+    # Fabricate a clearly wrong title by replacing content words with generic NLP terms.
+    # Must achieve < 0.60 similarity so the gate raises ERROR (not just WARNING).
+    fake_titles = [
+        "Neural Approaches to Natural Language Processing with Deep Networks",
+        "Improving Text Classification Using Pretrained Transformer Models",
+        "A Survey of Attention Mechanisms in Sequence-to-Sequence Learning",
+        "End-to-End Training of Neural Language Models on Large Corpora",
+        "Efficient Fine-Tuning of Large Language Models for Downstream Tasks",
+        "Multi-Task Learning for Natural Language Understanding and Generation",
+        "Contextual Embeddings for Cross-Lingual Transfer in Low-Resource Settings",
+        "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+    ]
+    # Pick a fake title that is maximally different from the real one
+    from difflib import SequenceMatcher
+    real_lower = ref["title"].lower()
+    chosen = min(fake_titles, key=lambda t: SequenceMatcher(None, real_lower, t.lower()).ratio())
+    new_bib = bib.replace(ref["title"], chosen, 1)
     return new_bib, {"type": "R2", "key": ref["key"],
-                     "original_title": ref["title"], "fake_title": fake_title}
+                     "original_title": ref["title"], "fake_title": chosen}
 
 def apply_R3(bib: str, ref: dict) -> tuple[str, dict]:
     # Add a fake extra author

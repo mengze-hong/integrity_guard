@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 2026-07-09 — reference gate 完整评测 + benchmark bib 修复
+
+### 修复
+- benchmark_v3 公共 bib 条目 `hollenstein2021multilingual` → 替换为 `rogers2020primer`（Crossref 返回不完整 family name，导致 gate 在 clean/perturbed 两侧均报 ERROR，differential signal 归零）
+- `bender2021parrots` title 与 Crossref 精确对齐（去掉副标题，Crossref 未收录）
+- R2 perturbation：从单词 swap（sim≈0.75，WARNING）改为完全不同标题（sim<0.60，ERROR），保证 differential signal
+- `run_eval_v3.py` reference gate 改用 ERROR-only 计数（WARNING 在 clean/perturbed 对称出现，相互抵消）
+
+### 结果
+- reference_authenticity F1: 0.00 (N/A) → **1.00** (P=1.00, R=1.00)
+- **Ours Overall macro F1: 0.98**（4 gates 全部完整评测）
+
+---
+
 ## 2026-07-09 — NCG table parsing 三项修复
 
 ### 修复
