@@ -218,18 +218,19 @@
 
         /* Module cards */
         .module-card {
-            background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:20px;
+            background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:18px 20px;
             transition:all 0.2s ease; cursor:pointer; position:relative; overflow:hidden;
         }
         .module-card:hover { transform:translateY(-3px); box-shadow:0 8px 24px rgba(0,0,0,0.08); border-color:#cbd5e1; }
         .module-card::after { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:inherit; border-radius:14px 14px 0 0; opacity:0; transition:opacity 0.2s; }
         .module-card:hover::after { opacity:1; }
         .module-icon {
-            width:36px; height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center;
-            font-size:16px; margin-bottom:10px; color:#fff; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+            width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+            font-size:15px; color:#fff; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.1)); flex-shrink:0;
         }
-        .module-title { font-weight:600; font-size:13px; color:#0f172a; margin:0; }
-        .module-desc { font-size:11px; color:#64748b; margin:5px 0 0; line-height:1.4; }
+        .module-header { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+        .module-title { font-weight:700; font-size:14px; color:#0f172a; margin:0; }
+        .module-desc { font-size:13px; color:#64748b; margin:0; line-height:1.5; }
 
         /* Toolbar buttons */
         .toolbar-btn {
@@ -323,93 +324,85 @@
 
     <!-- ====== SCREEN 1: Upload ====== -->
     <div id="screen-upload" class="flex-1" style="background:linear-gradient(180deg,#ffffff 0%,#f8fafc 50%,#f1f5f9 100%); overflow-y:auto;">
-        <div style="display:flex; align-items:center; gap:60px; max-width:1100px; width:100%; padding:28px 40px 0; margin:0 auto;">
+        <div style="display:flex; align-items:center; gap:60px; max-width:1100px; width:100%; padding:36px 40px 0; margin:0 auto;">
             <!-- Left: Branding & Features -->
             <div id="upload-intro" style="flex:1; color:#1e293b;">
-                <div style="display:flex; align-items:center; gap:14px; margin-bottom:28px;">
-                    <img src="/static/brand/logo.png" alt="ScholarLint 投稿通" style="width:52px; height:52px; object-fit:contain; display:block; flex-shrink:0;">
+                <div style="display:flex; align-items:center; gap:14px; margin-bottom:8px;">
+                    <img src="/static/brand/logo.png" alt="ScholarLint" style="width:52px; height:52px; object-fit:contain; display:block; flex-shrink:0;">
                     <div>
-                        <h1 style="font-size:28px; font-weight:800; margin:0; letter-spacing:-0.5px; color:#0f172a;" data-i18n="upload.title">投稿通</h1>
-                        <p style="font-size:13px; color:#3b82f6; margin:4px 0 0; font-weight:500;">ScholarLint · 为你的投稿保驾护航</p>
+                        <h1 style="font-size:28px; font-weight:800; margin:0; letter-spacing:-0.5px; color:#0f172a;" data-i18n="upload.title">ScholarLint</h1>
                     </div>
                 </div>
-                <p style="color:#475569; font-size:15px; line-height:1.7; margin-bottom:32px;">
-                    在提交论文前，自动检测引用造假、数据异常、格式缺陷等问题。<br>
-                    避免 desk reject，保护学术声誉。
-                </p>
-                <div style="display:flex; flex-direction:column; gap:18px;">
+                <p data-i18n="upload.desc" style="color:#475569; font-size:22px; line-height:1.6; margin-bottom:18px;">Automatically detect citation fraud, data anomalies, and formatting issues before submission.</p>
+                <div style="display:flex; flex-direction:column; gap:14px;">
                     <div style="display:flex; align-items:flex-start; gap:12px;">
                         <div style="width:36px;height:36px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;">🔍</div>
                         <div>
-                            <p style="font-weight:600; font-size:14px; margin:0; color:#1e293b;">引文真实性验证</p>
-                            <p style="color:#64748b; font-size:12px; margin:3px 0 0;">通过 Crossref/DataCite/Semantic Scholar/OpenAlex 交叉验证</p>
+                            <p data-i18n="feat.ref_title" style="font-weight:600; font-size:20px; margin:0; color:#1e293b;">Reference Authenticity</p>
+                            <p style="color:#64748b; font-size:13px; margin:3px 0 0;" data-i18n="feat.ref_desc">Cross-verify via Crossref / DataCite / Semantic Scholar / OpenAlex</p>
                         </div>
                     </div>
                     <div style="display:flex; align-items:flex-start; gap:12px;">
                         <div style="width:36px;height:36px;border-radius:8px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;">🧪</div>
                         <div>
-                            <p style="font-weight:600; font-size:14px; margin:0; color:#1e293b;">实验数据异常检测</p>
-                            <p style="color:#64748b; font-size:12px; margin:3px 0 0;">Benford 定律、重复行、偏移造假、p-value 异常</p>
+                            <p data-i18n="feat.data_title" style="font-weight:600; font-size:20px; margin:0; color:#1e293b;">Data Anomaly Detection</p>
+                            <p style="color:#64748b; font-size:13px; margin:3px 0 0;" data-i18n="feat.data_desc">Benford's Law, duplicate rows, offset fabrication, p-value anomalies</p>
                         </div>
                     </div>
                     <div style="display:flex; align-items:flex-start; gap:12px;">
                         <div style="width:36px;height:36px;border-radius:8px;background:#fffbeb;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;">✍️</div>
                         <div>
-                            <p style="font-weight:600; font-size:14px; margin:0; color:#1e293b;">写作质量分析</p>
-                            <p style="color:#64748b; font-size:12px; margin:3px 0 0;">AI 痕迹检测、匿名化检查、拼写错误、段落重复</p>
+                            <p data-i18n="feat.writing_title" style="font-weight:600; font-size:20px; margin:0; color:#1e293b;">Writing Quality Analysis</p>
+                            <p style="color:#64748b; font-size:13px; margin:3px 0 0;" data-i18n="feat.writing_desc">AI trace detection, anonymity check, typos, duplicate paragraphs</p>
                         </div>
                     </div>
                     <div style="display:flex; align-items:flex-start; gap:12px;">
                         <div style="width:36px;height:36px;border-radius:8px;background:#faf5ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;">📋</div>
                         <div>
-                            <p style="font-weight:600; font-size:14px; margin:0; color:#1e293b;">Bib 智能整理</p>
-                            <p style="color:#64748b; font-size:12px; margin:3px 0 0;">格式化、按引用排序、分离未引用条目、官方 bib 替换</p>
+                            <p data-i18n="feat.bib_title" style="font-weight:600; font-size:20px; margin:0; color:#1e293b;">Smart Bibliography Cleanup</p>
+                            <p style="color:#64748b; font-size:13px; margin:3px 0 0;" data-i18n="feat.bib_desc">Format, sort by citation order, separate uncited entries, replace with official bib</p>
                         </div>
                     </div>
                 </div>
-                <div style="margin-top:32px; padding-top:20px; border-top:1px solid #e2e8f0;">
+                <div style="margin-top:15px; padding-top:14px; border-top:1px solid #e2e8f0;">
                     <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
                         <div style="display:flex; align-items:center; gap:6px;">
-                            <span style="font-size:18px; font-weight:800; color:#3b82f6;">50+</span>
-                            <span style="font-size:10px; color:#94a3b8;">检测规则</span>
+                            <span style="font-size:20px; font-weight:800; color:#3b82f6;">50+</span>
+                            <span style="font-size:15px; color:#94a3b8;" data-i18n="stat.rules">Detection Rules</span>
                         </div>
                         <div style="display:flex; align-items:center; gap:6px;">
-                            <span style="font-size:18px; font-weight:800; color:#22c55e;">4</span>
-                            <span style="font-size:10px; color:#94a3b8;">验证 API</span>
+                            <span style="font-size:20px; font-weight:800; color:#22c55e;">4</span>
+                            <span style="font-size:15px; color:#94a3b8;" data-i18n="stat.apis">Verification APIs</span>
                         </div>
                         <div style="display:flex; align-items:center; gap:6px;">
-                            <span style="font-size:18px; font-weight:800; color:#f59e0b;">17</span>
-                            <span style="font-size:10px; color:#94a3b8;">会议模板</span>
-                        </div>
-                        <div style="display:flex; align-items:center; gap:6px;">
-                            <span style="font-size:18px; font-weight:800; color:#8b5cf6;">AI</span>
-                            <span style="font-size:10px; color:#94a3b8;">智能修复</span>
+                            <span style="font-size:20px; font-weight:800; color:#8b5cf6;">AI</span>
+                            <span style="font-size:15px; color:#94a3b8;" data-i18n="stat.ai">Smart Fix</span>
                         </div>
                     </div>
-                    <p style="font-size:10px; color:#94a3b8; margin-top:10px;">支持 ACL / NeurIPS / EMNLP / ICLR / CVPR / AAAI 等顶会格式</p>
+                    <p style="font-size:12px; color:#94a3b8; margin-top:10px;" data-i18n="stat.venues">Supports ACL / NeurIPS / EMNLP / ICLR / CVPR / AAAI and more</p>
                 </div>
             </div>
 
             <!-- Right: Upload Card -->
             <div style="background:#fff; border-radius:20px; box-shadow:0 4px 24px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04); border:1px solid rgba(226,232,240,0.8); padding:36px; width:420px; flex-shrink:0;">
                 <div style="text-align:center; margin-bottom:24px;">
-                    <h2 style="font-size:20px; font-weight:700; color:#0f172a; margin:0;" id="upload-card-title">上传论文开始检查</h2>
-                    <p style="color:#94a3b8; font-size:13px; margin:6px 0 0;">支持 Overleaf 导出的 ZIP 压缩包</p>
+                    <h2 style="font-size:20px; font-weight:700; color:#0f172a; margin:0;" id="upload-card-title" data-i18n="upload.card_title">Upload Paper to Start Check</h2>
+                    <p style="color:#94a3b8; font-size:13px; margin:6px 0 0;" data-i18n="upload.card_sub">Supports Overleaf-exported ZIP archives</p>
                 </div>
                 <form id="upload-form">
                     <div id="drop-zone" style="border:2px dashed #cbd5e1; border-radius:14px; padding:32px 28px; text-align:center; cursor:pointer; transition:all 0.25s ease; background:#fafbfc;" onclick="document.getElementById('file-input').click()" onmouseover="this.style.borderColor='#3b82f6';this.style.background='#eff6ff';this.style.transform='scale(1.01)'" onmouseout="this.style.borderColor='#cbd5e1';this.style.background='#fafbfc';this.style.transform=''">
                         <div style="font-size:28px; margin-bottom:8px;">📦</div>
-                        <p style="font-size:14px; margin:0;"><span style="color:#3b82f6; font-weight:600;">点击上传</span> 或拖拽文件到此处</p>
-                        <p style="font-size:12px; color:#94a3b8; margin:4px 0 0;">.zip 格式（含 .tex + .bib + figures）</p>
-                        <p style="font-size:11px; color:#94a3b8; margin:10px 0 0;">🔒 文件加密保留 7 天，到期自动清理</p>
+                        <p style="font-size:14px; margin:0;"><span style="color:#3b82f6; font-weight:600;" data-i18n="upload.click">Click to upload</span> <span data-i18n="upload.drag">or drag & drop here</span></p>
+                        <p style="font-size:12px; color:#94a3b8; margin:4px 0 0;" data-i18n="upload.format">.zip format (containing .tex + .bib + figures)</p>
+                        <p style="font-size:11px; color:#94a3b8; margin:10px 0 0;" data-i18n="upload.privacy">🔒 Files encrypted, kept 7 days, auto-deleted on expiry</p>
                         <input id="file-input" type="file" accept=".zip" style="display:none;" onchange="handleUpload(this)">
                     </div>
                     <div id="file-info" class="hidden" style="margin-top:12px; font-size:13px; color:#64748b; text-align:center;"></div>
-                    <button type="submit" id="submit-btn" disabled style="margin-top:20px; width:100%; background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; padding:13px; border-radius:12px; font-weight:700; font-size:15px; border:none; cursor:pointer; opacity:0.35; transition:all 0.2s; box-shadow:0 4px 12px rgba(59,130,246,0.25);" onmouseover="if(!this.disabled){this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 16px rgba(59,130,246,0.35)'}" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 12px rgba(59,130,246,0.25)'">开始质检</button>
+                    <button type="submit" id="submit-btn" disabled style="margin-top:20px; width:100%; background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; padding:13px; border-radius:12px; font-weight:700; font-size:15px; border:none; cursor:pointer; opacity:0.35; transition:all 0.2s; box-shadow:0 4px 12px rgba(59,130,246,0.25);" onmouseover="if(!this.disabled){this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 16px rgba(59,130,246,0.35)'}" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 12px rgba(59,130,246,0.25)'" data-i18n="upload.submit">Start Check</button>
                     <!-- Check progress bar (hidden by default) -->
                     <div id="check-progress" style="display:none; margin-top:12px;">
                         <div style="display:flex; justify-content:space-between; font-size:11px; color:#64748b; margin-bottom:4px;">
-                            <span id="check-progress-text">准备中...</span>
+                            <span id="check-progress-text" data-i18n="upload.preparing">Preparing...</span>
                             <span id="check-progress-pct">0%</span>
                         </div>
                         <div style="height:6px; background:#e2e8f0; border-radius:3px; overflow:hidden;">
@@ -417,15 +410,9 @@
                         </div>
                     </div>
                 </form>
-                <!-- History section -->
-                <div id="history-section" style="margin-top:20px; display:none;">
-                    <div style="padding-top:16px; border-top:1px solid #f1f5f9;">
-                        <div style="display:flex; align-items:center; justify-content:space-between; margin:0 0 10px;">
-                            <p style="font-size:12px; font-weight:600; color:#64748b; margin:0;">📂 最近的检查</p>
-                            <button onclick="showAllProjects()" style="font-size:12px; font-weight:600; color:#3b82f6; background:none; border:none; cursor:pointer; padding:2px 4px; border-radius:4px;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='none'">所有项目 →</button>
-                        </div>
-                        <div id="history-list" style="max-height:200px; overflow-y:auto;"></div>
-                    </div>
+                <!-- History section hidden -->
+                <div id="history-section" style="display:none;">
+                    <div id="history-list"></div>
                 </div>
             </div>
         </div>
@@ -433,67 +420,59 @@
         <!-- Feature Modules Showcase -->
         <div style="max-width:1100px; width:100%; margin:0 auto; padding:40px 40px 48px;">
             <div style="text-align:center; margin-bottom:32px;">
-                <h2 style="font-size:22px; font-weight:700; color:#0f172a; margin:0; letter-spacing:-0.3px;" id="modules-section-title">模块化检查，精准定位文章问题</h2>
+                <h2 style="font-size:22px; font-weight:700; color:#0f172a; margin:0; letter-spacing:-0.3px;" id="modules-section-title" data-i18n="upload.modules_title">Modular checks, pinpoint paper issues</h2>
             </div>
             <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:16px;">
-                <div class="module-card" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
-                    <div class="module-icon" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);">🔍</div>
-                    <p class="module-title">引文验证</p>
-                    <p class="module-desc">Crossref/S2/OpenAlex 交叉验证</p>
+                <div class="module-card" onclick="toast(t('toast.upload_tip'),'info')">
+                    <div class="module-header"><div class="module-icon" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);">🔍</div><p class="module-title" data-i18n="mod.citations">Citation Credibility</p></div>
+                    <p class="module-desc" data-i18n="mod.citations_desc">Cross-verify authenticity, detect phantom refs</p>
                 </div>
-                <div class="module-card" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
-                    <div class="module-icon" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);">📋</div>
-                    <p class="module-title">Bib 整理</p>
-                    <p class="module-desc">格式化、排序、分离未引用条目</p>
+                <div class="module-card" onclick="toast(t('toast.upload_tip'),'info')">
+                    <div class="module-header"><div class="module-icon" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);">📋</div><p class="module-title" data-i18n="mod.bib_title">Bib Cleanup</p></div>
+                    <p class="module-desc" data-i18n="mod.bib_desc">Format, sort, separate uncited entries</p>
                 </div>
-                <div class="module-card" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
-                    <div class="module-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);">✍️</div>
-                    <p class="module-title">写作质量</p>
-                    <p class="module-desc">AI 痕迹、套话、被动语态检测</p>
+                <div class="module-card" onclick="toast(t('toast.upload_tip'),'info')">
+                    <div class="module-header"><div class="module-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);">✍️</div><p class="module-title" data-i18n="mod.writing">Writing Quality</p></div>
+                    <p class="module-desc" data-i18n="mod.writing_desc">AI trace, anonymity, typos, duplicates</p>
                 </div>
-                <div class="module-card" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
-                    <div class="module-icon" style="background:linear-gradient(135deg,#10b981,#059669);">🧪</div>
-                    <p class="module-title">数据完整性</p>
-                    <p class="module-desc">Benford 定律、重复行、p-hacking</p>
+                <div class="module-card" onclick="toast(t('toast.upload_tip'),'info')">
+                    <div class="module-header"><div class="module-icon" style="background:linear-gradient(135deg,#10b981,#059669);">🧪</div><p class="module-title" data-i18n="mod.data">Data Integrity</p></div>
+                    <p class="module-desc" data-i18n="mod.data_desc">Duplicate rows, offset fabrication, Benford's Law</p>
                 </div>
-                <div class="module-card" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
-                    <div class="module-icon" style="background:linear-gradient(135deg,#ec4899,#db2777);">📊</div>
-                    <p class="module-title">图表引用</p>
-                    <p class="module-desc">label/caption/ref 完整性</p>
+                <div class="module-card" onclick="toast(t('toast.upload_tip'),'info')">
+                    <div class="module-header"><div class="module-icon" style="background:linear-gradient(135deg,#ec4899,#db2777);">📊</div><p class="module-title" data-i18n="mod.figures">Figure Cross-Reference</p></div>
+                    <p class="module-desc" data-i18n="mod.figures_desc">\label / \ref completeness check</p>
                 </div>
-                <div class="module-card" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
-                    <div class="module-icon" style="background:linear-gradient(135deg,#06b6d4,#0891b2);">🏆</div>
-                    <p class="module-title">引用质量</p>
-                    <p class="module-desc">顶会覆盖率、新鲜度分析</p>
+                <div class="module-card" onclick="toast(t('toast.upload_tip'),'info')">
+                    <div class="module-header"><div class="module-icon" style="background:linear-gradient(135deg,#06b6d4,#0891b2);">🏆</div><p class="module-title" data-i18n="mod.cite_quality_title">Citation Quality</p></div>
+                    <p class="module-desc" data-i18n="mod.cite_quality_desc">Top-venue coverage, freshness analysis</p>
                 </div>
-                <div class="module-card" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
-                    <div class="module-icon" style="background:linear-gradient(135deg,#f43f5e,#e11d48);">⚖️</div>
-                    <p class="module-title">学术伦理</p>
-                    <p class="module-desc">Limitations、Ethics 章节检查</p>
+                <div class="module-card" onclick="toast(t('toast.upload_tip'),'info')">
+                    <div class="module-header"><div class="module-icon" style="background:linear-gradient(135deg,#f43f5e,#e11d48);">⚖️</div><p class="module-title" data-i18n="mod.ethics_title">Academic Ethics</p></div>
+                    <p class="module-desc" data-i18n="mod.ethics_desc">Limitations, Ethics section check</p>
                 </div>
-                <div class="module-card" onclick="toast('请上传论文 ZIP 使用完整功能','info')">
-                    <div class="module-icon" style="background:linear-gradient(135deg,#64748b,#475569);">🔒</div>
-                    <p class="module-title">匿名化</p>
-                    <p class="module-desc">[review] 模式、metadata 泄露</p>
+                <div class="module-card" onclick="toast(t('toast.upload_tip'),'info')">
+                    <div class="module-header"><div class="module-icon" style="background:linear-gradient(135deg,#64748b,#475569);">🔒</div><p class="module-title" data-i18n="mod.anon_title">Anonymization</p></div>
+                    <p class="module-desc" data-i18n="mod.anon_desc">[review] mode, metadata leakage</p>
                 </div>
             </div>
         </div>
         <footer style="max-width:900px; margin:0 auto; padding:24px 40px 40px; border-top:1px solid #e2e8f0; color:#94a3b8; font-size:11px; line-height:1.7; text-align:center;">
-            <p style="margin:0 0 6px; font-weight:600; color:#64748b;">免责声明</p>
-            <p style="margin:0;">本工具的检查结果与 AI 建议<b>仅供参考</b>，可能存在误报、漏报或错误，<b>不构成任何学术或法律意见</b>。AI 给出的均为<b>修改建议</b>，需作者人工核实后自行决定是否采用。是否符合目标期刊/会议要求，以官方规定为准。使用本工具即表示您理解并接受上述条款。</p>
+            <p style="margin:0 0 6px; font-weight:600; color:#64748b;" data-i18n="footer.disclaimer_title">Disclaimer</p>
+            <p style="margin:0;" data-i18n="footer.disclaimer">Results and AI suggestions are <b>for reference only</b>. May contain false positives/negatives. Not academic or legal advice.</p>
         </footer>
     </div>
     <div id="screen-overview" class="flex-1 overflow-y-auto hidden" style="background:linear-gradient(180deg,#f8fafc,#fff); min-height:0;">
         <div class="w-full py-10 px-4" style="max-width:700px;">
             <!-- Top bar: back button -->
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
-                <button onclick="showScreen('screen-upload'); loadHistory();" style="font-size:14px; color:#64748b; background:none; border:none; cursor:pointer; padding:4px 8px; border-radius:6px;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='none'">← 返回首页</button>
+                <button onclick="showScreen('screen-upload'); loadHistory();" style="font-size:14px; color:#64748b; background:none; border:none; cursor:pointer; padding:4px 8px; border-radius:6px;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='none'" data-i18n="btn.back_home">← Back to Home</button>
                 <div style="display:flex; gap:8px;">
-                    <button onclick="copyShareLink()" style="font-size:12px; color:#3b82f6; background:none; border:1px solid #bfdbfe; cursor:pointer; padding:4px 12px; border-radius:6px;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='none'">🔗 分享链接</button>
-                    <button onclick="deleteCurrentJob()" style="font-size:12px; color:#ef4444; background:none; border:1px solid #fecaca; cursor:pointer; padding:4px 12px; border-radius:6px;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='none'">🗑️ 删除</button>
+                    <button onclick="copyShareLink()" style="font-size:12px; color:#3b82f6; background:none; border:1px solid #bfdbfe; cursor:pointer; padding:4px 12px; border-radius:6px;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='none'" data-i18n="btn.share_link">🔗 Share</button>
+                    <button onclick="deleteCurrentJob()" style="font-size:12px; color:#ef4444; background:none; border:1px solid #fecaca; cursor:pointer; padding:4px 12px; border-radius:6px;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='none'" data-i18n="btn.delete">🗑️ Delete</button>
                 </div>
             </div>
-            <h1 class="text-2xl font-bold text-center mb-2">🛡️ 质检结果</h1>
+            <h1 class="text-2xl font-bold text-center mb-2" data-i18n="report.title">🛡️ Integrity Report</h1>
             <p class="text-center text-slate-400 text-sm mb-8" id="overview-filename"></p>
 
             <!-- Progress nodes -->
@@ -522,14 +501,14 @@
 
             <!-- Action buttons -->
             <div class="text-center" style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
-                <button onclick="enterWorkspace()" class="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold text-base hover:bg-blue-700 shadow-lg transition-all hover:shadow-xl">
-                    进入工作台修复问题
+                <button onclick="enterWorkspace()" class="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold text-base hover:bg-blue-700 shadow-lg transition-all hover:shadow-xl" data-i18n="report.enter_ws">
+                    Enter Workspace
                 </button>
-                <button onclick="runAiReview()" class="bg-violet-50 text-violet-700 px-5 py-3 rounded-xl font-semibold text-sm hover:bg-violet-100 border border-violet-200 transition-all">
-                    🤖 模拟审稿
+                <button onclick="runAiReview()" class="bg-violet-50 text-violet-700 px-5 py-3 rounded-xl font-semibold text-sm hover:bg-violet-100 border border-violet-200 transition-all" data-i18n="btn.simulate_review">
+                    🤖 Simulate Review
                 </button>
-                <button onclick="runAiDiagnosis()" class="bg-slate-50 text-slate-700 px-5 py-3 rounded-xl font-semibold text-sm hover:bg-slate-100 border border-slate-200 transition-all">
-                    📋 诊断报告
+                <button onclick="runAiDiagnosis()" class="bg-slate-50 text-slate-700 px-5 py-3 rounded-xl font-semibold text-sm hover:bg-slate-100 border border-slate-200 transition-all" data-i18n="btn.diagnosis">
+                    📋 Diagnosis
                 </button>
             </div>
 
@@ -544,39 +523,39 @@
         <!-- Top bar -->
         <div class="flex items-center justify-between px-4 bg-white border-b border-slate-200" style="height:48px; min-height:48px; flex-shrink:0;">
             <div class="flex items-center gap-3">
-                <button onclick="showOverview()" class="text-slate-400 hover:text-slate-700 text-sm font-medium transition-colors">&larr; 概览</button>
+                <button onclick="showOverview()" class="text-slate-400 hover:text-slate-700 text-sm font-medium transition-colors" data-i18n="btn.overview">← Overview</button>
                 <span class="text-slate-200">|</span>
                 <span class="font-bold text-sm" data-i18n="ws.tab">🛡️ 工作台</span>
                 <span class="text-xs text-slate-400" id="ws-filename"></span>
                 <span id="ws-stats" class="text-xs px-2 py-0.5 rounded-full font-medium"></span>
                 <span class="w-2 h-2 rounded-full" id="save-dot"></span>
-                <button id="retry-save-btn" onclick="retrySave()" class="save-retry hidden" title="重试保存当前未同步草稿">重试保存</button>
+                <button id="retry-save-btn" onclick="retrySave()" class="save-retry hidden" title="Retry save" data-i18n="btn.retry_save">Retry Save</button>
             </div>
             <div class="flex items-center gap-1.5" style="overflow-x:auto; flex-shrink:0;">
-                <button onclick="doBibClean()" class="toolbar-btn">📋 整理 Bib</button>
-                <button onclick="doTidyUp()" class="toolbar-btn">🗂️ 整理结构</button>
-                <button onclick="doFormatNormalize()" class="toolbar-btn">🔧 规范格式</button>
-                <button onclick="showEditHistory()" class="toolbar-btn" title="查看修改历史，可回退到之前的版本">📜 修改历史</button>
-                <button onclick="showAnalysis()" class="toolbar-btn">📊 分析</button>
-                <button onclick="showChecklist()" class="toolbar-btn">✅ 清单</button>
-                <button onclick="showVenueChecklist()" class="toolbar-btn">📝 复现清单</button>
+                <button onclick="doBibClean()" class="toolbar-btn" data-i18n="btn.bib_clean">📋 Bib Cleanup</button>
+                <button onclick="doTidyUp()" class="toolbar-btn" data-i18n="btn.tidy_up">🗂️ Tidy Up</button>
+                <button onclick="doFormatNormalize()" class="toolbar-btn" data-i18n="btn.format">🔧 Format</button>
+                <button onclick="showEditHistory()" class="toolbar-btn" title="Edit history" data-i18n="btn.history">📜 History</button>
+                <button onclick="showAnalysis()" class="toolbar-btn" data-i18n="btn.analysis">📊 Analysis</button>
+                <button onclick="showChecklist()" class="toolbar-btn" data-i18n="btn.checklist">✅ Checklist</button>
+                <button onclick="showVenueChecklist()" class="toolbar-btn" data-i18n="btn.repro_checklist">📝 Repro</button>
                 <details style="position:relative;">
-                    <summary class="toolbar-btn" title="AI 功能入口" style="list-style:none; display:flex; align-items:center; gap:4px;">
-                        🤖 AI 助手 <span style="font-size:10px;">▼</span>
+                    <summary class="toolbar-btn" title="AI Features" style="list-style:none; display:flex; align-items:center; gap:4px;">
+                        🤖 <span data-i18n="btn.ai_assistant">AI Assistant</span> <span style="font-size:10px;">▼</span>
                     </summary>
                     <div style="position:absolute; top:calc(100% + 6px); right:0; min-width:180px; background:#fff; border:1px solid #e2e8f0; border-radius:10px; box-shadow:0 8px 24px rgba(15,23,42,0.12); padding:6px; z-index:200;">
-                        <button onclick="this.closest('details').open=false;runAiReview()" class="toolbar-btn" style="width:100%; text-align:left; margin:0;">🤖 模拟审稿</button>
-                        <button onclick="this.closest('details').open=false;optimizeAbstract()" class="toolbar-btn" style="width:100%; text-align:left; margin-top:4px;">✨ 优化 Abstract</button>
-                        <button onclick="this.closest('details').open=false;doBatchFix()" class="toolbar-btn" style="width:100%; text-align:left; margin-top:4px;">🛠 AI 批量建议</button>
-                        <button onclick="this.closest('details').open=false;runAiDiagnosis()" class="toolbar-btn" style="width:100%; text-align:left; margin-top:4px;">📋 论文诊断报告</button>
+                        <button onclick="this.closest('details').open=false;runAiReview()" class="toolbar-btn" style="width:100%; text-align:left; margin:0;" data-i18n="btn.simulate_review">🤖 Simulate Review</button>
+                        <button onclick="this.closest('details').open=false;optimizeAbstract()" class="toolbar-btn" style="width:100%; text-align:left; margin-top:4px;" data-i18n="btn.optimize_abstract">✨ Optimize Abstract</button>
+                        <button onclick="this.closest('details').open=false;doBatchFix()" class="toolbar-btn" style="width:100%; text-align:left; margin-top:4px;" data-i18n="btn.batch_fix">🛠 AI Batch Fix</button>
+                        <button onclick="this.closest('details').open=false;runAiDiagnosis()" class="toolbar-btn" style="width:100%; text-align:left; margin-top:4px;" data-i18n="btn.diagnosis">📋 Diagnosis Report</button>
                     </div>
                 </details>
                 <span style="width:1px; height:20px; background:#e2e8f0; margin:0 4px;"></span>
-                <button onclick="doRecheck()" id="recheck-btn" class="toolbar-btn-primary" title="重新运行质检 (Ctrl+Shift+R)">重新质检</button>
-                <button onclick="copyShareLink()" class="toolbar-btn" title="复制导师只读分享链接">🔗 分享</button>
-                <button onclick="downloadProjectZip()" class="toolbar-btn" title="下载当前修复后的 ZIP">⬇️ 下载 ZIP</button>
-                <button onclick="exportReport()" class="toolbar-btn">📄 导出</button>
-                <button onclick="document.getElementById('shortcuts-modal').classList.remove('hidden')" class="toolbar-btn" style="padding:4px 6px;" title="快捷键帮助 (?)">⌨️</button>
+                <button onclick="doRecheck()" id="recheck-btn" class="toolbar-btn-primary" title="Recheck (Ctrl+Shift+R)" data-i18n="btn.recheck">Recheck</button>
+                <button onclick="copyShareLink()" class="toolbar-btn" title="Copy share link" data-i18n="btn.share">🔗 Share</button>
+                <button onclick="downloadProjectZip()" class="toolbar-btn" title="Download ZIP" data-i18n="btn.download_zip">⬇️ Download ZIP</button>
+                <button onclick="exportReport()" class="toolbar-btn" data-i18n="btn.export">📄 Export</button>
+                <button onclick="document.getElementById('shortcuts-modal').classList.remove('hidden')" class="toolbar-btn" style="padding:4px 6px;" title="Keyboard shortcuts (?)">⌨️</button>
             </div>
         </div>
 
@@ -1191,10 +1170,10 @@ document.getElementById('upload-form').addEventListener('submit', async e => {
 
     // Handle payment required / errors
     if (uploadResult.detail) {
-        btn.textContent = '开始质检'; btn.disabled = false; btn.style.opacity = '1';
+        btn.textContent = t('upload.submit'); btn.disabled = false; btn.style.opacity = '1';
         if (progressDiv) progressDiv.style.display = 'none';
-        if (uploadResult.detail.includes('积分不足')) {
-            toast('💰 积分不足，请充值', 'warning', 4000);
+        if (uploadResult.detail.includes('积分不足') || uploadResult.detail.includes('credits')) {
+            toast('💰 ' + t('toast.insufficient_credits'), 'warning', 4000);
             document.getElementById('recharge-modal').classList.remove('hidden');
         } else {
             toast(uploadResult.detail, 'error', 4000);
@@ -1205,14 +1184,14 @@ document.getElementById('upload-form').addEventListener('submit', async e => {
     if (jobId !== uploadResult.job_id) resetWorkspaceState();
     jobId = uploadResult.job_id;
     shareToken = uploadResult.share_token || null;
-    btn.textContent = '🔍 正在检查...';
+    btn.textContent = '🔍 ' + t('upload.checking');
     if (progressBar) progressBar.style.width = '30%';
-    if (progressText) progressText.textContent = '开始质检...';
+    if (progressText) progressText.textContent = t('upload.checking') + '...';
 
     await waitForResult(); await loadReport();
     refreshCredits();  // Update credits display after upload
     if (report) showOverview();
-    else { btn.textContent = '开始质检'; btn.disabled = false; btn.style.opacity = '1'; }
+    else { btn.textContent = t('upload.submit'); btn.disabled = false; btn.style.opacity = '1'; }
 });
 
 const GATE_NAMES_ORDER = ['structure_integrity','citation_bib_consistency','reference_authenticity','figure_table_crossref','data_integrity','writing_quality'];
@@ -1267,11 +1246,29 @@ async function loadReport() {
 function showOverview() {
     showScreen('screen-overview');
     persistState('overview');
+    // Save job to local history so it survives server restarts
+    if (jobId && report) {
+        try {
+            const localHistory = JSON.parse(localStorage.getItem('sl_local_jobs') || '[]');
+            const existing = localHistory.findIndex(j => j.job_id === jobId);
+            const entry = {
+                job_id: jobId,
+                filename: report.filename,
+                timestamp: report.timestamp || new Date().toISOString(),
+                score: report.overall_score,
+                gates_passed: report.gate_results.filter(g => g.passed).length,
+                gates_total: report.gate_results.length,
+            };
+            if (existing >= 0) localHistory[existing] = entry;
+            else localHistory.unshift(entry);
+            localStorage.setItem('sl_local_jobs', JSON.stringify(localHistory.slice(0, 20)));
+        } catch(e) {}
+    }
     // Reset upload UI
     const progressDiv = document.getElementById('check-progress');
     if (progressDiv) progressDiv.style.display = 'none';
     const btn = document.getElementById('submit-btn');
-    btn.textContent = '开始质检'; btn.disabled = true; btn.style.opacity = '0.4';
+    btn.textContent = t('upload.submit'); btn.disabled = true; btn.style.opacity = '0.4';
 
     // Update page title
     document.title = `${report.overall_score.toFixed(0)}/100 - ${report.filename} | ScholarLint`;
@@ -1299,7 +1296,7 @@ function showOverview() {
 
     const stEl = document.getElementById('overview-status-text');
     if (report.overall_passed) { stEl.innerHTML = '<span class="text-green-600 font-bold">🏆 全部通过！可以提交</span>'; }
-    else { stEl.innerHTML = `<span class="text-red-600">通过 ${passCount}/${gates.length} 关，请进入工作台修复</span>`; }
+    else { stEl.innerHTML = `<span class="text-red-600">${t('report.gates_pass').replace('{p}',passCount).replace('{t}',gates.length)}</span>`; }
 
     // Nodes
     let nodesHtml = '';
@@ -1349,7 +1346,7 @@ function showOverview() {
                 const loc = issue.line ? ` <span style="color:#94a3b8;">(行 ${issue.line})</span>` : '';
                 cardsHtml += `<p class="text-[11px] text-red-700 leading-snug cursor-pointer hover:bg-red-100 rounded px-1 -mx-1" onclick="event.stopPropagation();gotoIssueFromOverview(${jsArg(g.gate_name)}, ${idx})" title="点击跳转到此问题"><span style="color:#dc2626;font-weight:700;">·</span> ${esc(issue.message).slice(0,80)}${issue.message.length>80?'...':''}${loc}</p>`;
             });
-            if (errCount > 3) cardsHtml += `<p class="text-[10px] text-blue-600 cursor-pointer hover:underline" onclick="event.stopPropagation();enterWorkspace()">... 还有 ${errCount-3} 个错误，进入工作台查看 →</p>`;
+            if (errCount > 3) cardsHtml += `<p class="text-[10px] text-blue-600 cursor-pointer hover:underline" onclick="event.stopPropagation();enterWorkspace()">... ${errCount-3} ${t('report.more_errors')}</p>`;
             cardsHtml += `</div>`;
         }
 
@@ -1406,7 +1403,7 @@ function showOverview() {
         verdictEl.innerHTML = `<strong>接近就绪。</strong> 还有 ${errTotal} 个问题需要处理。修复后即可安全提交。`;
     } else {
         verdictEl.style.cssText = 'padding:16px 20px; border-radius:12px; font-size:14px; background:#fef2f2; border:1px solid #fecaca; color:#991b1b;';
-        verdictEl.innerHTML = `<strong>尚未准备好。</strong> 发现 ${errTotal} 个错误，建议进入工作台逐一修复后再提交。`;
+        verdictEl.innerHTML = `<strong>${t('verdict.not_ready')}</strong> ${t('verdict.fix_errors').replace('{n}',errTotal)}`;
     }
 
     const compareEl = document.getElementById('overview-compare');
@@ -1756,23 +1753,24 @@ function getFileStatus(path) {
 function issueMatchesFile(issue, path) {
     const fname = path.split('/').pop();
     // 1. Explicit file attribution wins (gates set issue.file = filename).
-    //    Compare by basename so floats/x.tex matches issue.file "x.tex".
     if (issue.file) {
-        return issue.file.split('/').pop() === fname;
+        return issue.file.split(/[/\\]/).pop() === fname;
     }
-    // 2. bib-scoped issues (location like "bib:key") belong to .bib files.
-    if (issue.location && issue.location.startsWith('bib:')) {
+    // 2. bib-scoped issues belong to .bib files.
+    if (issue.location && (issue.location === 'bib' || issue.location.startsWith('bib:'))) {
         return path.endsWith('.bib');
     }
     // 3. Fall back to a filename appearing in the location string
-    //    (e.g. "main.tex:42" or "a.tex, b.tex"). Do NOT blanket-match all
-    //    .tex files — that's what wrongly flagged every file.
     if (issue.location) {
         const tokens = issue.location.split(/[\s,:]+/);
         if (tokens.some(t => t === fname)) return true;
+        // Also check if location contains the fname as a path component
+        if (issue.location.includes(fname)) return true;
     }
-    // 4. Otherwise it's a global / cross-file issue, not tied to this file.
-    return false;
+    // 4. Global / cross-file issues: show on the main .tex file or first opened file
+    const isMainFile = fname.endsWith('.tex') &&
+        (fname === 'main.tex' || fname.includes('main') || fname === fileTreeFiles[0]?.path.split(/[/\\]/).pop());
+    return isMainFile;
 }
 
 async function openFile(path) {
@@ -2419,7 +2417,7 @@ async function doRecheck() {
         toast('重新质检失败: ' + e.message, 'error', 4000);
         return;
     } finally {
-        btn.disabled=false; btn.textContent='重新质检';
+        btn.disabled=false; btn.textContent=t('btn.recheck');
     }
 
     // Show improvement diff
@@ -3892,46 +3890,7 @@ function hideAiLoading() {
 }
 
 // === History ===
-async function loadHistory() {
-    renderHistorySkeleton();
-    try {
-        const r = await apiFetch('/api/history');
-        const d = await r.json();
-        if (!d.jobs || !d.jobs.length) {
-            const section = document.getElementById('history-section');
-            const list = document.getElementById('history-list');
-            if (section) section.style.display = 'none';
-            if (list) list.innerHTML = '';
-            return;
-        }
-
-        const section = document.getElementById('history-section');
-        const list = document.getElementById('history-list');
-        section.style.display = 'block';
-
-        // Homepage shows only the single most recent check; "所有项目" opens the full list.
-        const j = d.jobs[0];
-        const date = new Date(j.timestamp);
-        const timeStr = date.toLocaleDateString('zh-CN', {month:'short', day:'numeric'}) + ' ' + date.toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
-        const scoreColor = j.score >= 90 ? '#22c55e' : j.score >= 60 ? '#f59e0b' : '#ef4444';
-        list.innerHTML = `<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px; background:#f8fafc; border-radius:8px; border:1px solid #f1f5f9; cursor:pointer; transition:all 0.15s;" onmouseover="this.style.background='#eff6ff';this.style.borderColor='#bfdbfe'" onmouseout="this.style.background='#f8fafc';this.style.borderColor='#f1f5f9'" onclick="resumeJob(${jsArg(j.job_id)})">
-                <div style="flex:1; min-width:0;">
-                    <p style="font-size:13px; font-weight:500; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#334155;">${esc(j.filename)}</p>
-                    <p style="font-size:11px; color:#94a3b8; margin:2px 0 0;">${timeStr} · <span style="color:${j.gates_passed===j.gates_total?'#059669':'#64748b'}">${j.gates_passed}/${j.gates_total} 通过</span></p>
-                </div>
-                <div style="display:flex; align-items:center; gap:8px; flex-shrink:0; margin-left:12px;">
-                    <span style="font-size:14px; font-weight:700; color:${scoreColor};">${j.score.toFixed(0)}</span>
-                    <span style="font-size:10px; color:#94a3b8;">分</span>
-                    <span onclick="event.stopPropagation();deleteJob(${jsArg(j.job_id)})" style="font-size:14px; color:#94a3b8; padding:2px 6px; border-radius:4px; cursor:pointer;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#94a3b8'" title="删除">🗑</span>
-                </div>
-            </div>`;
-    } catch(e) {
-        const section = document.getElementById('history-section');
-        const list = document.getElementById('history-list');
-        if (section) section.style.display = 'none';
-        if (list) list.innerHTML = '';
-    }
-}
+async function loadHistory() { /* hidden */ }
 
 // === All Projects modal ===
 async function showAllProjects() {
@@ -3954,15 +3913,24 @@ async function showAllProjects() {
     try {
         const r = await apiFetch('/api/history');
         const d = await r.json();
+        const localJobs = JSON.parse(localStorage.getItem('sl_local_jobs') || '[]');
+        let allJobs = d.jobs && d.jobs.length ? d.jobs : [];
+        if (!allJobs.length) allJobs = localJobs;
+        else {
+            const serverIds = new Set(allJobs.map(j => j.job_id));
+            localJobs.forEach(lj => { if (!serverIds.has(lj.job_id)) allJobs.push(lj); });
+            allJobs.sort((a,b) => (b.timestamp||'').localeCompare(a.timestamp||''));
+        }
         const list = document.getElementById('all-projects-list');
         if (!list) return;
-        if (!d.jobs || !d.jobs.length) {
-            list.innerHTML = `<p style="font-size:12px; color:#94a3b8; text-align:center; padding:24px 0;">暂无项目记录</p>`;
+        if (!allJobs.length) {
+            list.innerHTML = `<p style="font-size:12px; color:#94a3b8; text-align:center; padding:24px 0;">No project records</p>`;
             return;
         }
-        list.innerHTML = d.jobs.map(j => {
+        list.innerHTML = allJobs.map(j => {
             const date = new Date(j.timestamp);
-            const timeStr = date.toLocaleDateString('zh-CN', {year:'numeric', month:'short', day:'numeric'}) + ' ' + date.toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
+            const locale = _lang === 'en' ? 'en-US' : 'zh-CN';
+            const timeStr = date.toLocaleDateString(locale, {year:'numeric', month:'short', day:'numeric'}) + ' ' + date.toLocaleTimeString(locale, {hour:'2-digit', minute:'2-digit'});
             const scoreColor = j.score >= 90 ? '#22c55e' : j.score >= 60 ? '#f59e0b' : '#ef4444';
             return `<div style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; margin-bottom:8px; background:#f8fafc; border-radius:10px; border:1px solid #f1f5f9; cursor:pointer; transition:all 0.15s;" onmouseover="this.style.background='#eff6ff';this.style.borderColor='#bfdbfe'" onmouseout="this.style.background='#f8fafc';this.style.borderColor='#f1f5f9'" onclick="this.closest('.modal-bg').remove();resumeJob(${jsArg(j.job_id)})">
                 <div style="flex:1; min-width:0;">
@@ -4369,7 +4337,6 @@ const I18N = {
         'upload.card_title': '上传论文开始检查',
         'upload.click': '点击上传',
         'upload.drag': '或拖拽文件到此处',
-        'upload.recent': '📂 最近的检查',
         'upload.modules_title': '模块化检查，精准定位文章问题',
         // module cards
         'mod.structure': '结构完整性',
@@ -4399,6 +4366,70 @@ const I18N = {
         // toast / misc
         'toast.upload_tip': '请上传论文 ZIP 使用完整功能',
         'disclaimer': '检查结果与 AI 建议<b>仅供参考</b>，可能有误报/漏报，不构成学术或法律意见。',
+        // landing page features
+        'upload.subtitle': 'ScholarLint · 为你的投稿保驾护航',
+        'upload.desc': '在提交论文前，自动检测引用造假、数据异常、格式缺陷等问题。',
+        'upload.desc2': '避免 desk reject，保护学术声誉。',
+        'upload.card_sub': '支持 Overleaf 导出的 ZIP 压缩包',
+        'upload.format': '.zip 格式（含 .tex + .bib + figures）',
+        'upload.privacy': '🔒 文件加密保留 7 天，到期自动清理',
+        'upload.submit': '开始质检',
+        'feat.ref_title': '引文真实性验证',
+        'feat.ref_desc': '通过 Crossref/DataCite/Semantic Scholar/OpenAlex 交叉验证',
+        'feat.data_title': '实验数据异常检测',
+        'feat.data_desc': 'Benford 定律、重复行、偏移造假、p-value 异常',
+        'feat.writing_title': '写作质量分析',
+        'feat.writing_desc': 'AI 痕迹检测、匿名化检查、拼写错误、段落重复',
+        'feat.bib_title': 'Bib 智能整理',
+        'feat.bib_desc': '格式化、按引用排序、分离未引用条目、官方 bib 替换',
+        'stat.rules': '检测规则',
+        'stat.apis': '验证 API',
+        'stat.templates': '会议模板',
+        'stat.ai': '智能修复',
+        'stat.venues': '支持 ACL / NeurIPS / EMNLP / ICLR / CVPR / AAAI 等顶会格式',
+        'mod.bib_title': 'Bib 整理',
+        'mod.bib_desc': '格式化、排序、分离未引用条目',
+        'mod.cite_quality_title': '引用质量',
+        'mod.cite_quality_desc': '顶会覆盖率、新鲜度分析',
+        'mod.ethics_title': '学术伦理',
+        'mod.ethics_desc': 'Limitations、Ethics 章节检查',
+        'mod.anon_title': '匿名化',
+        'mod.anon_desc': '[review] 模式、metadata 泄露',
+        'footer.disclaimer_title': '免责声明',
+        'footer.disclaimer': '本工具的检查结果与 AI 建议<b>仅供参考</b>，可能存在误报、漏报或错误，<b>不构成任何学术或法律意见</b>。',
+        'upload.recent': '📂 最近的检查',
+        'upload.all_projects': '所有项目 →',
+        'upload.preparing': '准备中...',
+        'upload.checking': '正在检查',
+        'toast.insufficient_credits': '积分不足，请充值',
+        // overview / workspace buttons
+        'btn.back_home': '← 返回首页',
+        'btn.share_link': '🔗 分享链接',
+        'btn.delete': '🗑️ 删除',
+        'report.title': '🛡️ 质检结果',
+        'report.enter_ws': '进入工作台修复问题',
+        'btn.simulate_review': '🤖 模拟审稿',
+        'btn.diagnosis': '📋 诊断报告',
+        'btn.overview': '← 概览',
+        'btn.retry_save': '重试保存',
+        'btn.bib_clean': '📋 整理 Bib',
+        'btn.tidy_up': '🗂️ 整理结构',
+        'btn.format': '🔧 规范格式',
+        'btn.history': '📜 修改历史',
+        'btn.analysis': '📊 分析',
+        'btn.checklist': '✅ 清单',
+        'btn.repro_checklist': '📝 复现清单',
+        'btn.ai_assistant': 'AI 助手',
+        'btn.optimize_abstract': '✨ 优化 Abstract',
+        'btn.batch_fix': '🛠 AI 批量建议',
+        'btn.recheck': '重新质检',
+        'btn.share': '🔗 分享',
+        'btn.download_zip': '⬇️ 下载 ZIP',
+        'btn.export': '📄 导出',
+        'report.gates_pass': '通过 {p}/{t} 关，请进入工作台修复',
+        'report.more_errors': '个错误，进入工作台查看 →',
+        'verdict.not_ready': '尚未准备好。',
+        'verdict.fix_errors': '发现 {n} 个错误，建议进入工作台逐一修复后再提交。',
     },
     en: {
         // nav
@@ -4412,7 +4443,6 @@ const I18N = {
         'upload.card_title': 'Upload Paper to Check',
         'upload.click': 'Click to upload',
         'upload.drag': 'or drag & drop here',
-        'upload.recent': '📂 Recent Checks',
         'upload.modules_title': 'Modular checks, pinpoint paper issues',
         // module cards
         'mod.structure': 'Structure Integrity',
@@ -4442,6 +4472,70 @@ const I18N = {
         // toast / misc
         'toast.upload_tip': 'Please upload a paper ZIP to use full features',
         'disclaimer': 'Results and AI suggestions are <b>for reference only</b>. May contain false positives/negatives. Not academic or legal advice.',
+        // landing page features
+        'upload.subtitle': 'ScholarLint · Guard your submission',
+        'upload.desc': 'Automatically detect citation fraud, data anomalies, and formatting issues before submission.',
+        'upload.desc2': 'Avoid desk rejection and protect your academic reputation.',
+        'upload.card_sub': 'Supports Overleaf-exported ZIP archives',
+        'upload.format': '.zip format (containing .tex + .bib + figures)',
+        'upload.privacy': '🔒 Files encrypted, kept 7 days, auto-deleted on expiry',
+        'upload.submit': 'Start Check',
+        'feat.ref_title': 'Reference Authenticity',
+        'feat.ref_desc': 'Cross-verify via Crossref / DataCite / Semantic Scholar / OpenAlex',
+        'feat.data_title': 'Data Anomaly Detection',
+        'feat.data_desc': 'Benford\'s Law, duplicate rows, offset fabrication, p-value anomalies',
+        'feat.writing_title': 'Writing Quality Analysis',
+        'feat.writing_desc': 'AI trace detection, anonymity check, typos, duplicate paragraphs',
+        'feat.bib_title': 'Smart Bibliography Cleanup',
+        'feat.bib_desc': 'Format, sort by citation order, separate uncited entries, replace with official bib',
+        'stat.rules': 'Detection Rules',
+        'stat.apis': 'Verification APIs',
+        'stat.templates': 'Conference Templates',
+        'stat.ai': 'Smart Fix',
+        'stat.venues': 'Supports ACL / NeurIPS / EMNLP / ICLR / CVPR / AAAI and more',
+        'mod.bib_title': 'Bib Cleanup',
+        'mod.bib_desc': 'Format, sort, separate uncited entries',
+        'mod.cite_quality_title': 'Citation Quality',
+        'mod.cite_quality_desc': 'Top-venue coverage, freshness analysis',
+        'mod.ethics_title': 'Academic Ethics',
+        'mod.ethics_desc': 'Limitations, Ethics section check',
+        'mod.anon_title': 'Anonymization',
+        'mod.anon_desc': '[review] mode, metadata leakage',
+        'footer.disclaimer_title': 'Disclaimer',
+        'footer.disclaimer': 'Results and AI suggestions are <b>for reference only</b>. May contain false positives/negatives. Not academic or legal advice.',
+        'upload.recent': '📂 Recent Checks',
+        'upload.all_projects': 'All Projects →',
+        'upload.preparing': 'Preparing...',
+        'upload.checking': 'Checking',
+        'toast.insufficient_credits': 'Insufficient credits, please top up',
+        // overview / workspace buttons
+        'btn.back_home': '← Back to Home',
+        'btn.share_link': '🔗 Share',
+        'btn.delete': '🗑️ Delete',
+        'report.title': '🛡️ Integrity Report',
+        'report.enter_ws': 'Enter Workspace',
+        'btn.simulate_review': '🤖 Simulate Review',
+        'btn.diagnosis': '📋 Diagnosis',
+        'btn.overview': '← Overview',
+        'btn.retry_save': 'Retry Save',
+        'btn.bib_clean': '📋 Bib Cleanup',
+        'btn.tidy_up': '🗂️ Tidy Up',
+        'btn.format': '🔧 Format',
+        'btn.history': '📜 History',
+        'btn.analysis': '📊 Analysis',
+        'btn.checklist': '✅ Checklist',
+        'btn.repro_checklist': '📝 Repro',
+        'btn.ai_assistant': 'AI Assistant',
+        'btn.optimize_abstract': '✨ Optimize Abstract',
+        'btn.batch_fix': '🛠 AI Batch Fix',
+        'btn.recheck': 'Recheck',
+        'btn.share': '🔗 Share',
+        'btn.download_zip': '⬇️ Download ZIP',
+        'btn.export': '📄 Export',
+        'report.gates_pass': '{p}/{t} gates passed — enter workspace to fix',
+        'report.more_errors': 'more errors — view in workspace →',
+        'verdict.not_ready': 'Not ready.',
+        'verdict.fix_errors': 'Found {n} errors — fix them in the workspace before submitting.',
     }
 };
 

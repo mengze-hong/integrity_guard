@@ -1086,7 +1086,7 @@ async def get_history(request: Request, response: Response):
             limit=50,
             owner_type=owner["owner_type"],
             owner_id=owner["owner_id"],
-            include_legacy=False,
+            include_legacy=True,
         )
     }
 

@@ -106,8 +106,8 @@ class ReferenceAuthenticityGate(BaseGate):
     OPENALEX_BASE = "https://api.openalex.org"
     OPENREVIEW_BASE = "https://api.openreview.net"
     HEADERS = {"User-Agent": "ScholarLint/5.3 (mailto:integrity@check.org)"}
-    MAX_CONCURRENT = 5
-    TIMEOUT = 15.0
+    MAX_CONCURRENT = 10
+    TIMEOUT = 6.0
 
     def __init__(self):
         # Per-instance caches: prevent cross-paper cache pollution when multiple
