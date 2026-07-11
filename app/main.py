@@ -111,7 +111,13 @@ async def global_exception_handler(request: Request, exc: Exception):
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     """Render the upload page."""
-    return templates.TemplateResponse(request=request, name="index.html")
+    resp = templates.TemplateResponse(request=request, name="index.html")
+    # Never cache the shell HTML — it references versioned static assets and
+    # a stale cached copy silently pins users to old (possibly broken) JS.
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
 
 @app.get("/healthz")
