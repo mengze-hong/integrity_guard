@@ -141,7 +141,7 @@ class FigureTableGate(BaseGate):
     """Gate 4: Figure & Table cross-reference integrity check."""
 
     name = "figure_table_crossref"
-    description = "图表交叉引用：验证所有图表有标签、标题，且在正文中被引用"
+    description = "Figure/table cross-references: verifies all floats have labels, captions, and are cited in text"
     is_blocking = True
 
     async def check(self, paper: ParsedPaper) -> CheckResult:
@@ -188,10 +188,10 @@ class FigureTableGate(BaseGate):
             if not flt["label"]:
                 issues.append(Issue(
                     severity=Severity.ERROR,
-                    message=f"{display_name} 缺少 \\label — 无法被正文引用",
+                    message=f"{display_name} is missing \\label — cannot be referenced in text",
                     location=f"{flt['file']}:{flt['line']}",
                     evidence=f"Caption: {flt['caption'] or 'N/A'}",
-                    suggestion=f"在 {flt['type']} 环境内添加 \\label{{{flt['type']}:meaningful_name}}。",
+                    suggestion=f"Add \\label{{{flt['type']}:meaningful_name}} inside the {flt['type']} environment.",
                     file=flt["file"],
                     line=flt["line"],
                 ))
@@ -200,9 +200,9 @@ class FigureTableGate(BaseGate):
             if not flt["caption"]:
                 issues.append(Issue(
                     severity=Severity.ERROR,
-                    message=f"{display_name} 缺少 \\caption",
+                    message=f"{display_name} is missing \\caption",
                     location=f"{flt['file']}:{flt['line']}",
-                    suggestion="每个图表必须有描述性的 caption。请添加 \\caption{{...}}。",
+                    suggestion="Every float must have a descriptive caption. Add \\caption{{...}}.",
                     file=flt["file"],
                     line=flt["line"],
                 ))
@@ -211,10 +211,10 @@ class FigureTableGate(BaseGate):
             if flt["label"] and flt["label"] not in ref_locations and not flt.get("in_appendix"):
                 issues.append(Issue(
                     severity=Severity.ERROR,
-                    message=f"{display_name} (\\label{{{flt['label']}}}) 在正文中从未被引用",
+                    message=f"{display_name} (\\label{{{flt['label']}}}) is never referenced in the text",
                     location=f"{flt['file']}:{flt['line']}",
                     evidence=f"Caption: {flt['caption'] or 'N/A'}",
-                    suggestion=f"在正文合适位置添加 \\ref{{{flt['label']}}} 或 \\cref{{{flt['label']}}} 来引用此图表。",
+                    suggestion=f"Add \\ref{{{flt['label']}}} or \\cref{{{flt['label']}}} at an appropriate location in the text to reference this float.",
                 ))
 
         # Check for dangling \ref{fig:*} or \ref{tab:*} pointing to non-existent labels
@@ -228,10 +228,10 @@ class FigureTableGate(BaseGate):
             loc_str = ", ".join(f"{loc['section']}" for loc in locs[:3])
             issues.append(Issue(
                 severity=Severity.ERROR,
-                message=f"\\ref{{{key}}} 引用了不存在的图表标签",
+                message=f"\\ref{{{key}}} references a non-existent float label",
                 location=loc_str,
-                evidence=f"引用位置: {', '.join(loc['file'] + ':' + str(loc['line']) for loc in locs[:3])}",
-                suggestion=f"请创建 \\label{{{key}}} 对应的图表，或修正 \\ref 中的标签名。",
+                evidence=f"Referenced at: {', '.join(loc['file'] + ':' + str(loc['line']) for loc in locs[:3])}",
+                suggestion=f"Create a float with \\label{{{key}}}, or correct the label name in the \\ref.",
             ))
 
         # Compute score: 5 pts per error, 2 pts per warning

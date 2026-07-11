@@ -121,8 +121,8 @@ class StructureGate(BaseGate):
             issues.append(
                 Issue(
                     severity=Severity.ERROR,
-                    message="项目中未找到 .tex 文件",
-                    suggestion="请上传包含至少一个 .tex 文件的 LaTeX 项目",
+                    message="No .tex files found in the project",
+                    suggestion="Please upload a LaTeX project containing at least one .tex file",
                 )
             )
             return CheckResult(
@@ -139,8 +139,8 @@ class StructureGate(BaseGate):
             issues.append(
                 Issue(
                     severity=Severity.ERROR,
-                    message="项目中未找到 .bib 文件",
-                    suggestion="请包含 .bib 参考文献文件",
+                    message="No .bib file found in the project",
+                    suggestion="Please include a .bib bibliography file",
                 )
             )
             score -= 50
@@ -151,8 +151,8 @@ class StructureGate(BaseGate):
             issues.append(
                 Issue(
                     severity=Severity.WARNING,
-                    message="无法识别主 .tex 文件（未找到 \\documentclass）",
-                    suggestion="请确保有一个 .tex 文件包含 \\documentclass 和 \\begin{document}",
+                    message="Could not identify the main .tex file (no \\documentclass found)",
+                    suggestion="Ensure one .tex file contains both \\documentclass and \\begin{document}",
                 )
             )
             score -= 10
@@ -170,9 +170,9 @@ class StructureGate(BaseGate):
                     issues.append(
                         Issue(
                             severity=Severity.ERROR,
-                            message=f"引用的文件不存在: \\input{{{input_ref}}}",
+                            message=f"Referenced file does not exist: \\input{{{input_ref}}}",
                             location=str(tex_file.path.name),
-                            suggestion=f"请确保 '{ref_path}' 包含在上传的 zip 中",
+                            suggestion=f"Ensure '{ref_path}' is included in the uploaded zip",
                         )
                     )
                     score -= 15
@@ -211,9 +211,9 @@ class StructureGate(BaseGate):
                     issues.append(
                         Issue(
                             severity=Severity.WARNING,
-                            message=f"图片文件不存在: {graphic}",
+                            message=f"Image file not found: {graphic}",
                             location=str(tex_file.path.name),
-                            suggestion=f"请将图片文件 '{graphic}' 包含在上传的 zip 中",
+                            suggestion=f"Include the image file '{graphic}' in the uploaded zip",
                         )
                     )
                     score -= 5
@@ -235,10 +235,10 @@ class StructureGate(BaseGate):
                 if not any(c.exists() for c in candidates):
                     issues.append(Issue(
                         severity=Severity.ERROR,
-                        message=f"{command}{{{bib_ref}}} 指向不存在的文件: {bib_name}",
+                        message=f"{command}{{{bib_ref}}} points to a non-existent file: {bib_name}",
                         location=str(tex_file.path.name),
                         file=tex_file.path.name,
-                        suggestion=f"请确保 '{bib_name}' 包含在上传的 zip 中，或修正 {command} 中的文件名。",
+                        suggestion=f"Ensure '{bib_name}' is included in the uploaded zip, or correct the filename in {command}.",
                     ))
                     score -= 15
 
@@ -254,9 +254,9 @@ class StructureGate(BaseGate):
             if len(files) > 1:
                 issues.append(Issue(
                     severity=Severity.ERROR,
-                    message=f"重复的 \\label{{{label}}}（在 {len(files)} 个文件中定义）",
+                    message=f"Duplicate \\label{{{label}}} (defined in {len(files)} files)",
                     location=", ".join(files),
-                    suggestion="每个 label 只能定义一次。重复 label 会导致交叉引用指向错误位置。",
+                    suggestion="Each label must be defined exactly once. Duplicate labels cause cross-references to point to the wrong location.",
                 ))
                 score -= 10
 
@@ -273,10 +273,10 @@ class StructureGate(BaseGate):
             if ref_key not in all_label_set:
                 issues.append(Issue(
                     severity=Severity.ERROR,
-                    message=f"\\ref{{{ref_key}}} 引用了不存在的 label",
+                    message=f"\\ref{{{ref_key}}} references a non-existent label",
                     location=files[0],
                     file=files[0],
-                    suggestion=f"请创建 \\label{{{ref_key}}} 或修正 \\ref 中的拼写。编译后会显示 '??'。",
+                    suggestion=f"Create \\label{{{ref_key}}} or fix the spelling in \\ref. This will render as '??' after compilation.",
                 ))
                 score -= 10
 
@@ -315,10 +315,10 @@ class StructureGate(BaseGate):
             if len(paths) > 1:
                 issues.append(Issue(
                     severity=Severity.WARNING,
-                    message=f"发现重复图片文件（{len(paths)} 个文件内容完全相同）",
+                    message=f"Duplicate image files found ({len(paths)} files with identical content)",
                     location=paths[0],
-                    evidence=f"相同文件: {', '.join(paths[:4])}",
-                    suggestion="这些图片文件内容完全一样。如果用于不同的 figure，可能是 copy-paste 错误。",
+                    evidence=f"Identical files: {', '.join(paths[:4])}",
+                    suggestion="These image files have identical content. If used in different figures, this may be a copy-paste error.",
                 ))
                 score -= 5
 
@@ -327,11 +327,11 @@ class StructureGate(BaseGate):
             if size_bytes > _LARGE_IMAGE_BYTES:
                 issues.append(Issue(
                     severity=Severity.WARNING,
-                    message=f"图片文件过大: {rel}",
+                    message=f"Image file is too large: {rel}",
                     location=rel,
                     file=rel,
-                    evidence=f"文件大小约 {size_bytes / 1024 / 1024:.1f} MB",
-                    suggestion="建议压缩位图或 PDF 图片；若是图表，优先使用矢量 PDF/SVG，并避免嵌入过大的未压缩截图。",
+                    evidence=f"File size is approximately {size_bytes / 1024 / 1024:.1f} MB",
+                    suggestion="Consider compressing raster images or PDF figures. For plots and diagrams, prefer vector PDF/SVG and avoid embedding oversized uncompressed screenshots.",
                 ))
                 score -= 2
 
@@ -341,11 +341,11 @@ class StructureGate(BaseGate):
                 if min(width, height) < _LOW_RASTER_MIN_DIMENSION:
                     issues.append(Issue(
                         severity=Severity.WARNING,
-                        message=f"图片像素偏低: {rel}",
+                        message=f"Image resolution is low: {rel}",
                         location=rel,
                         file=rel,
-                        evidence=f"检测到 {width}x{height}px，短边低于 {_LOW_RASTER_MIN_DIMENSION}px",
-                        suggestion="建议替换为更高分辨率图片或矢量图，避免投稿 PDF 中图表模糊。",
+                        evidence=f"Detected {width}x{height}px; shortest side is below {_LOW_RASTER_MIN_DIMENSION}px",
+                        suggestion="Replace with a higher-resolution image or a vector graphic to avoid blurry figures in the submitted PDF.",
                     ))
                     score -= 2
 
@@ -376,10 +376,10 @@ class StructureGate(BaseGate):
                 if count > end_count:
                     issues.append(Issue(
                         severity=Severity.ERROR,
-                        message=f"\\begin{{{env}}} 比 \\end{{{env}}} 多 {count - end_count} 个（未关闭的环境）",
+                        message=f"\\begin{{{env}}} has {count - end_count} more occurrence(s) than \\end{{{env}}} (unclosed environment)",
                         location=tex_file.path.name,
                         file=tex_file.path.name,
-                        suggestion=f"请确保每个 \\begin{{{env}}} 都有对应的 \\end{{{env}}}。未关闭的环境会导致编译失败。",
+                        suggestion=f"Ensure every \\begin{{{env}}} has a matching \\end{{{env}}}. Unclosed environments will cause compilation failure.",
                     ))
                     score -= 15
 
@@ -388,10 +388,10 @@ class StructureGate(BaseGate):
                 if count > begin_count:
                     issues.append(Issue(
                         severity=Severity.ERROR,
-                        message=f"\\end{{{env}}} 比 \\begin{{{env}}} 多 {count - begin_count} 个（多余的结束标记）",
+                        message=f"\\end{{{env}}} has {count - begin_count} more occurrence(s) than \\begin{{{env}}} (extra closing tag)",
                         location=tex_file.path.name,
                         file=tex_file.path.name,
-                        suggestion=f"有多余的 \\end{{{env}}}。请检查是否误删了对应的 \\begin{{{env}}}。",
+                        suggestion=f"There is an extra \\end{{{env}}}. Check whether the corresponding \\begin{{{env}}} was accidentally deleted.",
                     ))
                     score -= 15
 

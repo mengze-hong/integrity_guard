@@ -303,8 +303,8 @@ def _check_duplicate_rows(table: dict) -> list[dict]:
             idx_str = ", ".join(str(i + 1) for i in indices)
             findings.append({
                 "type": "duplicate_row",
-                "message": f"第 {idx_str} 行数据完全相同（{len(indices)} 行重复）",
-                "evidence": f"行数据: {list(key)}",
+                "message": f"Row(s) {idx_str} are identical ({len(indices)} duplicate rows)",
+                "evidence": f"Row data: {list(key)}",
             })
     return findings
 
@@ -344,8 +344,8 @@ def _check_tail_pattern(table: dict) -> list[dict]:
         if ratio >= 0.75 and most_common_digit != "0":
             findings.append({
                 "type": "tail_pattern",
-                "message": f"第 {col_idx+1} 列: {most_common_count}/{len(tails)} 个小数值尾数为 '{most_common_digit}'（{ratio:.0%}）",
-                "evidence": f"值: {col_values[:8]}{'...' if len(col_values)>8 else ''}",
+                "message": f"Column {col_idx+1}: {most_common_count}/{len(tails)} decimal values end with '{most_common_digit}' ({ratio:.0%})",
+                "evidence": f"Values: {col_values[:8]}{'...' if len(col_values)>8 else ''}",
             })
 
     return findings
@@ -369,8 +369,8 @@ def _check_offset_fabrication(table: dict) -> list[dict]:
             offset = diffs[0]
             findings.append({
                 "type": "offset",
-                "message": f"第 {i+1} 行 + {offset} = 第 {j+1} 行（所有列偏移相同）",
-                "evidence": f"行{i+1}: {row_a[:5]}\n行{j+1}: {row_b[:5]}",
+                "message": f"Row {i+1} + {offset} = Row {j+1} (constant offset across all columns)",
+                "evidence": f"Row {i+1}: {row_a[:5]}\nRow {j+1}: {row_b[:5]}",
             })
 
     return findings
@@ -395,8 +395,8 @@ def _check_low_variance(table: dict) -> list[dict]:
         if len(set(col_values)) == 1:
             findings.append({
                 "type": "zero_variance",
-                "message": f"第 {col_idx+1} 列所有值完全相同: {col_values[0]}",
-                "evidence": f"共 {len(col_values)} 个值全部为 {col_values[0]}",
+                "message": f"Column {col_idx+1}: all values are identical: {col_values[0]}",
+                "evidence": f"{len(col_values)} values all equal {col_values[0]}",
             })
 
     return findings
@@ -434,8 +434,8 @@ def _check_precision_inconsistency(table: dict) -> list[dict]:
         if len(set(precisions)) > 2 and max(precisions) - min(precisions) >= 4:
             findings.append({
                 "type": "precision_inconsistency",
-                "message": f"第 {col_idx+1} 列小数精度差异异常（{min(precisions)}-{max(precisions)} 位）",
-                "evidence": f"精度分布: {dict(Counter(precisions))}",
+                "message": f"Column {col_idx+1}: abnormal decimal precision spread ({min(precisions)}–{max(precisions)} digits)",
+                "evidence": f"Precision distribution: {dict(Counter(precisions))}",
             })
 
     return findings
@@ -495,8 +495,8 @@ def _check_benford_law(table: dict) -> list[dict]:
         dist_str = ", ".join(f"{d}:{counter.get(d,0)}" for d in range(1, 10))
         findings.append({
             "type": "benford_violation",
-            "message": f"首位数字分布异常（χ²={chi_sq:.1f}，p<0.01），不符合 Benford 定律",
-            "evidence": f"分布: [{dist_str}]，共 {n} 个数值（已跳过百分比列）",
+            "message": f"First-digit distribution is anomalous (χ²={chi_sq:.1f}, p<0.01); does not follow Benford's Law",
+            "evidence": f"Distribution: [{dist_str}], from {n} values (percentage columns excluded)",
         })
 
     return findings
@@ -555,7 +555,7 @@ class DataIntegrityGate(BaseGate):
                     message=f"[{table['caption'][:30]}] {f['message']}",
                     location=f"{table['file']}:{table['line']}",
                     evidence=f["evidence"],
-                    suggestion="此数据模式可能表明数据异常。请核实原始实验数据。",
+                    suggestion="This data pattern may indicate anomalous data. Please verify against the original experimental results.",
                     file=table["file"],
                     line=table["line"],
                 ))
@@ -569,7 +569,7 @@ class DataIntegrityGate(BaseGate):
                 message=pf["message"],
                 location=pf.get("location", ""),
                 evidence=pf["evidence"],
-                suggestion="多个刚好低于显著性阈值的 p 值可能表明 p-hacking。请提供原始统计检验结果。",
+                suggestion="Multiple p-values just below the significance threshold may indicate p-hacking. Please provide raw statistical test results.",
                 file=pf.get("file"),
                 line=pf.get("line"),
             ))
@@ -584,7 +584,7 @@ class DataIntegrityGate(BaseGate):
                 message=cf["message"],
                 location=cf.get("location", ""),
                 evidence=cf["evidence"],
-                suggestion="正文中引用的数值与表格数据不匹配。请核对原始实验数据，确认是否为笔误或数据更新后未同步。",
+                suggestion="A numeric value cited in the text does not match the corresponding table entry. Please verify the original experimental data to check whether this is a typo or an unsynchronized update.",
                 file=cf.get("file"),
                 line=cf.get("line"),
             ))
@@ -598,7 +598,7 @@ class DataIntegrityGate(BaseGate):
                 message=iv["message"],
                 location=iv.get("location", ""),
                 evidence=iv["evidence"],
-                suggestion="该数值超出指标的合法取值范围，请核查原始数据或单位换算。",
+                suggestion="This value exceeds the valid range for the metric. Please verify the original data or check for unit conversion errors.",
                 file=iv.get("file"),
                 line=iv.get("line"),
             ))
@@ -649,7 +649,7 @@ class DataIntegrityGate(BaseGate):
         if len(borderline_values) >= 3:
             evidence = "\n".join(f"  p={v['value']} ({v['file']}:{v['line']})" for v in borderline_values[:5])
             findings.append({
-                "message": f"发现 {len(borderline_values)} 个刚好低于 0.05 的 p 值（可能存在 p-hacking）",
+                "message": f"Found {len(borderline_values)} p-value(s) just below 0.05 (possible p-hacking)",
                 "evidence": evidence,
                 "location": borderline_values[0]["file"],
                 "file": borderline_values[0]["file"],
@@ -720,10 +720,10 @@ class DataIntegrityGate(BaseGate):
                         if lower <= diff <= upper:
                             findings.append({
                                 "message": (
-                                    f"正文中 {claimed_str} 与表格中 {tv} 接近但不一致"
-                                    f"（对齐到 {claimed_dp} 位后差 {diff:.{claimed_dp}f}）"
+                                    f"Text claims {claimed_str} but table value {tv} is close but inconsistent"
+                                    f" (difference of {diff:.{claimed_dp}f} at {claimed_dp} decimal place(s))"
                                 ),
-                                "evidence": f"行 {i}: {line.strip()[:60]}",
+                                "evidence": f"Line {i}: {line.strip()[:60]}",
                                 "location": tex_file.path.name,
                                 "file": tex_file.path.name,
                                 "line": i,
@@ -1161,11 +1161,11 @@ class DataIntegrityGate(BaseGate):
                     ) else best_cell["caption"][:30]
                     findings.append({
                         "message": (
-                            f"正文声称 {claim['value_str']}，"
-                            f"但对应表格 [{addr}] 中为 {tv}"
-                            f"（差 {diff:.{max(dp,2)}f}）"
+                            f"Text claims {claim['value_str']}, "
+                            f"but corresponding table [{addr}] shows {tv}"
+                            f" (difference {diff:.{max(dp,2)}f})"
                         ),
-                        "evidence": f"行 {claim['line']}: {claim['context']}",
+                        "evidence": f"Line {claim['line']}: {claim['context']}",
                         "location": claim["file"],
                         "file": claim["file"],
                         "line": claim["line"],
@@ -1227,14 +1227,14 @@ class DataIntegrityGate(BaseGate):
                     if _BOUNDED_METRICS.search(chdr):
                         if v > 100.0 + 1e-3:
                             _flag(
-                                f"表格列 [{chdr}] 中数值 {v} 超过 100（百分比指标上限）",
-                                f"表 [{table['caption'][:40]}] 第 {ri+1} 行",
+                                f"Table column [{chdr}] contains value {v} exceeding 100 (upper limit for percentage metrics)",
+                                f"Table [{table['caption'][:40]}] row {ri+1}",
                                 table["file"], table["line"],
                             )
                     if _PPL_METRIC.search(chdr) and v < 1.0:
                         _flag(
-                            f"表格列 [{chdr}] 中 perplexity={v} < 1（物理上不可能）",
-                            f"表 [{table['caption'][:40]}] 第 {ri+1} 行",
+                            f"Table column [{chdr}] has perplexity={v} < 1 (physically impossible)",
+                            f"Table [{table['caption'][:40]}] row {ri+1}",
                             table["file"], table["line"],
                         )
 
@@ -1248,8 +1248,8 @@ class DataIntegrityGate(BaseGate):
             if _BOUNDED_METRICS.search(metric):
                 if v > 100.0 + 1e-3:
                     _flag(
-                        f"正文声称 {claim['value_str']} ({metric})，超过 100",
-                        f"行 {claim['line']}: {claim['context']}",
+                        f"Text claims {claim['value_str']} ({metric}), exceeding 100",
+                        f"Line {claim['line']}: {claim['context']}",
                         claim["file"], claim["line"],
                     )
 

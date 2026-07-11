@@ -155,11 +155,11 @@ class WritingQualityGate(BaseGate):
             if em_dash_count > 8:
                 issues.append(Issue(
                     severity=Severity.WARNING,
-                    message=f"Em-dash (—) 使用过多: {em_dash_count} 次",
+                    message=f"Excessive em-dash (—) usage: {em_dash_count} occurrences",
                     location=tex_file.path.name,
                     file=tex_file.path.name,
-                    evidence="GPT 生成的文本倾向于大量使用 em-dash。学术论文中通常较少使用。",
-                    suggestion="考虑将部分 em-dash 替换为逗号、分号或括号。",
+                    evidence="GPT-generated text tends to overuse em-dashes. They are relatively rare in academic writing.",
+                    suggestion="Consider replacing some em-dashes with commas, semicolons, or parentheses.",
                 ))
 
             # 1.5 En-dash misuse (using -- where - should be, or vice versa)
@@ -167,11 +167,11 @@ class WritingQualityGate(BaseGate):
             if en_dash_count > 20:
                 issues.append(Issue(
                     severity=Severity.WARNING,
-                    message=f"En-dash (–/--) 使用频繁: {en_dash_count} 次",
+                    message=f"Frequent en-dash (–/--) usage: {en_dash_count} occurrences",
                     location=tex_file.path.name,
                     file=tex_file.path.name,
-                    evidence="大量 en-dash 可能表明格式不统一。学术论文中 en-dash 主要用于数字范围（如 pages 1--10）。",
-                    suggestion="确认 en-dash 用途是否正确。数字范围用 --，破折号用 ---。",
+                    evidence="A high en-dash count may indicate inconsistent formatting. In academic writing, en-dashes are mainly used for numeric ranges (e.g. pages 1--10).",
+                    suggestion="Verify that en-dash usage is correct. Use -- for numeric ranges and --- for em-dashes.",
                 ))
 
             # 2. AI connector word frequency — soft signal, report as INFO only
@@ -189,11 +189,11 @@ class WritingQualityGate(BaseGate):
             if ai_word_count >= 20:
                 issues.append(Issue(
                     severity=Severity.INFO,
-                    message=f"GPT 常见词出现较多: 共 {ai_word_count} 次",
+                    message=f"High frequency of GPT-characteristic words: {ai_word_count} total occurrences",
                     location=tex_file.path.name,
                     file=tex_file.path.name,
-                    evidence=f"高频词: {', '.join(found_ai_words[:8])}",
-                    suggestion="这些词在 AI 生成文本中出现频率偏高，但也可能出现在正常学术写作中。仅供参考，不作为确定性判断。",
+                    evidence=f"High-frequency words: {', '.join(found_ai_words[:8])}",
+                    suggestion="These words appear at elevated rates in AI-generated text, but may also occur in legitimate academic writing. Provided for reference only — not a definitive judgment.",
                 ))
 
             # 2.5 Strong AI padding phrases — higher confidence, report as WARNING
@@ -210,11 +210,11 @@ class WritingQualityGate(BaseGate):
             if strong_count >= 3:
                 issues.append(Issue(
                     severity=Severity.WARNING,
-                    message=f"检测到 {strong_count} 处 AI 常见套语",
+                    message=f"Detected {strong_count} AI-characteristic filler phrases",
                     location=tex_file.path.name,
                     file=tex_file.path.name,
                     evidence="\n".join(strong_examples),
-                    suggestion="这些短语在 AI 生成文本中高度典型，建议替换为更具体的表述。",
+                    suggestion="These phrases are highly typical of AI-generated text. Consider replacing them with more specific language.",
                 ))
 
             # 3. Prompt leakage — only fire when not inside quotes or citations
@@ -243,12 +243,12 @@ class WritingQualityGate(BaseGate):
                         break
                     issues.append(Issue(
                         severity=Severity.ERROR,
-                        message=f"疑似 AI prompt 残留: \"{marker}\"",
+                        message=f"Possible AI prompt leakage: \"{marker}\"",
                         location=f"{tex_file.path.name}:{i}",
                         file=tex_file.path.name,
                         line=i,
                         evidence=line.strip()[:100],
-                        suggestion="这段文字包含明显的 AI 生成痕迹，请删除或重写。",
+                        suggestion="This text contains clear signs of AI generation. Please remove or rewrite it.",
                     ))
                     break
 
@@ -262,12 +262,12 @@ class WritingQualityGate(BaseGate):
                     if sim > 0.80:
                         issues.append(Issue(
                             severity=Severity.WARNING,
-                            message=f"两个段落高度相似（{sim:.0%}）",
+                            message=f"Two paragraphs are highly similar ({sim:.0%})",
                             location=f"{tex_file.path.name}:{paragraphs[i]['line']}",
                             file=tex_file.path.name,
                             line=paragraphs[i]["line"],
-                            evidence=f"段落1 (行{paragraphs[i]['line']}): {paragraphs[i]['text'][:60]}...\n段落2 (行{paragraphs[j]['line']}): {paragraphs[j]['text'][:60]}...",
-                            suggestion="两段内容几乎相同，可能是 copy-paste 遗留。请检查是否需要删除或改写。",
+                            evidence=f"Paragraph 1 (line {paragraphs[i]['line']}): {paragraphs[i]['text'][:60]}...\nParagraph 2 (line {paragraphs[j]['line']}): {paragraphs[j]['text'][:60]}...",
+                            suggestion="These two paragraphs are nearly identical, which may be a copy-paste artifact. Check whether one should be removed or rewritten.",
                         ))
 
             # === Anonymization Check ===
@@ -277,12 +277,12 @@ class WritingQualityGate(BaseGate):
                 line_num = raw_text[:final_match.start()].count("\n") + 1
                 issues.append(Issue(
                     severity=Severity.WARNING,
-                    message="投稿模式为 [final]，double-blind 应使用 [review]",
+                    message="Submission mode is [final]; double-blind review should use [review]",
                     location=f"{tex_file.path.name}:{line_num}",
                     file=tex_file.path.name,
                     line=line_num,
                     evidence=final_match.group(0),
-                    suggestion=f"将 \\usepackage[final]{{{final_match.group(1)}}} 改为 \\usepackage[review]{{{final_match.group(1)}}} 以启用匿名模式。",
+                    suggestion=f"Change \\usepackage[final]{{{final_match.group(1)}}} to \\usepackage[review]{{{final_match.group(1)}}} to enable anonymous mode.",
                 ))
 
             # Check \author{} content (only warn if [final] mode detected)
@@ -299,12 +299,12 @@ class WritingQualityGate(BaseGate):
                     line_num = raw_text[:hypersetup.start()].count("\n") + 1
                     issues.append(Issue(
                         severity=Severity.WARNING,
-                        message="\\hypersetup 中包含 pdfauthor（PDF metadata 泄露作者）",
+                        message="\\hypersetup contains pdfauthor (PDF metadata leaks author identity)",
                         location=f"{tex_file.path.name}:{line_num}",
                         file=tex_file.path.name,
                         line=line_num,
                         evidence=hs_content.strip()[:80],
-                        suggestion="Double-blind 投稿前请删除 \\hypersetup 中的 pdfauthor 字段。",
+                        suggestion="Remove the pdfauthor field from \\hypersetup before double-blind submission.",
                     ))
 
             # Check for self-citation patterns
@@ -313,12 +313,12 @@ class WritingQualityGate(BaseGate):
                     if re.search(pat, line, re.IGNORECASE):
                         issues.append(Issue(
                             severity=Severity.WARNING,
-                            message="可能泄露作者身份的自引表述",
+                            message="Self-referential phrasing may reveal author identity",
                             location=f"{tex_file.path.name}:{i}",
                             file=tex_file.path.name,
                             line=i,
                             evidence=line.strip()[:100],
-                            suggestion="Double-blind 投稿中应避免 'our previous work' 等暴露身份的表述。建议改为 'Prior work [X]'。",
+                            suggestion="In double-blind submissions, avoid phrases like 'our previous work' that expose author identity. Consider using 'Prior work [X]' instead.",
                         ))
                         break
 
@@ -356,11 +356,11 @@ class WritingQualityGate(BaseGate):
                     if found_names:
                         issues.append(Issue(
                             severity=Severity.WARNING,
-                            message=f"正文中出现作者姓氏: {', '.join(found_names)}",
+                            message=f"Author surname(s) appear in the body text: {', '.join(found_names)}",
                             location=tex_file.path.name,
                             file=tex_file.path.name,
-                            evidence=f"检测到的姓氏: {', '.join(found_names)}（可能暴露作者身份）",
-                            suggestion="Double-blind 投稿中，正文不应出现作者自己的姓名。请检查是否为自引语境。",
+                            evidence=f"Detected surname(s): {', '.join(found_names)} (may reveal author identity)",
+                            suggestion="In double-blind submissions, author names should not appear in the body. Check whether these occur in a self-citation context.",
                         ))
 
             # === Typo Detection ===
@@ -375,11 +375,11 @@ class WritingQualityGate(BaseGate):
                 evidence = "\n".join(f"  {wrong} → {right}" for wrong, right in list(typo_found.items())[:8])
                 issues.append(Issue(
                     severity=Severity.WARNING,
-                    message=f"发现 {len(typo_found)} 个拼写错误",
+                    message=f"Found {len(typo_found)} spelling error(s)",
                     location=tex_file.path.name,
                     file=tex_file.path.name,
                     evidence=evidence,
-                    suggestion="请修正以上拼写错误。",
+                    suggestion="Please correct the spelling errors listed above.",
                 ))
 
             # LaTeX command typos
@@ -399,11 +399,11 @@ class WritingQualityGate(BaseGate):
             if found_latex_typos:
                 issues.append(Issue(
                     severity=Severity.ERROR,
-                    message=f"LaTeX 命令拼写错误: {len(found_latex_typos)} 处",
+                    message=f"LaTeX command typo(s): {len(found_latex_typos)} found",
                     location=tex_file.path.name,
                     file=tex_file.path.name,
                     evidence="\n".join(f"  {t}" for t in found_latex_typos),
-                    suggestion="这些命令拼写错误会导致编译失败。请修正。",
+                    suggestion="These misspelled commands will cause compilation failure. Please fix them.",
                 ))
 
             # Template remnant detection — placeholder text left in from a template
@@ -418,11 +418,11 @@ class WritingQualityGate(BaseGate):
             if remnant_found:
                 issues.append(Issue(
                     severity=Severity.ERROR,
-                    message=f"发现 {len(remnant_found)} 处模板残留/占位文本",
+                    message=f"Found {len(remnant_found)} template remnant(s) / placeholder text",
                     location=tex_file.path.name,
                     file=tex_file.path.name,
                     evidence="\n".join(remnant_found[:6]),
-                    suggestion="投稿前必须删除所有模板占位文本（如 'Lorem ipsum'、'TODO:'、'[citation needed]' 等）。",
+                    suggestion="All template placeholder text (e.g. 'Lorem ipsum', 'TODO:', '[citation needed]') must be removed before submission.",
                 ))
 
             # Double spaces (cosmetic but sloppy)
@@ -431,10 +431,10 @@ class WritingQualityGate(BaseGate):
             if len(double_space_lines) > 30:
                 issues.append(Issue(
                     severity=Severity.INFO,
-                    message=f"发现 {len(double_space_lines)} 行含有多余双空格",
+                    message=f"Found {len(double_space_lines)} lines containing extra double spaces",
                     location=tex_file.path.name,
                     file=tex_file.path.name,
-                    suggestion="虽然不影响编译，但双空格不规范。可使用编辑器的正则替换清理。",
+                    suggestion="While this does not affect compilation, double spaces are non-standard. Use a regex find-and-replace in your editor to clean them up.",
                 ))
 
             # Filler sentence detection
@@ -452,11 +452,11 @@ class WritingQualityGate(BaseGate):
             if filler_count >= 8:
                 issues.append(Issue(
                     severity=Severity.WARNING,
-                    message=f"检测到 {filler_count} 处套话/万金油句子",
+                    message=f"Detected {filler_count} filler / boilerplate sentence(s)",
                     location=tex_file.path.name,
                     file=tex_file.path.name,
                     evidence="\n".join(filler_examples),
-                    suggestion="这些句子常见于 AI 生成或凑字数的文本，缺乏实质内容。建议删除或替换为具体论述。",
+                    suggestion="These sentences are common in AI-generated or padded text and add little substance. Consider removing or replacing them with concrete discussion.",
                 ))
 
             # === Language Polish Suggestions ===
@@ -480,12 +480,12 @@ class WritingQualityGate(BaseGate):
             if long_sentences > 10:
                 issues.append(Issue(
                     severity=Severity.WARNING,
-                    message=f"发现 {long_sentences} 个超长句子（>50 词），最长 {longest_line_words} 词在行 {longest_line_num}",
+                    message=f"Found {long_sentences} overly long sentence(s) (>50 words); longest is {longest_line_words} words at line {longest_line_num}",
                     location=f"{tex_file.path.name}:{longest_line_num}",
                     file=tex_file.path.name,
                     line=longest_line_num,
-                    evidence=f"最长句: {longest_line[:100]}...",
-                    suggestion="超长句子影响可读性。建议拆分为多个短句，每句 20-30 词为宜。点击可跳转到最长的那句。",
+                    evidence=f"Longest sentence: {longest_line[:100]}...",
+                    suggestion="Overly long sentences hurt readability. Consider splitting them into shorter sentences of 20–30 words each. Click to jump to the longest one.",
                 ))
 
             # 2. Passive voice overuse (simple heuristic)
@@ -496,11 +496,11 @@ class WritingQualityGate(BaseGate):
             if len(passive_patterns) > 35:
                 issues.append(Issue(
                     severity=Severity.INFO,
-                    message=f"被动语态使用较多（约 {len(passive_patterns)} 处）",
+                    message=f"Passive voice used frequently (approximately {len(passive_patterns)} instances)",
                     location=tex_file.path.name,
                     file=tex_file.path.name,
-                    evidence=f"示例: {', '.join(passive_patterns[:5])}",
-                    suggestion="过多被动语态会让文章显得生硬。建议适当改用主动语态（如 'We propose...' 代替 'It is proposed that...'）。",
+                    evidence=f"Examples: {', '.join(passive_patterns[:5])}",
+                    suggestion="Excessive passive voice can make writing feel stilted. Consider switching to active voice where appropriate (e.g. 'We propose...' instead of 'It is proposed that...').",
                 ))
 
         # === Academic Ethics Check ===
@@ -524,9 +524,9 @@ class WritingQualityGate(BaseGate):
         if has_human_annotation and not has_ethics_section:
             issues.append(Issue(
                 severity=Severity.WARNING,
-                message="论文涉及人工标注但缺少 Ethical Considerations 章节",
-                evidence="检测到人工标注相关内容（human annotation/crowdsourcing/MTurk 等）",
-                suggestion="涉及人工标注的论文应包含 Ethical Considerations 或 Broader Impact 章节，说明标注者信息、薪酬等。",
+                message="Paper involves human annotation but lacks an Ethical Considerations section",
+                evidence="Human annotation-related content detected (human annotation/crowdsourcing/MTurk, etc.)",
+                suggestion="Papers involving human annotation should include an Ethical Considerations or Broader Impact section describing annotator details, compensation, etc.",
             ))
 
         # Check if human annotation is mentioned but no annotator profile
@@ -539,8 +539,8 @@ class WritingQualityGate(BaseGate):
             if not has_annotator_info:
                 issues.append(Issue(
                     severity=Severity.INFO,
-                    message="涉及人工标注但未说明标注者背景信息",
-                    suggestion="建议添加标注者 profile（如：专业背景、语言能力、薪酬标准等）。这是 ACL/EMNLP 审稿人常关注的点。",
+                    message="Human annotation is mentioned but annotator background is not described",
+                    suggestion="Consider adding an annotator profile (e.g. professional background, language proficiency, compensation). This is a point reviewers at ACL/EMNLP often scrutinize.",
                 ))
 
         # Check for Limitations section (required by ACL 2023+)
@@ -556,17 +556,17 @@ class WritingQualityGate(BaseGate):
             if is_acl_family:
                 issues.append(Issue(
                     severity=Severity.ERROR,
-                    message="缺少 Limitations 章节（ACL/EMNLP/NAACL 强制要求）",
-                    suggestion="自 ACL 2023 起，所有 *ACL 投稿必须包含 Limitations 章节（不计入页数限制）。"
-                    "请在 References 之前添加 \\section*{Limitations}，讨论方法的局限性、适用范围等。"
-                    "缺少此章节可能直接导致 desk reject。",
+                    message="Missing Limitations section (required by ACL/EMNLP/NAACL)",
+                    suggestion="Since ACL 2023, all *ACL submissions must include a Limitations section (not counted toward the page limit). "
+                    "Add \\section*{Limitations} before References to discuss the scope and limitations of your method. "
+                    "Omitting this section may result in a desk rejection.",
                 ))
             else:
                 issues.append(Issue(
                     severity=Severity.WARNING,
-                    message="未找到 Limitations 章节",
-                    suggestion="建议添加 Limitations 章节，讨论方法的局限性。"
-                    "越来越多的会议（ACL/NeurIPS/ICML）要求或建议包含此章节。",
+                    message="No Limitations section found",
+                    suggestion="Consider adding a Limitations section to discuss the constraints of your method. "
+                    "An increasing number of venues (ACL/NeurIPS/ICML) require or strongly encourage this section.",
                 ))
 
         # === Cross-file checks ===
@@ -591,9 +591,9 @@ class WritingQualityGate(BaseGate):
             if sim > 0.60:
                 issues.append(Issue(
                     severity=Severity.WARNING,
-                    message=f"Abstract 与 Conclusion 内容高度重复（{sim:.0%} 相似）",
+                    message=f"Abstract and Conclusion overlap significantly ({sim:.0%} similarity)",
                     evidence=f"Abstract: {abstract_text[:80]}...\nConclusion: {conclusion_text[:80]}...",
-                    suggestion="Abstract 和 Conclusion 不应过度重复。Conclusion 应总结贡献和未来方向，而非重述 Abstract。",
+                    suggestion="The Abstract and Conclusion should not be excessively repetitive. The Conclusion should summarize contributions and future directions rather than restating the Abstract.",
                 ))
 
         # "et al" formatting check (should be "et al." with period, or \etal in italics)
@@ -607,12 +607,12 @@ class WritingQualityGate(BaseGate):
                     if etal_issues <= 1:  # Only report first instance
                         issues.append(Issue(
                             severity=Severity.WARNING,
-                            message="\"et al\" 格式不规范（应为 \"et al.\" 带句点）",
+                            message="\"et al\" format is incorrect (should be \"et al.\" with a period)",
                             location=f"{tex_file.path.name}:{i}",
                             file=tex_file.path.name,
                             line=i,
                             evidence=line.strip()[:80],
-                            suggestion="标准格式为 \"et al.\"（带句点）。建议使用 \\textit{et al.} 或定义 \\newcommand{\\etal}{\\textit{et al.}}",
+                            suggestion="The standard format is \"et al.\" (with a period). Consider using \\textit{et al.} or defining \\newcommand{\\etal}{\\textit{et al.}}",
                         ))
 
         # === Missing Required Sections ===
@@ -630,16 +630,16 @@ class WritingQualityGate(BaseGate):
         # Generate writing tips based on detected patterns
         tips = []
         for issue in issues:
-            if "被动语态" in issue.message:
-                tips.append("多用主动语态（We propose/show/demonstrate）提升文章力度")
-            elif "超长句子" in issue.message:
-                tips.append("长句拆短：一句一个核心观点，控制在 25 词以内")
+            if "passive voice" in issue.message.lower():
+                tips.append("Use active voice (We propose/show/demonstrate) to strengthen your writing")
+            elif "overly long sentence" in issue.message.lower() or "long sentence" in issue.message.lower():
+                tips.append("Break long sentences: one core idea per sentence, aim for under 25 words")
             elif "em-dash" in issue.message.lower() or "en-dash" in issue.message.lower():
-                tips.append("减少 em-dash (—) 使用，改用逗号或分句")
-            elif "重复" in issue.message and "段落" in issue.message:
-                tips.append("Abstract 和 Conclusion 避免大段复制粘贴，用不同角度总结")
+                tips.append("Reduce em-dash (—) usage; replace with commas or split into clauses")
+            elif "similar" in issue.message.lower() and "paragraph" in issue.message.lower():
+                tips.append("Avoid copying large blocks between Abstract and Conclusion; summarize from a different angle")
             elif "Limitations" in issue.message:
-                tips.append("Limitations 不是缺点列表，而是诚实讨论方法的适用边界")
+                tips.append("A Limitations section is not a list of weaknesses — discuss the applicable scope of your method honestly")
         # Deduplicate
         tips = list(dict.fromkeys(tips))[:5]
 
@@ -758,18 +758,18 @@ class WritingQualityGate(BaseGate):
                 if not has_ethics:
                     issues.append(Issue(
                         severity=Severity.WARNING,
-                        message="建议添加 Ethics Statement 章节",
+                        message="Consider adding an Ethics Statement section",
                         location=tex_file.path.name,
                         file=tex_file.path.name,
-                        suggestion="ACL 鼓励包含 Ethics Statement（不计入页数）。如涉及人类受试者、偏见分析或潜在误用，建议添加。",
+                        suggestion="ACL encourages including an Ethics Statement (not counted toward the page limit). If the paper involves human subjects, bias analysis, or potential misuse, this section is recommended.",
                     ))
 
             # Check for abstract (universal requirement)
             if not re.search(r"\\begin\{abstract\}", text_lower):
                 issues.append(Issue(
                     severity=Severity.ERROR,
-                    message="缺少 Abstract",
+                    message="Missing Abstract",
                     location=tex_file.path.name,
                     file=tex_file.path.name,
-                    suggestion="所有学术论文必须包含 Abstract。请添加 \\begin{abstract}...\\end{abstract}。",
+                    suggestion="All academic papers must include an Abstract. Add \\begin{abstract}...\\end{abstract}.",
                 ))

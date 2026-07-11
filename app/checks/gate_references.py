@@ -127,8 +127,8 @@ class ReferenceAuthenticityGate(BaseGate):
                 score=0.0,
                 issues=[Issue(
                     severity=Severity.ERROR,
-                    message="未找到任何参考文献条目",
-                    suggestion="请确保 .bib 文件中包含有效的参考文献条目",
+                    message="No bibliography entries found",
+                    suggestion="Ensure the .bib file contains valid bibliography entries",
                 )],
                 summary="No references to verify",
                 metadata={},
@@ -332,19 +332,19 @@ class ReferenceAuthenticityGate(BaseGate):
         if not entry.doi:
             has_trusted_url = any(pat in entry_url for pat in trusted_url_patterns)
             if has_trusted_url:
-                # 有可信来源 URL，降级为 warning
+                # Has a trusted source URL — downgrade to warning
                 issues.append(Issue(
                     severity=Severity.WARNING,
-                    message=f"[{entry.key}] 缺少 DOI（有可信来源 URL）",
+                    message=f"[{entry.key}] Missing DOI (trusted source URL present)",
                     location=location, file=issue_file, line=issue_line,
                     evidence=f"URL: {entry_url}",
-                    suggestion="建议添加 DOI 以便自动验证。当前通过 URL 确认来源可信。",
+                    suggestion="Adding a DOI would enable automatic verification. The source is currently confirmed via URL.",
                 ))
                 meta["status"] = "no_doi_but_url"
                 meta["doi_link"] = entry_url
                 return issues, meta
             else:
-                # 完全没有 DOI 也没有可信 URL → 尝试通过标题搜索验证
+                # No DOI and no trusted URL — attempt title-search verification
                 if entry.title:
                     found = await self._search_by_title(entry.title, client, semaphore)
                     if found:
@@ -352,14 +352,14 @@ class ReferenceAuthenticityGate(BaseGate):
                         meta["doi_link"] = found.get("url", "")
                         issues.append(Issue(
                             severity=Severity.WARNING,
-                            message=f"[{entry.key}] 缺少 DOI，但通过标题搜索确认论文存在",
+                            message=f"[{entry.key}] Missing DOI, but paper confirmed via title search",
                             location=location, file=issue_file, line=issue_line,
-                            evidence=f"标题匹配: {found.get('title', '')[:80]}",
-                            suggestion=f"建议添加 DOI 以便精确验证。搜索到的记录: {found.get('url', '')}",
+                            evidence=f"Title match: {found.get('title', '')[:80]}",
+                            suggestion=f"Adding a DOI would enable precise verification. Found record: {found.get('url', '')}",
                         ))
                         return issues, meta
 
-                # 搜索也找不到 → 判断是否技术报告，降级为 WARNING
+                # Title search also failed — check if this is a tech report, downgrade to WARNING
                 raw_fields_text = " ".join(str(v) for v in entry.raw_fields.values())
                 is_tech_report = (
                     _TECH_REPORT_KEY_RE.search(entry.key)
@@ -370,20 +370,20 @@ class ReferenceAuthenticityGate(BaseGate):
                 if is_tech_report:
                     issues.append(Issue(
                         severity=Severity.WARNING,
-                        message=f"[{entry.key}] 技术报告/模型卡片缺少 DOI（无法自动验证）",
+                        message=f"[{entry.key}] Technical report / model card lacks a DOI (cannot be automatically verified)",
                         location=location, file=issue_file, line=issue_line,
-                        evidence=f"标题: {entry.title or '无'}",
-                        suggestion="技术报告和模型卡片通常无正式 DOI。建议在 note/url 字段添加官方链接以便读者查阅。",
+                        evidence=f"Title: {entry.title or 'N/A'}",
+                        suggestion="Technical reports and model cards typically have no formal DOI. Consider adding an official URL in the note/url field for reader reference.",
                     ))
                     meta["status"] = "tech_report_no_doi"
                     return issues, meta
 
                 issues.append(Issue(
                     severity=Severity.ERROR,
-                    message=f"[{entry.key}] 缺少 DOI 且无可信来源，标题搜索未找到匹配",
+                    message=f"[{entry.key}] Missing DOI, no trusted source, and title search returned no match",
                     location=location, file=issue_file, line=issue_line,
-                    evidence=f"标题: {entry.title or '无'}",
-                    suggestion="请添加有效的 DOI（可在 https://search.crossref.org/ 查找），或提供来自 arxiv/ACL/NeurIPS 等可信来源的 URL。",
+                    evidence=f"Title: {entry.title or 'N/A'}",
+                    suggestion="Add a valid DOI (searchable at https://search.crossref.org/), or provide a URL from a trusted source such as arXiv, ACL Anthology, or NeurIPS.",
                 ))
                 meta["status"] = "no_doi"
                 return issues, meta
@@ -398,10 +398,10 @@ class ReferenceAuthenticityGate(BaseGate):
         if not re.match(r"^10\.\d{4,9}/\S+$", doi):
             issues.append(Issue(
                 severity=Severity.ERROR,
-                message=f"[{entry.key}] DOI 格式非法: {doi}",
+                message=f"[{entry.key}] Invalid DOI format: {doi}",
                 location=location, file=issue_file, line=issue_line,
-                evidence="合法 DOI 格式应为 10.XXXX/... (如 10.1145/3491102.3517582)",
-                suggestion="请检查 DOI 是否正确输入。合法 DOI 以 '10.' 开头。",
+                evidence="A valid DOI must match the pattern 10.XXXX/... (e.g. 10.1145/3491102.3517582)",
+                suggestion="Check that the DOI was entered correctly. A valid DOI begins with '10.'",
             ))
             meta["status"] = "doi_invalid_format"
             return issues, meta
@@ -414,19 +414,19 @@ class ReferenceAuthenticityGate(BaseGate):
             if source == "unavailable":
                 issues.append(Issue(
                     severity=Severity.WARNING,
-                    message=f"[{entry.key}] DOI 暂时无法验证: {doi}",
+                    message=f"[{entry.key}] DOI temporarily unverifiable: {doi}",
                     location=location, file=issue_file, line=issue_line,
-                    evidence="Crossref/DataCite/Semantic Scholar 暂时不可用或限流，未将该引用判定为伪造。",
-                    suggestion="请稍后重新质检，或手动打开 DOI 链接核对来源。",
+                    evidence="Crossref/DataCite/Semantic Scholar is temporarily unavailable or rate-limiting. This reference is not being classified as fabricated.",
+                    suggestion="Re-run the check later, or manually open the DOI link to verify the source.",
                 ))
                 meta["status"] = "verification_unavailable"
                 return issues, meta
             issues.append(Issue(
                 severity=Severity.ERROR,
-                message=f"[{entry.key}] DOI 无法解析: {doi}",
+                message=f"[{entry.key}] DOI cannot be resolved: {doi}",
                 location=location, file=issue_file, line=issue_line,
-                evidence="在 Crossref 和 DataCite 均无法找到此 DOI",
-                suggestion=f"请确认 DOI 是否正确。验证链接: https://doi.org/{doi}",
+                evidence="This DOI was not found in either Crossref or DataCite",
+                suggestion=f"Confirm the DOI is correct. Verification link: https://doi.org/{doi}",
             ))
             meta["status"] = "doi_invalid"
             return issues, meta
@@ -440,7 +440,7 @@ class ReferenceAuthenticityGate(BaseGate):
         ]
         meta["crossref_venue"] = cr_venue
 
-        # Step 3.5: Retraction 检测
+        # Step 3.5: Retraction detection
         if source == "crossref":
             # Check for retraction notices via "update-to" field
             updates = data.get("update-to", [])
@@ -448,10 +448,10 @@ class ReferenceAuthenticityGate(BaseGate):
                 if upd.get("type") == "retraction" or upd.get("label", "").lower() == "retraction":
                     issues.append(Issue(
                         severity=Severity.ERROR,
-                        message=f"[{entry.key}] ⚠️ 此论文已被撤回 (RETRACTED)",
+                        message=f"[{entry.key}] ⚠️ This paper has been retracted (RETRACTED)",
                         location=location, file=issue_file, line=issue_line,
-                        evidence=f"标题: {cr_title}\nDOI: {doi}",
-                        suggestion=f"引用已撤回的论文是严重问题。请移除此引用或说明引用原因。\n🔗 https://doi.org/{doi}",
+                        evidence=f"Title: {cr_title}\nDOI: {doi}",
+                        suggestion=f"Citing a retracted paper is a serious issue. Remove this citation or justify its inclusion.\n🔗 https://doi.org/{doi}",
                     ))
                     meta["retracted"] = True
                     break
@@ -460,10 +460,10 @@ class ReferenceAuthenticityGate(BaseGate):
             if relations.get("is-retracted-by"):
                 issues.append(Issue(
                     severity=Severity.ERROR,
-                    message=f"[{entry.key}] ⚠️ 此论文已被撤回 (RETRACTED)",
+                    message=f"[{entry.key}] ⚠️ This paper has been retracted (RETRACTED)",
                     location=location, file=issue_file, line=issue_line,
-                    evidence=f"标题: {cr_title}\nDOI: {doi}",
-                    suggestion=f"引用已撤回的论文是严重问题。请移除此引用或说明引用原因。\n🔗 https://doi.org/{doi}",
+                    evidence=f"Title: {cr_title}\nDOI: {doi}",
+                    suggestion=f"Citing a retracted paper is a serious issue. Remove this citation or justify its inclusion.\n🔗 https://doi.org/{doi}",
                 ))
                 meta["retracted"] = True
 
@@ -480,24 +480,24 @@ class ReferenceAuthenticityGate(BaseGate):
                 meta["title_match"] = False
                 issues.append(Issue(
                     severity=severity,
-                    message=f"[{entry.key}] 标题不匹配（相似度 {sim:.0%}）",
+                    message=f"[{entry.key}] Title mismatch (similarity {sim:.0%})",
                     location=location, file=issue_file, line=issue_line,
-                    evidence=f"BIB 标题: {entry.title}\n数据库标题: {cr_title}",
-                    suggestion=f"请修正 .bib 中的标题，使其与数据库记录一致。\n🔗 数据库原文: https://doi.org/{doi}",
+                    evidence=f"bib title: {entry.title}\nDatabase title: {cr_title}",
+                    suggestion=f"Please correct the title in your .bib file to match the database record.\n🔗 Database source: https://doi.org/{doi}",
                 ))
         elif bib_title_norm and not cr_title_norm:
             meta["title_match"] = True
             issues.append(Issue(
                 severity=Severity.INFO,
-                message=f"[{entry.key}] 数据库无标题元数据，无法验证标题",
+                message=f"[{entry.key}] Database has no title metadata; title cannot be verified",
                 location=location, file=issue_file, line=issue_line,
             ))
         elif not entry.title:
             issues.append(Issue(
                 severity=Severity.ERROR,
-                message=f"[{entry.key}] .bib 条目缺少 title 字段",
+                message=f"[{entry.key}] bib entry is missing the title field",
                 location=location, file=issue_file, line=issue_line,
-                suggestion="每条引文必须包含 title 字段。",
+                suggestion="Every bibliography entry must include a title field.",
             ))
 
         # Step 5: 作者验证（严格 — 姓氏必须逐位对应）
@@ -512,13 +512,13 @@ class ReferenceAuthenticityGate(BaseGate):
             if len(bib_families) != len(cr_fam):
                 issues.append(Issue(
                     severity=Severity.ERROR,
-                    message=f"[{entry.key}] 作者数量不一致: .bib 有 {len(bib_families)} 人, 数据库有 {len(cr_fam)} 人",
+                    message=f"[{entry.key}] Author count mismatch: .bib has {len(bib_families)}, database has {len(cr_fam)}",
                     location=location, file=issue_file, line=issue_line,
                     evidence=(
-                        f"BIB ({len(entry.authors)} 人): {', '.join(entry.authors)}\n"
-                        f"数据库 ({len(cr_fam)} 人): {', '.join(meta['crossref_authors'])}"
+                        f"bib ({len(entry.authors)} author(s)): {', '.join(entry.authors)}\n"
+                        f"Database ({len(cr_fam)} author(s)): {', '.join(meta['crossref_authors'])}"
                     ),
-                    suggestion=f"作者人数与数据库记录不符。请检查是否遗漏或多出作者。\n🔗 数据库原文: https://doi.org/{doi}",
+                    suggestion=f"The author count does not match the database record. Check for missing or extra authors.\n🔗 Database source: https://doi.org/{doi}",
                 ))
             else:
                 mismatches = []
@@ -537,16 +537,16 @@ class ReferenceAuthenticityGate(BaseGate):
                 if mismatches:
                     meta["authors_match"] = False
                     evidence_lines = [
-                        f"  第{i+1}位: BIB '{m[0]}' (姓: '{m[2]}') ≠ 数据库 '{m[1]}' (姓: '{m[3]}')"
+                        f"  Author {i+1}: bib '{m[0]}' (family: '{m[2]}') ≠ database '{m[1]}' (family: '{m[3]}')"
                         for i, m in enumerate(mismatches)
                     ]
                     doi_url = f"https://doi.org/{doi}" if doi else ""
                     issues.append(Issue(
                         severity=Severity.ERROR,
-                        message=f"[{entry.key}] 作者姓氏不匹配（{len(mismatches)} 处）",
+                        message=f"[{entry.key}] Author surname mismatch ({len(mismatches)} discrepancy/discrepancies)",
                         location=location, file=issue_file, line=issue_line,
                         evidence="\n".join(evidence_lines),
-                        suggestion=f"作者姓氏与数据库记录不一致，请核实并修正。\n🔗 数据库原文: {doi_url}" if doi_url else "作者姓氏与数据库记录不一致，请核实并修正。",
+                        suggestion=f"Author surnames do not match the database record. Please verify and correct them.\n🔗 Database source: {doi_url}" if doi_url else "Author surnames do not match the database record. Please verify and correct them.",
                     ))
                 else:
                     meta["authors_match"] = True
@@ -554,15 +554,15 @@ class ReferenceAuthenticityGate(BaseGate):
             meta["authors_match"] = True
             issues.append(Issue(
                 severity=Severity.INFO,
-                message=f"[{entry.key}] 数据库无作者元数据，无法验证作者",
+                message=f"[{entry.key}] Database has no author metadata; authors cannot be verified",
                 location=location, file=issue_file, line=issue_line,
             ))
         elif not entry.authors:
             issues.append(Issue(
                 severity=Severity.WARNING,
-                message=f"[{entry.key}] .bib 条目缺少 author 字段",
+                message=f"[{entry.key}] bib entry is missing the author field",
                 location=location, file=issue_file, line=issue_line,
-                suggestion="请在 .bib 条目中添加 author 字段。",
+                suggestion="Please add an author field to the bib entry.",
             ))
 
         # Step 6: 期刊/会议验证（宽松 — 缩写、全称、年份差异很常见）
@@ -584,24 +584,24 @@ class ReferenceAuthenticityGate(BaseGate):
             if not meta["venue_match"]:
                 issues.append(Issue(
                     severity=Severity.WARNING,
-                    message=f"[{entry.key}] 期刊/会议名不匹配（相似度 {venue_sim:.0%}）",
+                    message=f"[{entry.key}] Venue name mismatch (similarity {venue_sim:.0%})",
                     location=location, file=issue_file, line=issue_line,
-                    evidence=f"BIB: {bib_venue}\n数据库: {cr_venue}",
-                    suggestion=f"期刊名与数据库不一致，请检查拼写或缩写是否正确。\n🔗 数据库原文: https://doi.org/{doi}",
+                    evidence=f"bib: {bib_venue}\nDatabase: {cr_venue}",
+                    suggestion=f"The venue name differs from the database record. Check for spelling errors or incorrect abbreviations.\n🔗 Database source: https://doi.org/{doi}",
                 ))
         elif bib_venue and not cr_venue:
-            meta["venue_match"] = True  # 数据库无 venue 数据
+            meta["venue_match"] = True  # Database has no venue data
 
-        # Step 7: 官方引用格式检查（ACL/DBLP）
+        # Step 7: Official citation format check (ACL/DBLP)
         official_bib_url = self._get_official_bib_url(doi)
         meta["official_bib_url"] = official_bib_url
         if official_bib_url and not meta.get("venue_match"):
             issues.append(Issue(
                 severity=Severity.WARNING,
-                message=f"[{entry.key}] 建议使用官方引用格式",
+                message=f"[{entry.key}] Consider using the official citation format",
                 location=location, file=issue_file, line=issue_line,
-                evidence=f"官方 BIB 地址: {official_bib_url}",
-                suggestion=f"请从官方来源获取标准 bib 条目，避免格式差异。链接: {official_bib_url}",
+                evidence=f"Official bib URL: {official_bib_url}",
+                suggestion=f"Obtain a standard bib entry from the official source to avoid formatting discrepancies. Link: {official_bib_url}",
             ))
         elif official_bib_url:
             meta["official_bib_url"] = official_bib_url
@@ -624,10 +624,10 @@ class ReferenceAuthenticityGate(BaseGate):
                 if diff > 1:
                     issues.append(Issue(
                         severity=Severity.WARNING,
-                        message=f"[{entry.key}] 年份不一致: .bib 为 {entry.year}，数据库为 {db_year}",
+                        message=f"[{entry.key}] Year mismatch: .bib has {entry.year}, database has {db_year}",
                         location=location, file=issue_file, line=issue_line,
-                        evidence=f"差异 {diff} 年",
-                        suggestion=f"请检查年份是否正确。数据库记录为 {db_year} 年。\n🔗 https://doi.org/{doi}",
+                        evidence=f"Difference: {diff} year(s)",
+                        suggestion=f"Check whether the year is correct. The database record shows {db_year}.\n🔗 https://doi.org/{doi}",
                     ))
                 elif diff == 1:
                     # 1 year diff is common (preprint vs published), just info
@@ -647,7 +647,7 @@ class ReferenceAuthenticityGate(BaseGate):
         if has_errors:
             # Check if it's truly fake or just unverifiable
             error_msgs = " ".join(i.message for i in issues if i.severity == Severity.ERROR)
-            if "不匹配" in error_msgs or "无法解析" in error_msgs:
+            if "mismatch" in error_msgs or "cannot be resolved" in error_msgs:
                 meta["status"] = "fake"  # Fabricated or unmatched
             else:
                 meta["status"] = "unsure"  # Cannot determine
@@ -849,10 +849,10 @@ class ReferenceAuthenticityGate(BaseGate):
         if ratio > 0.30:
             issues.append(Issue(
                 severity=Severity.WARNING,
-                message=f"自引比例偏高: {self_cite_count}/{total} ({ratio:.0%}) 的引文包含本文作者",
-                location="全局",
-                evidence=f"本文作者姓氏: {', '.join(sorted(paper_authors)[:5])}",
-                suggestion="自引比例超过 30% 可能引起审稿人关注。请检查是否有必要引用自己的全部论文。",
+                message=f"High self-citation ratio: {self_cite_count}/{total} ({ratio:.0%}) of references include an author of this paper",
+                location="global",
+                evidence=f"Author surnames in this paper: {', '.join(sorted(paper_authors)[:5])}",
+                suggestion="A self-citation ratio above 30% may raise concerns among reviewers. Check whether all self-citations are necessary.",
             ))
 
     @staticmethod
@@ -879,12 +879,12 @@ class ReferenceAuthenticityGate(BaseGate):
             for entry in suspicious_entries[:3]:
                 issues.append(Issue(
                     severity=Severity.WARNING,
-                    message=f"[{entry.key}] 作者姓氏全部为高频常见姓（可能是 GPT 编造）",
+                    message=f"[{entry.key}] All author surnames are very common names (possible GPT fabrication)",
                     location=f"bib:{entry.key}",
                     file=entry.source_file,
                     line=entry.source_line,
-                    evidence=f"作者: {', '.join(entry.authors[:5])}",
-                    suggestion="所有作者姓氏都在 top-20 常见姓氏列表中，这种模式在 GPT 编造引文时常见。请核实此论文真实性。",
+                    evidence=f"Authors: {', '.join(entry.authors[:5])}",
+                    suggestion="All author surnames appear in the top-20 most common surname list, a pattern typical of GPT-fabricated references. Please verify that this paper actually exists.",
                 ))
 
 
@@ -932,19 +932,19 @@ class ReferenceAuthenticityGate(BaseGate):
         if nlp_count <= 2 and total >= 10:
             issues.append(Issue(
                 severity=Severity.INFO,
-                message=f"NLP 顶会引用较少: 仅 {nlp_count}/{total} 篇来自 ACL/EMNLP/NAACL/TACL",
-                location="全局",
-                evidence=f"NLP venue: {nlp_count}, ML venue: {ml_count}, 其他: {total - nlp_count - ml_count}",
-                suggestion="如果投稿 NLP 会议（ACL/EMNLP/NAACL），建议增加对这些 venue 近年论文的引用，体现对领域的了解。",
+                message=f"Few top NLP venue citations: only {nlp_count}/{total} from ACL/EMNLP/NAACL/TACL",
+                location="global",
+                evidence=f"NLP venue: {nlp_count}, ML venue: {ml_count}, Other: {total - nlp_count - ml_count}",
+                suggestion="If submitting to an NLP venue (ACL/EMNLP/NAACL), consider citing more recent papers from those venues to demonstrate awareness of the field.",
             ))
 
         # If mostly citing non-top venues
         if top_venue_ratio < 0.2 and total >= 15:
             issues.append(Issue(
                 severity=Severity.INFO,
-                message=f"顶会/顶刊引用比例偏低: {nlp_count+ml_count}/{total} ({top_venue_ratio:.0%})",
-                location="全局",
-                suggestion="建议增加 ACL/EMNLP/NeurIPS/ICML 等顶级 venue 的引用，提升论文说服力。",
+                message=f"Low top-venue citation ratio: {nlp_count+ml_count}/{total} ({top_venue_ratio:.0%})",
+                location="global",
+                suggestion="Consider adding citations from top venues such as ACL/EMNLP/NeurIPS/ICML to strengthen the paper's positioning.",
             ))
 
     @staticmethod
@@ -988,32 +988,32 @@ class ReferenceAuthenticityGate(BaseGate):
         if median_year < current_year - 8:
             issues.append(Issue(
                 severity=Severity.WARNING,
-                message=f"引文整体偏旧：中位年份 {median_year}（距今 {current_year - median_year} 年）",
-                location="全局",
-                suggestion=f"引用文献的中位发表年份为 {median_year}，"
-                f"大量旧文献可能让审稿人质疑对最新进展的了解。"
-                f"建议补充 {current_year-2}-{current_year} 年的相关工作。",
+                message=f"Citations are generally old: median publication year is {median_year} ({current_year - median_year} years ago)",
+                location="global",
+                suggestion=f"The median publication year of your references is {median_year}. "
+                f"A large proportion of old references may lead reviewers to question your familiarity with recent advances. "
+                f"Consider adding relevant work from {current_year-2}–{current_year}.",
             ))
 
         # Warning: very few recent papers
         if recent_pct < 15 and len(years) >= 10:
             issues.append(Issue(
                 severity=Severity.WARNING,
-                message=f"近 3 年引文占比过低: {recent_count}/{len(years)} ({recent_pct:.0f}%)",
-                location="全局",
-                suggestion=f"仅有 {recent_pct:.0f}% 的引文发表于 {current_year-3}-{current_year} 年。"
-                f"审稿人可能认为你未充分 survey 最新工作。"
-                f"建议至少 25-30% 的引文来自近 3 年。",
+                message=f"Low proportion of recent citations: {recent_count}/{len(years)} ({recent_pct:.0f}%) from the past 3 years",
+                location="global",
+                suggestion=f"Only {recent_pct:.0f}% of your references were published in {current_year-3}–{current_year}. "
+                f"Reviewers may conclude that you have not sufficiently surveyed recent work. "
+                f"Aim for at least 25–30% of citations from the past 3 years.",
             ))
 
         # Warning: too many very old papers (>10 years)
         if old_pct > 50 and len(years) >= 10:
             issues.append(Issue(
                 severity=Severity.WARNING,
-                message=f"超过半数引文发表于 10 年前: {old_count}/{len(years)} ({old_pct:.0f}%)",
-                location="全局",
-                suggestion="超过一半的引用文献距今超过 10 年。"
-                "虽然经典论文值得引用，但过多旧文献可能被审稿人视为 related work 不充分。",
+                message=f"More than half of the references are over 10 years old: {old_count}/{len(years)} ({old_pct:.0f}%)",
+                location="global",
+                suggestion="Over half of your cited works are more than 10 years old. "
+                "While seminal papers deserve citation, an excess of old references may be seen by reviewers as insufficient coverage of related work.",
             ))
 
         # Store year info in verified_entries for frontend display
