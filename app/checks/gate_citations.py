@@ -39,10 +39,10 @@ class CitationConsistencyGate(BaseGate):
             locations = cite_locations[key]
             issues.append(Issue(
                 severity=Severity.ERROR,
-                message=f"未定义引用: \\cite{{{key}}} → 编译后 PDF 中将显示 '?'",
+                message=f"Undefined citation: \\cite{{{key}}} → will show '?' in compiled PDF",
                 location=", ".join(locations),
-                evidence=f"引用键 '{key}' 在正文中使用但在 .bib 中不存在",
-                suggestion=f"请在 .bib 中添加 '{key}' 条目，或修正引用键的拼写。",
+                evidence=f"Key '{key}' is used in text but not defined in .bib",
+                suggestion=f"Add a '{key}' entry to your .bib file, or fix the citation key spelling.",
             ))
 
         # Warning: orphan bib entries (not critical but messy)
@@ -50,9 +50,9 @@ class CitationConsistencyGate(BaseGate):
         for key in uncited_entries:
             issues.append(Issue(
                 severity=Severity.WARNING,
-                message=f"孤立条目: '{key}' 在 .bib 中定义但从未被引用",
+                message=f"Orphaned entry: '{key}' is defined in .bib but never cited",
                 location="bib",
-                suggestion=f"请在正文中引用 '{key}'，或从 .bib 中删除该条目。",
+                suggestion=f"Either cite '{key}' in the text, or remove it from .bib.",
             ))
 
         # Check for duplicate bib keys
@@ -63,9 +63,9 @@ class CitationConsistencyGate(BaseGate):
             if count > 1:
                 issues.append(Issue(
                     severity=Severity.ERROR,
-                    message=f"重复键: .bib 中 '{key}' 定义了 {count} 次",
+                    message=f"Duplicate key: '{key}' is defined {count} times in .bib",
                     location="bib",
-                    suggestion="每个引用键必须唯一，请重命名其中一个。",
+                    suggestion="Each citation key must be unique. Rename one of the duplicates.",
                 ))
 
         # Check 4: Incomplete bib entries (missing critical fields)
@@ -80,9 +80,9 @@ class CitationConsistencyGate(BaseGate):
             if missing:
                 issues.append(Issue(
                     severity=Severity.WARNING,
-                    message=f"[{entry.key}] 缺少必要字段: {', '.join(missing)}",
+                    message=f"[{entry.key}] missing required fields: {', '.join(missing)}",
                     location=f"bib:{entry.key}",
-                    suggestion="完整的 bib 条目至少需要 title、author、year。缺少字段可能导致参考文献列表显示不完整。",
+                    suggestion="A complete bib entry needs at least title, author, and year.",
                 ))
 
         # Score and pass/fail
@@ -99,9 +99,9 @@ class CitationConsistencyGate(BaseGate):
             score=score,
             issues=issues,
             summary=(
-                f"共 {total_cites} 个引用键: {valid_cites} 个正常, "
-                f"{len(undefined_cites)} 个未定义 (→ '?'), "
-                f"{len(uncited_entries)} 个孤立条目"
+                f"{total_cites} citation keys: {valid_cites} OK, "
+                f"{len(undefined_cites)} undefined (→ '?'), "
+                f"{len(uncited_entries)} orphaned"
             ),
             metadata={
                 "total_citations": total_cites,

@@ -130,7 +130,7 @@ class ReferenceAuthenticityGate(BaseGate):
                     message="未找到任何参考文献条目",
                     suggestion="请确保 .bib 文件中包含有效的参考文献条目",
                 )],
-                summary="无参考文献可验证",
+                summary="No references to verify",
                 metadata={},
             )
 
@@ -176,7 +176,7 @@ class ReferenceAuthenticityGate(BaseGate):
             passed=passed,
             score=score,
             issues=issues,
-            summary=f"共 {total} 条引文：{total_pass} 条验证通过 ✓，{total_fail} 条未通过 ✗",
+            summary=f"{total} references: {total_pass} verified ✓, {total_fail} failed ✗",
             metadata={"verified_entries": verified_entries},
         )
 

@@ -136,7 +136,7 @@ class WritingQualityGate(BaseGate):
     """Gate 6: 写作质量检查"""
 
     name = "writing_quality"
-    description = "写作质量：检测 AI 痕迹、段落重复、匿名化问题、拼写错误"
+    description = "Writing quality: detects AI traces, duplicate paragraphs, anonymity issues, and typos"
     is_blocking = False  # Warning level
 
     async def check(self, paper: ParsedPaper) -> CheckResult:
@@ -652,7 +652,7 @@ class WritingQualityGate(BaseGate):
             passed=passed,
             score=score,
             issues=issues,
-            summary=f"写作检查: {error_count} 个错误, {warn_count} 个警告 (Grade {grade})",
+            summary=f"Writing check: {error_count} error(s), {warn_count} warning(s) (Grade {grade})",
             metadata={"grade": grade, "error_count": error_count, "warning_count": warn_count, "tips": tips},
         )
 

@@ -758,12 +758,12 @@ let hydratingEditor = false;
 let localDraftErrorShown = false;
 
 const GATE_INFO = {
-    'structure_integrity':      { name:'文件结构', icon:'📂' },
-    'citation_bib_consistency': { name:'引用匹配', icon:'🔗' },
-    'reference_authenticity':   { name:'引文真实', icon:'🔍' },
-    'figure_table_crossref':    { name:'图表引用', icon:'📊' },
-    'data_integrity':           { name:'数据完整', icon:'🧪' },
-    'writing_quality':          { name:'写作质量', icon:'✍️' },
+    'structure_integrity':      { name:'Structure', icon:'📂' },
+    'citation_bib_consistency': { name:'Citations', icon:'🔗' },
+    'reference_authenticity':   { name:'References', icon:'🔍' },
+    'figure_table_crossref':    { name:'Figures', icon:'📊' },
+    'data_integrity':           { name:'Data', icon:'🧪' },
+    'writing_quality':          { name:'Writing', icon:'✍️' },
 };
 
 // === Screen management ===
@@ -910,8 +910,8 @@ function renderDimensionScores(dimensionScores) {
     }
     const colorFor = score => score >= 85 ? '#16a34a' : score >= 65 ? '#2563eb' : score >= 45 ? '#d97706' : '#dc2626';
     el.innerHTML = `<div style="border:1px solid #dbeafe; background:linear-gradient(180deg,#eff6ff,#fff); border-radius:14px; padding:16px 18px;">
-        <p style="font-size:13px; font-weight:800; color:#1e3a8a; margin:0;">🎯 多维度评分</p>
-        <p style="font-size:11px; color:#64748b; margin:3px 0 12px;">基于当前 gate 结果的启发式审稿维度，不替代人工评审。</p>
+        <p style="font-size:13px; font-weight:800; color:#1e3a8a; margin:0;">🎯 Multi-dimensional Score</p>
+        <p style="font-size:11px; color:#64748b; margin:3px 0 12px;">Heuristic reviewer dimensions based on gate results. Not a substitute for human review.</p>
         <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px;">
             ${dimensions.map(d => {
                 const score = Number(d.score || 0);
@@ -1315,10 +1315,10 @@ function showOverview() {
     const bibCount = refGate?.metadata?.verified_entries?.length || 0;
     const wordCount = report.metadata?.word_count || 0;
     document.getElementById('overview-stats').innerHTML = `
-        <div class="text-center"><span class="text-2xl font-bold text-red-600">${totalErrors}</span><p class="text-xs text-slate-400">错误</p></div>
-        <div class="text-center"><span class="text-2xl font-bold text-amber-500">${totalWarnings}</span><p class="text-xs text-slate-400">警告</p></div>
-        <div class="text-center"><span class="text-2xl font-bold text-blue-600">${bibCount}</span><p class="text-xs text-slate-400">引文</p></div>
-        <div class="text-center"><span class="text-2xl font-bold text-slate-600">${wordCount>1000?(wordCount/1000).toFixed(1)+'k':wordCount}</span><p class="text-xs text-slate-400">词数</p></div>`;
+        <div class="text-center"><span class="text-2xl font-bold text-red-600">${totalErrors}</span><p class="text-xs text-slate-400">Errors</p></div>
+        <div class="text-center"><span class="text-2xl font-bold text-amber-500">${totalWarnings}</span><p class="text-xs text-slate-400">Warnings</p></div>
+        <div class="text-center"><span class="text-2xl font-bold text-blue-600">${bibCount}</span><p class="text-xs text-slate-400">Citations</p></div>
+        <div class="text-center"><span class="text-2xl font-bold text-slate-600">${wordCount>1000?(wordCount/1000).toFixed(1)+'k':wordCount}</span><p class="text-xs text-slate-400">Words</p></div>`;
     renderDimensionScores(report.dimension_scores);
 
     // Gate cards
@@ -1331,7 +1331,7 @@ function showOverview() {
         cardsHtml += `<div class="border rounded-lg p-4 ${bg} transition-all">
             <div class="flex items-center justify-between cursor-pointer" onclick="enterWorkspace()">
                 <span class="font-medium">${info.icon} ${info.name}</span>
-                <span class="text-sm font-bold ${g.passed?'text-green-600':'text-red-600'}">${g.passed?'通过':''+errCount+' 个错误'}${warnCount?' · '+warnCount+' 警告':''}</span>
+                <span class="text-sm font-bold ${g.passed?'text-green-600':'text-red-600'}">${g.passed?'✓ Passed':''+errCount+' error'+(errCount!==1?'s':'')}${warnCount?' · '+warnCount+' warning'+(warnCount!==1?'s':''):''}</span>
             </div>
             <p class="text-xs text-slate-500 mt-1">${g.summary}</p>`;
 
@@ -1365,7 +1365,7 @@ function showOverview() {
                 <div style="width:${failCount/total*100}%; background:#ef4444;"></div>
             </div>
             <div style="display:flex; justify-content:space-between; margin-top:4px; font-size:10px; color:#64748b;">
-                <span>${passCount} 验证通过</span><span>${warnCount} 需注意</span><span>${failCount} 异常</span>
+                <span>${passCount} verified</span><span>${warnCount} minor issues</span><span>${failCount} errors</span>
             </div>`;
 
             cardsHtml += `<details class="mt-2"><summary class="text-[11px] text-blue-600 cursor-pointer hover:underline">查看详情 (${total} 条)</summary>
@@ -2128,7 +2128,7 @@ function renderIssues(path) {
 
     if (!totalShown) {
         if (issueFilter === 'all') html = `<div class="text-center py-12 text-slate-400"><p style="font-size:32px; margin-bottom:8px; opacity:0.5;">○</p><p class="text-sm">此文件无问题</p><p class="text-xs mt-1 text-slate-300">切换到其他文件查看更多</p></div>`;
-        else html = `<div class="text-center py-12 text-slate-400"><p class="text-sm">无匹配的 ${issueFilter==='error'?'错误':issueFilter==='warning'?'警告':'已忽略'} 项</p></div>`;
+        else html = `<div class="text-center py-12 text-slate-400"><p class="text-sm">No ${issueFilter==='error'?'errors':issueFilter==='warning'?'warnings':'dismissed items'}</p></div>`;
     }
     div.innerHTML = html;
 

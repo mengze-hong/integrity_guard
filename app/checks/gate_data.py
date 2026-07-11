@@ -506,7 +506,7 @@ class DataIntegrityGate(BaseGate):
     """Gate 5: 实验数据完整性检查"""
 
     name = "data_integrity"
-    description = "数据完整性：检测表格中的重复数据、可疑模式、偏移造假等异常"
+    description = "Data integrity: detects duplicate rows, suspicious patterns, and offset fabrication in tables"
     is_blocking = False  # warning-level, 不强制阻止但标出
 
     async def check(self, paper: ParsedPaper) -> CheckResult:
@@ -522,7 +522,7 @@ class DataIntegrityGate(BaseGate):
                 passed=True,
                 score=100.0,
                 issues=[],
-                summary="未发现 LaTeX 表格数据",
+                summary="No LaTeX tables found",
                 metadata={"tables_checked": 0},
             )
 
@@ -615,7 +615,7 @@ class DataIntegrityGate(BaseGate):
             passed=passed,
             score=score,
             issues=issues,
-            summary=f"检查了 {len(tables)} 个表格，发现 {total_findings} 个可疑数据模式",
+            summary=f"Checked {len(tables)} table(s), found {total_findings} suspicious data pattern(s)",
             metadata={"tables_checked": len(tables), "table_summaries": table_summaries},
         )
 

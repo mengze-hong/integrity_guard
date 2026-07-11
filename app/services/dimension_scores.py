@@ -30,25 +30,25 @@ def build_dimension_scores(report: FullReport) -> dict:
             "key": "novelty",
             "label": "Novelty",
             "score": _avg(scores, ["reference_authenticity"], overall),
-            "basis": "引用真实度与文献新鲜度信号",
+            "basis": "Reference authenticity & citation freshness signal",
         },
         {
             "key": "soundness",
             "label": "Soundness",
             "score": _avg(scores, ["data_integrity", "citation_bib_consistency", "reference_authenticity"], overall),
-            "basis": "数据完整性、引用一致性与参考文献真实性",
+            "basis": "Data integrity, citation consistency & reference authenticity",
         },
         {
             "key": "clarity",
             "label": "Clarity",
             "score": _avg(scores, ["writing_quality", "figure_table_crossref", "structure_integrity"], overall),
-            "basis": "写作质量、图表交叉引用与结构完整性",
+            "basis": "Writing quality, figure cross-references & structure",
         },
         {
             "key": "significance",
             "label": "Significance",
             "score": _avg(scores, ["data_integrity", "writing_quality", "reference_authenticity"], overall),
-            "basis": "结果可信度、表达清晰度与相关文献支撑",
+            "basis": "Result credibility, clarity & literature support",
         },
     ]
 

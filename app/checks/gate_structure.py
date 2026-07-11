@@ -109,7 +109,7 @@ class StructureGate(BaseGate):
     """Gate 1: Verify project file structure integrity."""
 
     name = "structure_integrity"
-    description = "文件结构检查：验证项目文件完整性，所有引用的文件都存在"
+    description = "Structure check: validates project file completeness and all referenced files exist"
     is_blocking = True
 
     async def check(self, paper: ParsedPaper) -> CheckResult:
@@ -131,7 +131,7 @@ class StructureGate(BaseGate):
                 passed=False,
                 score=0.0,
                 issues=issues,
-                summary="未找到 .tex 文件",
+                summary="No .tex files found",
             )
 
         # Check 2: .bib file exists
@@ -404,5 +404,5 @@ class StructureGate(BaseGate):
             passed=passed,
             score=max(score, 0.0),
             issues=issues,
-            summary=f"结构检查: {error_count} 个错误, {len(issues) - error_count} 个警告",
+            summary=f"Structure check: {error_count} error(s), {len(issues) - error_count} warning(s)",
         )
