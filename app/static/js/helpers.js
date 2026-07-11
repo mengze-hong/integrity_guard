@@ -7,10 +7,6 @@
         'DOI/source not found', 'official URL/DOI'
     ];
 
-    function jsArg(value) {
-        return JSON.stringify(String(value ?? ''));
-    }
-
     function esc(value) {
         return String(value ?? '')
             .replace(/&/g, '&amp;')
@@ -18,6 +14,15 @@
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
+    }
+
+    // Produces a JS string literal safe to embed inside a DOUBLE-quoted
+    // inline attribute (onclick="fn(${jsArg(x)})"). JSON.stringify gives a
+    // "..."-wrapped literal; HTML-escaping it turns the wrapping quotes into
+    // &quot; so they don't prematurely close the attribute — the browser
+    // decodes them back to real quotes before compiling the handler.
+    function jsArg(value) {
+        return esc(JSON.stringify(String(value ?? '')));
     }
 
     function normEol(value) {
