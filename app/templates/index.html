@@ -21,16 +21,26 @@
     <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/scroll/simplescrollbars.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/scroll/simplescrollbars.css">
     <style>
-        /* Overview two-column layout: score/dimensions left, gate cards right */
-        .overview-two-col {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-            gap: 32px;
-            align-items: start;
+        /* Overview: dimensions + gate cards flow into two balanced columns
+           (masonry-like), so short gate cards fill under the taller
+           Multi-dimensional Score card instead of leaving a gap. */
+        .overview-flow {
+            column-count: 2;
+            column-gap: 20px;
             margin-bottom: 24px;
         }
+        .overview-flow > #overview-dimensions,
+        .overview-flow .gate-card {
+            break-inside: avoid;
+            -webkit-column-break-inside: avoid;
+            page-break-inside: avoid;
+            display: block;
+            margin: 0 0 12px;
+        }
+        /* #overview-gates is just a wrapper; let its cards join the column flow */
+        .overview-flow > #overview-gates { display: contents; }
         @media (max-width: 860px) {
-            .overview-two-col { grid-template-columns: 1fr; gap: 8px; }
+            .overview-flow { column-count: 1; }
         }
         :root {
             --color-primary: #3b82f6;
@@ -489,26 +499,23 @@
             <!-- Progress nodes -->
             <div class="flex items-center justify-center gap-0 mb-8 px-4" id="overview-nodes"></div>
 
-            <!-- Two-column: left = score + stats + dimensions, right = gate cards -->
-            <div class="overview-two-col">
-              <div class="overview-col-left">
-                <!-- Score + quick stats (one row) -->
-                <div class="flex items-center justify-center gap-8 mb-8 flex-wrap">
-                    <div class="text-center">
-                        <div><span class="text-5xl font-black" id="overview-score">0</span><span class="text-xl text-slate-400">/100</span></div>
-                        <p class="text-sm mt-2" id="overview-status-text"></p>
-                    </div>
-                    <div id="overview-stats" class="flex gap-6 text-sm"></div>
+            <!-- Score + quick stats (one row, full width) -->
+            <div class="flex items-center justify-center gap-8 mb-8 flex-wrap">
+                <div class="text-center">
+                    <div><span class="text-5xl font-black" id="overview-score">0</span><span class="text-xl text-slate-400">/100</span></div>
+                    <p class="text-sm mt-2" id="overview-status-text"></p>
                 </div>
+                <div id="overview-stats" class="flex gap-6 text-sm"></div>
+            </div>
 
+            <!-- Two-column balanced flow: dimensions + gate cards pack into two
+                 columns of equal height, so shorter gate cards fill the space
+                 beneath the Multi-dimensional Score card. -->
+            <div id="overview-flow" class="overview-flow">
                 <!-- Reviewer-style dimensions -->
-                <div id="overview-dimensions" class="mb-8"></div>
-              </div>
-
-              <div class="overview-col-right">
+                <div id="overview-dimensions"></div>
                 <!-- Gate summary cards -->
-                <div id="overview-gates" class="space-y-3"></div>
-              </div>
+                <div id="overview-gates"></div>
             </div>
 
             <!-- Submission verdict -->
@@ -1346,7 +1353,7 @@ function showOverview() {
         const errCount = g.issues.filter(x=>x.severity==='error').length;
         const warnCount = g.issues.filter(x=>x.severity==='warning').length;
         const bg = g.passed ? 'border-green-200 bg-green-50 hover:bg-green-100' : 'border-red-200 bg-red-50 hover:bg-red-100';
-        cardsHtml += `<div class="border rounded-lg p-4 ${bg} transition-all">
+        cardsHtml += `<div class="gate-card border rounded-lg p-4 ${bg} transition-all">
             <div class="flex items-center justify-between cursor-pointer" onclick="enterWorkspace()">
                 <span class="font-medium">${info.icon} ${info.name}</span>
                 <span class="text-sm font-bold ${g.passed?'text-green-600':'text-red-600'}">${g.passed?'✓ Passed':''+errCount+' error'+(errCount!==1?'s':'')}${warnCount?' · '+warnCount+' warning'+(warnCount!==1?'s':''):''}</span>
@@ -1407,8 +1414,7 @@ function showOverview() {
 
         cardsHtml += `</div>`;
     });
-    document.getElementById('overview-gates').innerHTML =
-        `<div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; align-items:stretch;">${cardsHtml}</div>`;
+    document.getElementById('overview-gates').innerHTML = cardsHtml;
 
     // Submission verdict
     const verdictEl = document.getElementById('overview-verdict');
@@ -2984,17 +2990,17 @@ async function showAnalysis() {
         </div>`;
         document.body.appendChild(modal);
     } catch(e) {
-        toast('分析加载失败: ' + e.message, 'error');
+        toast('Analysis failed to load: ' + e.message, 'error');
     }
 }
 
 async function doTidyUp() {
     if (!jobId) return;
-    toast('分析项目结构...', 'info', 2000);
+    toast('Analyzing project structure...', 'info', 2000);
     const r = await fetch(`/api/tidyup/${jobId}`);
     const d = await r.json();
     if (!d.changes || d.changes.length === 0) {
-        toast('项目结构已经很整洁，无需调整', 'success', 3000);
+        toast('Project structure is already clean — no changes needed', 'success', 3000);
         return;
     }
     // Show popup with checkboxes for each change
@@ -3032,7 +3038,7 @@ async function executeTidyUp(btn) {
     const modal = btn.closest('.modal-bg');
     const checkboxes = modal.querySelectorAll('input[type=checkbox]:checked');
     const selected = Array.from(checkboxes).map(cb => parseInt(cb.dataset.idx));
-    if (!selected.length) { toast('未选择任何操作', 'warning'); modal.remove(); return; }
+    if (!selected.length) { toast('No action selected', 'warning'); modal.remove(); return; }
 
     btn.textContent = '执行中...'; btn.disabled = true;
     const r = await fetch(`/api/tidyup/${jobId}`, {
@@ -3041,7 +3047,7 @@ async function executeTidyUp(btn) {
     });
     const d = await r.json();
     modal.remove();
-    toast(`🗂️ 整理完成！执行了 ${d.count} 项改动，正在重新质检...`, 'success', 3000);
+    toast(`🗂️ Cleanup done! Applied ${d.count} change(s), re-checking...`, 'success', 3000);
     // Reload file tree and current file, then auto re-run the quality check
     loadFileTree();
     if (currentFile) await openFile(currentFile);
@@ -3083,7 +3089,7 @@ function batchFixMarkdown() {
 
 function copyBatchFixMarkdown() {
     navigator.clipboard.writeText(batchFixMarkdown());
-    toast('已复制批量建议 Markdown', 'success', 1500);
+    toast('Batch suggestions copied as Markdown', 'success', 1500);
 }
 
 async function doBatchFix() {
@@ -3173,16 +3179,16 @@ async function doBatchFix() {
                 <div id="batch-fixes-list">${fixesHtml}</div>
                 <div style="display:flex; gap:8px; margin-top:16px; justify-content:flex-end;">
                     <button onclick="this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-size:13px;">关闭</button>
-                    <button onclick="copyBatchFixMarkdown()" style="padding:8px 16px; border-radius:8px; border:none; background:#64748b; color:#fff; cursor:pointer; font-size:13px;">复制 Markdown</button>
+                    <button onclick="copyBatchFixMarkdown()" style="padding:8px 16px; border-radius:8px; border:none; background:#64748b; color:#fff; cursor:pointer; font-size:13px;">Copy Markdown</button>
                     <button onclick="applyAllBatchFixes();this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:none; background:#22c55e; color:#fff; cursor:pointer; font-size:13px; font-weight:600;">✅ 全部应用并重新质检</button>
                 </div>
             </div>`;
             document.body.appendChild(modal);
         } else {
-            toast(d.message || '没有可自动修复的问题', 'success', 2000);
+            toast(d.message || 'No auto-fixable issues', 'success', 2000);
         }
     } catch(e) {
-        toast('批量修复请求失败: ' + e.message, 'error');
+        toast('Batch fix request failed: ' + e.message, 'error');
     } finally {
         hideAiLoading();
     }
@@ -3226,10 +3232,10 @@ async function applyBatchFixIndexes(indexes, label) {
         if (fix && fix.can_apply !== false && await applyOneFix(fix)) applied++;
     }
     if (applied > 0) {
-        toast(`✅ 已采用 ${label}：${applied}/${indexes.length} 条建议，正在重新质检…`, 'success', 2500);
+        toast(`✅ Applied ${label}: ${applied}/${indexes.length} suggestion(s), re-checking…`, 'success', 2500);
         await doRecheck();
     } else {
-        toast('无法匹配原文（原文可能已被修改），未自动应用', 'warning', 3500);
+        toast('Could not match the original text (it may have changed); not applied automatically', 'warning', 3500);
     }
 }
 
@@ -3250,7 +3256,7 @@ async function applyAllBatchFixes() {
 
 async function doFormatNormalize() {
     if (!jobId) return;
-    toast('🔧 正在规范化格式...', 'info', 2000);
+    toast('🔧 Normalizing formatting...', 'info', 2000);
     try {
         const r = await apiFetch(`/api/format-normalize/${jobId}`, {
             method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -3260,7 +3266,7 @@ async function doFormatNormalize() {
         if (d.status === 'ok' && d.changes.length > 0) {
             // Reload file to show changes
             if (currentFile) await openFile(currentFile);
-            toast(`🔧 格式规范化完成：${d.changes.length} 处修改`, 'success', 4000);
+            toast(`🔧 Formatting normalized: ${d.changes.length} change(s)`, 'success', 4000);
             // Show details in a quick modal
             const detail = d.changes.join('\n');
             const modal = document.createElement('div');
@@ -3273,16 +3279,16 @@ async function doFormatNormalize() {
             </div>`;
             document.body.appendChild(modal);
         } else {
-            toast('✅ 格式已经很规范，无需修改', 'success', 2000);
+            toast('✅ Formatting is already clean — no changes needed', 'success', 2000);
         }
     } catch(e) {
-        toast('格式化失败: ' + e.message, 'error');
+        toast('Formatting failed: ' + e.message, 'error');
     }
 }
 
 async function doBibClean() {
     if (!jobId) return;
-    if (!confirm('📋 整理 Bib：\n\n1. 统一缩进和格式\n2. 去除 abstract/keywords 等冗余字段\n3. 按引用顺序排序\n4. 未引用条目移至 unused.bib（不删除）\n\n确定执行？')) return;
+    if (!confirm('📋 Tidy Bib:\n\n1. Unify indentation and formatting\n2. Remove redundant fields (abstract/keywords, etc.)\n3. Sort by citation order\n4. Move uncited entries to unused.bib (not deleted)\n\nProceed?')) return;
     const r = await fetch(`/api/bib-clean/${jobId}`, {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({action:'all'})
@@ -3290,7 +3296,7 @@ async function doBibClean() {
     const d = await r.json();
     if (d.status === 'done') {
         const summary = Object.entries(d.results).map(([k,v]) => `${k}: ${v.unused_entries||0} 条移至 unused.bib`).join(', ');
-        toast(`📋 Bib 整理完成！${summary}`, 'success', 5000);
+        toast(`📋 Bib tidied! ${summary}`, 'success', 5000);
         // Reload current file if it's a .bib
         if (currentFile?.endsWith('.bib')) openFile(currentFile);
         loadFileTree();
@@ -3423,16 +3429,16 @@ async function runAiDiagnosis() {
                 <p style="font-size:11px; color:#b45309; background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:8px 10px; margin:14px 0 0;">⚠️ 诊断报告只基于质检摘要与 AI 建议生成，不代表真实审稿结论。请人工核实所有科学结论、数字和引用。</p>
                 <div style="display:flex; gap:8px; margin-top:16px; justify-content:flex-end;">
                     <button onclick="this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-size:13px;">关闭</button>
-                    <button onclick="navigator.clipboard.writeText(window._lastDiagnosisMarkdown || '');toast('已复制诊断报告 Markdown','success',1500)" style="padding:8px 16px; border-radius:8px; border:none; background:#334155; color:#fff; cursor:pointer; font-size:13px;">复制 Markdown</button>
+                    <button onclick="navigator.clipboard.writeText(window._lastDiagnosisMarkdown || '');toast('Diagnosis report copied as Markdown','success',1500)" style="padding:8px 16px; border-radius:8px; border:none; background:#334155; color:#fff; cursor:pointer; font-size:13px;">Copy Markdown</button>
                     <button onclick="enterWorkspace();this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:none; background:#2563eb; color:#fff; cursor:pointer; font-size:13px; font-weight:600;">进入工作台处理</button>
                 </div>
             </div>`;
             document.body.appendChild(modal);
         } else {
-            toast('诊断报告生成失败: ' + (d.detail || '未知错误'), 'error');
+            toast('Diagnosis report generation failed: ' + (d.detail || 'Unknown error'), 'error');
         }
     } catch (e) {
-        toast('诊断报告请求失败: ' + e.message, 'error');
+        toast('Diagnosis report request failed: ' + e.message, 'error');
     } finally {
         hideAiLoading();
     }
@@ -3456,15 +3462,15 @@ async function runAiReview() {
                 <p style="font-size:11px; color:#b45309; background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:8px 10px; margin:12px 0 0;">⚠️ 模拟结果不代表真实审稿结论，请结合官方审稿标准人工判断。</p>
                 <div style="display:flex; gap:8px; margin-top:14px; justify-content:flex-end;">
                     <button onclick="this.closest('.modal-bg').remove()" style="padding:8px 14px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-size:13px;">关闭</button>
-                    <button onclick="navigator.clipboard.writeText(this.closest('.modal-bg').querySelector('[data-review]').textContent);toast('已复制审稿意见','success',1500)" style="padding:8px 14px; border-radius:8px; border:none; background:#3b82f6; color:#fff; cursor:pointer; font-size:13px; font-weight:600;">复制</button>
+                    <button onclick="navigator.clipboard.writeText(this.closest('.modal-bg').querySelector('[data-review]').textContent);toast('Review copied','success',1500)" style="padding:8px 14px; border-radius:8px; border:none; background:#3b82f6; color:#fff; cursor:pointer; font-size:13px; font-weight:600;">Copy</button>
                 </div>
             </div>`;
             document.body.appendChild(modal);
         } else {
-            toast('AI 审稿失败: ' + (d.detail || '未知错误'), 'error');
+            toast('AI review failed: ' + (d.detail || 'Unknown error'), 'error');
         }
     } catch (e) {
-        toast('AI 审稿请求失败: ' + e.message, 'error');
+        toast('AI review request failed: ' + e.message, 'error');
     } finally {
         hideAiLoading();
     }
@@ -3526,17 +3532,17 @@ async function optimizeAbstract() {
                 <p style="font-size:11px; color:#b45309; background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:8px 10px; margin:12px 0 0;">⚠️ 这是 AI 建议，可能存在事实或措辞偏差，请人工校对后采用。</p>
                 <div style="display:flex; gap:8px; margin-top:14px; justify-content:flex-end;">
                     <button onclick="this.closest('.modal-bg').remove()" style="padding:8px 14px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-size:13px;">关闭</button>
-                    <button onclick="navigator.clipboard.writeText(decodeURIComponent(atob('${encoded}')));toast('已复制优化后的 Abstract','success',1500)" style="padding:8px 14px; border-radius:8px; border:none; background:#64748b; color:#fff; cursor:pointer; font-size:13px;">复制优化版</button>
-                    <button onclick="navigator.clipboard.writeText(decodeURIComponent(atob('${suggestionEncoded}')));toast('已复制完整建议','success',1500)" style="padding:8px 14px; border-radius:8px; border:none; background:#334155; color:#fff; cursor:pointer; font-size:13px;">复制完整建议</button>
-                    ${canApply ? `<button onclick="if(applyAbstractText(decodeURIComponent(atob('${encoded}')))){toast('✅ 已替换当前文件 Abstract','success',1800);this.closest('.modal-bg').remove();}else{toast('当前文件未找到 abstract 环境，请先打开主 .tex 文件', 'warning', 2600);}" style="padding:8px 14px; border-radius:8px; border:none; background:#22c55e; color:#fff; cursor:pointer; font-size:13px; font-weight:600;">✅ 替换当前文件</button>` : ''}
+                    <button onclick="navigator.clipboard.writeText(decodeURIComponent(atob('${encoded}')));toast('Optimized abstract copied','success',1500)" style="padding:8px 14px; border-radius:8px; border:none; background:#64748b; color:#fff; cursor:pointer; font-size:13px;">Copy optimized</button>
+                    <button onclick="navigator.clipboard.writeText(decodeURIComponent(atob('${suggestionEncoded}')));toast('Full suggestion copied','success',1500)" style="padding:8px 14px; border-radius:8px; border:none; background:#334155; color:#fff; cursor:pointer; font-size:13px;">Copy full suggestion</button>
+                    ${canApply ? `<button onclick="if(applyAbstractText(decodeURIComponent(atob('${encoded}')))){toast('✅ Replaced abstract in current file','success',1800);this.closest('.modal-bg').remove();}else{toast('No abstract environment in the current file — open the main .tex first', 'warning', 2600);}" style="padding:8px 14px; border-radius:8px; border:none; background:#22c55e; color:#fff; cursor:pointer; font-size:13px; font-weight:600;">✅ Replace in current file</button>` : ''}
                 </div>
             </div>`;
             document.body.appendChild(modal);
         } else {
-            toast('Abstract 优化失败: ' + (d.detail || '未知错误'), 'error');
+            toast('Abstract optimization failed: ' + (d.detail || 'Unknown error'), 'error');
         }
     } catch (e) {
-        toast('Abstract 优化请求失败: ' + e.message, 'error');
+        toast('Abstract optimization request failed: ' + e.message, 'error');
     } finally {
         hideAiLoading();
     }
@@ -3549,12 +3555,12 @@ async function exportReport() {
     const blob = new Blob([text], {type:'text/markdown;charset=utf-8'});
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
     a.download = `质检报告_${report.filename.replace('.zip','')}.md`; a.click();
-    toast('📄 报告已下载（Markdown 格式）', 'success', 2000);
+    toast('📄 Report downloaded (Markdown)', 'success', 2000);
 }
 
 async function deleteCurrentJob() {
     if (!jobId) return;
-    if (!confirm(`确定删除 "${report?.filename || jobId}" 的检查记录？\n此操作不可撤销。`)) return;
+    if (!confirm(`Delete the check record for "${report?.filename || jobId}"?\nThis cannot be undone.`)) return;
     await apiFetch(`/api/job/${jobId}`, {method:'DELETE'});
     jobId = null; report = null;
     showScreen('screen-upload');
@@ -3566,7 +3572,7 @@ function copyShareLink() {
     const share = token ? `&share=${encodeURIComponent(token)}` : '';
     const url = `${window.location.origin}/?job=${encodeURIComponent(jobId)}&view=overview${share}`;
     navigator.clipboard.writeText(url).then(() => {
-        toast(token ? '🔗 只读分享链接已复制' : '🔗 分享链接已复制', 'success', 3000);
+        toast(token ? '🔗 Read-only share link copied' : '🔗 Share link copied', 'success', 3000);
     });
 }
 
@@ -3628,16 +3634,16 @@ async function aiFixIssue(message, file, line, gate) {
                 <p style="font-size:11px; color:#b45309; background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:8px 10px; margin:12px 0 0;">⚠️ 这是 AI 的修改<b>建议</b>，可能有误，请人工核实后再采用。应用后会自动重新质检。</p>
                 <div style="display:flex; gap:8px; margin-top:16px; justify-content:flex-end;">
                     <button onclick="this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-size:13px;">关闭</button>
-                    <button onclick="navigator.clipboard.writeText(decodeURIComponent(atob('${suggestionEncoded}')));toast('已复制','success',1500);this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:none; background:#64748b; color:#fff; cursor:pointer; font-size:13px;">复制</button>
+                    <button onclick="navigator.clipboard.writeText(decodeURIComponent(atob('${suggestionEncoded}')));toast('Copied','success',1500);this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:none; background:#64748b; color:#fff; cursor:pointer; font-size:13px;">Copy</button>
                     ${canApply ? `<button onclick="applySingleFix();this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:none; background:#22c55e; color:#fff; cursor:pointer; font-size:13px; font-weight:600;">✅ 采用建议并重新质检</button>` : ''}
                 </div>
             </div>`;
             document.body.appendChild(modal);
         } else {
-            toast('AI 修复暂不可用: ' + (d.detail||'未知错误'), 'warning');
+            toast('AI fix temporarily unavailable: ' + (d.detail||'Unknown error'), 'warning');
         }
     } catch(e) {
-        toast('AI 修复请求失败', 'error');
+        toast('AI fix request failed', 'error');
     } finally {
         hideAiLoading();
     }
@@ -3651,22 +3657,22 @@ async function applySingleFix() {
     if (fix.original && fix.original.trim()) {
         const ok = await applyOneFix(fix);  // robust: EOL/fence/$-safe/cross-file
         if (ok) {
-            toast('✅ 已采用建议，正在重新质检…', 'success', 2000);
+            toast('✅ Suggestion applied, re-checking…', 'success', 2000);
             await doRecheck();  // re-verify after every applied AI suggestion
             return;
         }
         // Exact match failed (file changed since suggestion) — do NOT clobber.
-        toast('⚠️ 未能精确定位原文，未自动插入。请复制建议后手动核对。', 'warning', 4500);
+        toast('⚠️ Could not locate the exact original text; not inserted automatically. Copy the suggestion and verify manually.', 'warning', 4500);
         return;
     }
-    toast('⚠️ 缺少可替换原文，不能自动采用。请复制建议后手动核对。', 'warning', 4500);
+    toast('⚠️ No replaceable original text; cannot apply automatically. Copy the suggestion and verify manually.', 'warning', 4500);
 }
 
 // === AI Polish (integrated into right-click) ===
 async function doPolishSelection(mode = 'academic') {
     const selection = editor.getSelection();
     if (!selection || selection.length < 10) {
-        toast('请先选中要润色的文本（至少 10 字符）', 'warning');
+        toast('Select the text to polish first (at least 10 characters)', 'warning');
         return;
     }
 
@@ -3699,22 +3705,22 @@ async function doPolishSelection(mode = 'academic') {
                 </div>
                 <div style="display:flex; gap:8px; margin-top:16px; justify-content:flex-end;">
                     <button onclick="this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-size:13px;">取消</button>
-                    <button onclick="editor.replaceSelection(decodeURIComponent(atob('${polishedEncoded}')));this.closest('.modal-bg').remove();toast('✨ 已替换','success',1500)" style="padding:8px 16px; border-radius:8px; border:none; background:#22c55e; color:#fff; cursor:pointer; font-size:13px; font-weight:600;">✅ 替换原文</button>
+                    <button onclick="editor.replaceSelection(decodeURIComponent(atob('${polishedEncoded}')));this.closest('.modal-bg').remove();toast('✨ Replaced','success',1500)" style="padding:8px 16px; border-radius:8px; border:none; background:#22c55e; color:#fff; cursor:pointer; font-size:13px; font-weight:600;">✅ Replace original</button>
                 </div>
             </div>`;
             document.body.appendChild(modal);
         } else {
-            toast('润色失败: ' + (d.detail || '未知错误'), 'error');
+            toast('Polish failed: ' + (d.detail || 'Unknown error'), 'error');
         }
     } catch(e) {
-        toast('润色请求失败: ' + e.message, 'error');
+        toast('Polish request failed: ' + e.message, 'error');
     } finally {
         hideAiLoading();
     }
 }
 
 async function deleteJob(id) {
-    if (!confirm('确定删除此检查记录？')) return;
+    if (!confirm('Delete this check record?')) return;
     await apiFetch(`/api/job/${id}`, {method:'DELETE'});
     loadHistory();
 }
@@ -3796,13 +3802,13 @@ function _historyDeltaBadge(entry) {
 }
 
 async function showEditHistory() {
-    if (!jobId) { toast('请先打开一个项目', 'warning'); return; }
+    if (!jobId) { toast('Open a project first', 'warning'); return; }
     let data;
     try {
         const r = await apiFetch(`/api/history-edits/${jobId}`);
         data = await r.json();
     } catch (e) {
-        toast('加载修改历史失败: ' + e.message, 'error');
+        toast('Failed to load edit history: ' + e.message, 'error');
         return;
     }
     const entries = data.entries || [];
@@ -3852,7 +3858,7 @@ async function viewHistoryDiff(entryId) {
         const r = await apiFetch(`/api/history-edits/${jobId}/${encodeURIComponent(entryId)}`);
         d = await r.json();
     } catch (e) {
-        toast('加载 diff 失败: ' + e.message, 'error');
+        toast('Failed to load diff: ' + e.message, 'error');
         return;
     }
     const hasContent = d.old_content !== null && d.old_content !== undefined || d.new_content !== null && d.new_content !== undefined;
@@ -3873,13 +3879,13 @@ async function viewHistoryDiff(entryId) {
 }
 
 async function revertHistoryEntry(entryId) {
-    if (!confirm('确定要回退到这次改动之前的版本吗？当前内容会被覆盖（此次回退也会记入历史，可再次撤销）。')) return;
+    if (!confirm('Revert to the version before this change? The current content will be overwritten (this revert is also recorded in history and can be undone).')) return;
     let d;
     try {
         const r = await apiFetch(`/api/history-edits/${jobId}/${encodeURIComponent(entryId)}/revert`, {method:'POST'});
         d = await r.json();
     } catch (e) {
-        toast('回退失败: ' + e.message, 'error');
+        toast('Revert failed: ' + e.message, 'error');
         return;
     }
     document.querySelectorAll('.modal-bg').forEach(m => m.remove());
@@ -3889,7 +3895,7 @@ async function revertHistoryEntry(entryId) {
     } else {
         loadFileTree();
     }
-    toast(`已回退 ${d.file_path}`, 'success', 3000);
+    toast(`Reverted ${d.file_path}`, 'success', 3000);
 }
 
 document.addEventListener('keydown', e => {
@@ -4029,7 +4035,7 @@ async function showAllProjects() {
 
 // Delete from within the all-projects modal, then refresh both the modal list and homepage.
 async function deleteJobInModal(id) {
-    if (!confirm('确定删除此检查记录？')) return;
+    if (!confirm('Delete this check record?')) return;
     await apiFetch(`/api/job/${id}`, {method:'DELETE'});
     loadHistory();
     const modal = document.getElementById('all-projects-modal');
@@ -4043,7 +4049,7 @@ async function resumeJob(id) {
 
     await loadReport();
     if (report) showOverview();
-    else { showScreen('screen-upload'); toast('加载报告失败', 'error'); }
+    else { showScreen('screen-upload'); toast('Failed to load report', 'error'); }
 }
 
 // === Auth System ===
@@ -4104,7 +4110,7 @@ async function handleAuth(e) {
         localStorage.setItem('token', d.token);
         document.getElementById('auth-modal').classList.add('hidden');
         updateNavbar();
-        toast(authMode === 'login' ? `👋 欢迎回来，${currentUser.name}` : `🎉 注册成功！赠送 3 次免费质检`, 'success', 3000);
+        toast(authMode === 'login' ? `👋 Welcome back, ${currentUser.name}` : `🎉 Registered! You get 3 free checks`, 'success', 3000);
     } catch(err) {
         errEl.textContent = '网络错误';
         errEl.style.display = 'block';
@@ -4157,13 +4163,13 @@ function doLogout() {
     currentUser = null;
     localStorage.removeItem('token');
     updateNavbar();
-    toast('已退出登录', 'info', 2000);
+    toast('Signed out', 'info', 2000);
     const dd = document.getElementById('user-dropdown');
     if (dd) dd.remove();
 }
 
 async function showDashboard() {
-    toast('加载账户信息...', 'info', 1500);
+    toast('Loading account info...', 'info', 1500);
     try {
         const r = await apiFetch('/api/auth/dashboard');
         const d = await r.json();
@@ -4254,7 +4260,7 @@ async function showDashboard() {
         </div>`;
         document.body.appendChild(modal);
     } catch(e) {
-        toast('加载失败', 'error');
+        toast('Loading failed', 'error');
     }
 }
 
@@ -4268,7 +4274,7 @@ function selectRecharge(el) {
 
 async function doRecharge() {
     const selected = document.querySelector('.recharge-card[style*="border-color: rgb(59, 130, 246)"]');
-    if (!selected) { toast('请选择套餐', 'warning'); return; }
+    if (!selected) { toast('Please select a plan', 'warning'); return; }
     if (!currentUser) { showAuthModal('login'); document.getElementById('recharge-modal').classList.add('hidden'); return; }
 
     const packageId = selected.dataset.pkg || 'pro';
@@ -4279,7 +4285,7 @@ async function doRecharge() {
             body: JSON.stringify({package_id: packageId}),
         });
         const d = await r.json();
-        if (!r.ok) { toast(d.detail || '创建订单失败', 'error'); return; }
+        if (!r.ok) { toast(d.detail || 'Failed to create order', 'error'); return; }
 
         if (d.sandbox) {
             // Sandbox mode: credits added instantly
@@ -4287,16 +4293,16 @@ async function doRecharge() {
             if (d.new_tier) currentUser.tier = d.new_tier;
             updateNavbar();
             document.getElementById('recharge-modal').classList.add('hidden');
-            toast(`🎉 充值成功！+${d.credits} 积分，余额 ${d.new_balance}`, 'success', 4000);
+            toast(`🎉 Top-up successful! +${d.credits} credits, balance ${d.new_balance}`, 'success', 4000);
         } else {
             // Production: show payment URL / QR code
-            toast('📱 请使用支付宝扫码支付', 'info', 5000);
+            toast('📱 Scan the Alipay QR code to pay', 'info', 5000);
             // TODO: Show QR code with d.payment_url
             // Poll for completion
             pollPaymentStatus(d.order_id);
         }
     } catch(e) {
-        toast('充值请求失败: ' + e.message, 'error');
+        toast('Top-up request failed: ' + e.message, 'error');
     }
 }
 
@@ -4312,7 +4318,7 @@ async function pollPaymentStatus(orderId) {
                 clearInterval(iv);
                 await refreshCredits();
                 document.getElementById('recharge-modal').classList.add('hidden');
-                toast(`🎉 充值成功！+${d.credits} 积分`, 'success', 4000);
+                toast(`🎉 Top-up successful! +${d.credits} credits`, 'success', 4000);
             }
         } catch(e) {}
     }, 2000);
