@@ -214,7 +214,7 @@ async def ai_batch_fix(job_id: str, request: Request, response: Response):
             "fixes": [],
             "summary": summary,
             "skipped": skipped,
-            "message": "没有可自动修复的问题",
+            "message": "No auto-fixable issues",
         }
 
     fixes = []
@@ -318,16 +318,16 @@ async def ai_reviewer_simulation(job_id: str, request: Request, response: Respon
             resp = await legacy._llm_chat_post(
                 client,
                 [
-                    {"role": "system", "content": """你是一位严格的顶会审稿人（ACL/NeurIPS/ICML level）。
-这是【模拟审稿意见】，不是正式审稿结论。请阅读以下论文片段，给出：
-1. **Strengths** (2-3 点，简洁)
-2. **Weaknesses** (3-5 点，具体且可操作)
-3. **Questions for Authors** (2-3 个关键问题)
+                    {"role": "system", "content": """You are a strict top-tier conference reviewer (ACL / NeurIPS / ICML level).
+This is a [SIMULATED REVIEW], not an official decision. Read the paper excerpt below and provide:
+1. **Strengths** (2-3 points, concise)
+2. **Weaknesses** (3-5 points, specific and actionable)
+3. **Questions for Authors** (2-3 key questions)
 4. **Overall Score**: Accept / Borderline / Reject
-5. **Action Items** (3-5 条作者下一步应该优先完成的具体修改)
+5. **Action Items** (3-5 concrete revisions the authors should prioritize next)
 
-用中文回复，格式清晰。每点用 - 开头。不要编造论文中没有的实验、结果或引用；证据不足时明确写“论文片段中未看到证据”。注意：你应该像真正的审稿人一样严格但公正。"""},
-                    {"role": "user", "content": f"请审阅这篇论文:\n\n{main_text}"},
+Reply in English, clearly formatted. Start each point with '- '. Do not invent experiments, results, or citations that are not in the paper; when evidence is insufficient, state explicitly "no evidence seen in the provided excerpt". Be strict but fair, like a real reviewer."""},
+                    {"role": "user", "content": f"Please review this paper:\n\n{main_text}"},
                 ],
                 max_tokens=1000,
                 temperature=0.7,
@@ -353,12 +353,12 @@ async def ai_polish_text(job_id: str, request: Request, response: Response):
     mode = body.get("mode", "academic")
 
     if not text or len(text) < 10:
-        raise HTTPException(status_code=400, detail="请选择要润色的文本")
+        raise HTTPException(status_code=400, detail="Please select the text to polish")
 
     mode_prompts = {
-        "academic": "改写为更加学术化、流畅的英文表达，保持原意不变。使用学术论文常见的表达方式。",
-        "concise": "精简这段文字，去除冗余表达，使其更加简洁有力，同时保留所有关键信息。",
-        "formal": "改写为更正式的学术写作风格，避免口语化表达，使用被动语态和正式词汇。",
+        "academic": "Rewrite this into more academic, fluent English while preserving the original meaning. Use phrasing common in scholarly papers.",
+        "concise": "Tighten this text, remove redundancy, and make it more concise and forceful while keeping all key information.",
+        "formal": "Rewrite this in a more formal academic style, avoiding colloquial expressions and using passive voice and formal vocabulary.",
     }
     prompt = mode_prompts.get(mode, mode_prompts["academic"])
 
@@ -367,7 +367,7 @@ async def ai_polish_text(job_id: str, request: Request, response: Response):
             resp = await legacy._llm_chat_post(
                 client,
                 [
-                    {"role": "system", "content": f"你是一位学术论文润色专家。{prompt}\n\n只输出润色后的文本，不要任何解释或标注。保持 LaTeX 命令不变。"},
+                    {"role": "system", "content": f"You are an academic writing polishing expert. {prompt}\n\nOutput only the polished text — no explanation or annotation. Keep LaTeX commands unchanged."},
                     {"role": "user", "content": text},
                 ],
                 max_tokens=max(1024, len(text) * 2),
@@ -401,32 +401,32 @@ async def ai_optimize_abstract(job_id: str, request: Request, response: Response
             break
 
     if not abstract:
-        return {"status": "error", "detail": "未找到 abstract"}
+        return {"status": "error", "detail": "No abstract found"}
 
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await legacy._llm_chat_post(
                 client,
                 [
-                    {"role": "system", "content": """你是一位学术写作专家。请优化这篇论文的 Abstract，使其：
-1. 更加简洁有力（控制在 150-250 词）
-2. 结构清晰：问题→方法→结果→结论
-3. 突出贡献和创新点
-4. 使用主动语态和强动词
+                    {"role": "system", "content": """You are an academic writing expert. Optimize this paper's Abstract so that it is:
+1. More concise and forceful (target 150-250 words)
+2. Clearly structured: problem → method → results → conclusion
+3. Emphasizes the contributions and novelty
+4. Uses active voice and strong verbs
 
-关键事实约束：
-- 不得夸大论文正文片段中没有支持的实验结果、贡献、数字或结论
-- 不得新增不存在的指标、数据集、baseline、SOTA claim 或引用
-- 如果原 abstract 的 claim 在正文片段中看不到证据，请降低措辞强度而不是增强
-- 保留 LaTeX 命令和科学含义，不要改变数字与引用
+Factual constraints:
+- Do not overstate experimental results, contributions, numbers, or conclusions not supported by the body excerpt
+- Do not add non-existent metrics, datasets, baselines, SOTA claims, or citations
+- If a claim in the original abstract has no evidence in the body excerpt, soften the wording rather than strengthen it
+- Preserve LaTeX commands and scientific meaning; do not change numbers or citations
 
-输出格式：
-**优化后的 Abstract:**
-[优化后的文本]
+Output format:
+**Optimized Abstract:**
+[optimized text]
 
-**修改说明:**
-- [每处修改的原因，2-3条]"""},
-                    {"role": "user", "content": f"当前 Abstract:\n{abstract}\n\n论文正文片段:\n{main_text[:3000]}"},
+**Revision notes:**
+- [reason for each change, 2-3 points]"""},
+                    {"role": "user", "content": f"Current Abstract:\n{abstract}\n\nPaper body excerpt:\n{main_text[:3000]}"},
                 ],
                 max_tokens=800,
                 temperature=0.5,
