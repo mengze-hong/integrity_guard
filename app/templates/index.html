@@ -2237,6 +2237,10 @@ function _issueFile(issue) {
     if (issue.location) {
         const m = issue.location.match(/^([^:]+\.(tex|bib)):(\d+)/);
         if (m) return m[1];
+        // 3. Bare filename in location (e.g. citation issues → "main.tex",
+        //    or a comma-separated list "main.tex, intro.tex" → take the first)
+        const bare = issue.location.split(/[\s,]+/).find(t => /\.(tex|bib)$/.test(t));
+        if (bare) return bare;
     }
     return null;
 }
@@ -2260,6 +2264,25 @@ function _issueLine(issue) {
         const lines = editor.getValue().split('\n');
         for (let i = 0; i < lines.length; i++) {
             if (lines[i].includes(key)) return i;
+        }
+    }
+
+    // 3b. Citation issues carry no line — pull the \cite{key} from the message
+    // and locate the first line in the editor that cites that key. This covers
+    // the citation_bib_consistency gate (undefined/orphaned/duplicate cites),
+    // which is the bulk of clickable issues but never sets a line number.
+    {
+        const keyMatch = (issue.message || '').match(/\\cite\{([^}]+)\}|['"‘’“”]([\w:.\-]+)['"‘’“”]|\[([\w:.\-]+)\]/);
+        const key = keyMatch && (keyMatch[1] || keyMatch[2] || keyMatch[3]);
+        if (key) {
+            const lines = editor.getValue().split('\n');
+            // Prefer an actual \cite{...key...} occurrence, else any line mentioning the key.
+            for (let i = 0; i < lines.length; i++) {
+                if (/\\[a-zA-Z]*cite[a-zA-Z]*\s*(\[[^\]]*\])*\s*\{[^}]*\}/.test(lines[i]) && lines[i].includes(key)) return i;
+            }
+            for (let i = 0; i < lines.length; i++) {
+                if (lines[i].includes(key)) return i;
+            }
         }
     }
 
