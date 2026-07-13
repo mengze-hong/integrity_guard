@@ -4534,7 +4534,7 @@ const I18N = {
         // nav
         'nav.login': '登录',
         'nav.free_trial': '免费试用',
-        'lang.toggle': 'EN',
+        'lang.toggle': '中',
         // upload screen
         'upload.title': '投稿通',
         'upload.subtitle': 'ScholarLint · 为你的投稿保驾护航',
@@ -4640,7 +4640,7 @@ const I18N = {
         // nav
         'nav.login': 'Sign In',
         'nav.free_trial': 'Free Trial',
-        'lang.toggle': '中',
+        'lang.toggle': 'EN',
         // upload screen
         'upload.title': 'ScholarLint',
         'upload.subtitle': 'ScholarLint · Guard your submission',
@@ -4744,7 +4744,7 @@ const I18N = {
     }
 };
 
-let _lang = localStorage.getItem('sl_lang') || 'zh';
+let _lang = localStorage.getItem('sl_lang') || 'en';
 
 function t(key) {
     return (I18N[_lang] && I18N[_lang][key]) || (I18N['zh'][key]) || key;
