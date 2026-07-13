@@ -21,6 +21,7 @@ Out:  research/bench/benchmark_multi.json
 from __future__ import annotations
 import json
 import random
+import re
 import sys
 from pathlib import Path
 
@@ -28,7 +29,7 @@ _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
 from build_benchmark_v3 import (  # noqa: E402
-    TEMPLATES, REAL_REFS, _wrap,
+    TEMPLATES, REAL_REFS, _wrap, _bib_block,
     apply_P1, apply_P3, apply_P4, apply_P5, apply_P6,
     apply_R1, apply_R2, apply_R3,
 )
@@ -85,14 +86,15 @@ def _signature(meta: dict) -> dict | None:
     return None
 
 
-def _inject(tmpl: dict, chosen: list[str], rng: random.Random) -> tuple[str, str, dict, list[dict]]:
-    """Apply the chosen perturbation types to one template.
+def _inject(clean_body: str, clean_bib: str, extra: dict, cited_refs: list[dict],
+            chosen: list[str], rng: random.Random) -> tuple[str, str, dict, list[dict]]:
+    """Apply the chosen perturbation types to a cleaned template.
 
     Returns (tex, bib, extra_files, ground_truth_issues).
     Body perturbations are applied in a collision-safe order; reference
-    perturbations target distinct refs.
+    perturbations target distinct CITED refs.
     """
-    body = tmpl["body"]
+    body = clean_body
     issues: list[dict] = []
 
     # Body order: P6 (remove label) -> P5 (add dangling ref) -> P4 (break cite)
@@ -110,12 +112,11 @@ def _inject(tmpl: dict, chosen: list[str], rng: random.Random) -> tuple[str, str
             if sig:
                 issues.append(sig)
 
-    # Reference perturbations on DISTINCT real refs so they don't overwrite.
-    _, clean_bib, _ = _wrap(tmpl["body"], tmpl["extra"], tmpl.get("bib", ""))
+    # Reference perturbations on DISTINCT cited refs so they don't overwrite.
     bib = clean_bib
     ref_types = [rt for rt in ["R1", "R2", "R3"] if rt in chosen]
-    if ref_types:
-        refs = rng.sample(REAL_REFS, k=min(len(ref_types), len(REAL_REFS)))
+    if ref_types and cited_refs:
+        refs = rng.sample(cited_refs, k=min(len(ref_types), len(cited_refs)))
         for rt, ref in zip(ref_types, refs):
             fn = {"R1": apply_R1, "R2": apply_R2, "R3": apply_R3}[rt]
             new_bib, meta = fn(bib, ref)
@@ -125,11 +126,55 @@ def _inject(tmpl: dict, chosen: list[str], rng: random.Random) -> tuple[str, str
                 if sig:
                     issues.append(sig)
 
-    tex, _, extra = _wrap(body, tmpl["extra"], tmpl.get("bib", ""))
-    return tex, bib, extra, issues
+    tex, _, ex = _wrap(body, extra, clean_bib)
+    return tex, bib, ex, issues
 
 
 ALL_TYPES = ["P1", "P3", "P4", "P5", "P6", "R1", "R2", "R3"]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Make a template genuinely CLEAN so that, post-injection, the only issues in a
+# paper are the injected ones (any extra flag is then a true false positive).
+#   * bib holds ONLY the refs actually cited (no orphan-entry warnings)
+#   * every table/figure \label (incl. cross-file) is \ref'd in the prose
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _cited_keys(body: str) -> list[str]:
+    keys: list[str] = []
+    for grp in re.findall(r"\\cite[tp]?\{([^}]+)\}", body):
+        for k in grp.split(","):
+            k = k.strip()
+            if k and k not in keys:
+                keys.append(k)
+    return keys
+
+
+def _cited_refs(body: str) -> list[dict]:
+    cited = set(_cited_keys(body))
+    return [r for r in REAL_REFS if r["key"] in cited]
+
+
+def _ensure_float_refs(body: str, extra: dict) -> str:
+    """Append a benign reference for any table/figure label not already \\ref'd."""
+    all_text = body + "\n" + "\n".join(extra.values())
+    labels = re.findall(r"\\label\{((?:tab|fig):[^}]+)\}", all_text)
+    add_lines = []
+    for lab in labels:
+        if f"\\ref{{{lab}}}" not in body:
+            kind = "Table" if lab.startswith("tab:") else "Figure"
+            add_lines.append(f"{kind}~\\ref{{{lab}}} summarises these results.")
+    if add_lines:
+        body = body.rstrip() + "\n" + " ".join(add_lines) + "\n"
+    return body
+
+
+def _clean_template(tmpl: dict) -> tuple[str, str, dict]:
+    """Return (clean_body, trimmed_bib, extra) with no orphan refs / unused floats."""
+    body = _ensure_float_refs(tmpl["body"], tmpl.get("extra", {}))
+    refs = _cited_refs(body)
+    bib = _bib_block(refs) if refs else ""
+    return body, bib, tmpl.get("extra", {})
 
 
 def build():
@@ -137,9 +182,9 @@ def build():
     papers: list[dict] = []
 
     for tmpl in TEMPLATES:
-        clean_tex, clean_bib, clean_extra = _wrap(
-            tmpl["body"], tmpl["extra"], tmpl.get("bib", "")
-        )
+        clean_body, trimmed_bib, extra = _clean_template(tmpl)
+        cited_refs = _cited_refs(clean_body)
+        clean_tex, clean_bib, clean_extra = _wrap(clean_body, extra, trimmed_bib)
 
         # One CLEAN paper per template (0 injected issues) for precision / FP.
         papers.append({
@@ -156,15 +201,15 @@ def build():
             else:
                 k = rng.randint(SUBSET_MIN, SUBSET_MAX)
                 chosen = rng.sample(ALL_TYPES, k=k)
-            tex, bib, extra, issues = _inject(tmpl, chosen, rng)
-            # Assign stable issue ids
+            tex, bib, ex, issues = _inject(clean_body, trimmed_bib, extra,
+                                           cited_refs, chosen, rng)
             for j, iss in enumerate(issues):
                 iss["issue_id"] = f"{tmpl['name']}_v{v}_i{j}"
             papers.append({
                 "id": f"{tmpl['name']}_v{v}",
                 "template": tmpl["name"],
                 "label": "buggy",
-                "tex": tex, "bib": bib, "extra_files": extra,
+                "tex": tex, "bib": bib, "extra_files": ex,
                 "issues": issues,
             })
 
