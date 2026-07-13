@@ -1,0 +1,85 @@
+[
+  {
+    "category": "clean",
+    "difficulty": "-",
+    "requires_external_verification": false,
+    "note": "real paper, correct metadata",
+    "bib": "@inproceedings{ref1,\n  author = {Anna Currey and Kenneth Heafield},\n  title = {Incorporating Source Syntax into Transformer-Based Neural Machine Translation},\n  year = {2019},\n  doi = {10.18653/v1/w19-5203},\n  booktitle = {Proceedings of the Fourth Conference on Machine Translation (Volume 1: Research Papers)}\n}",
+    "scholarlint_verdict": []
+  },
+  {
+    "category": "cites_retracted",
+    "difficulty": "hard",
+    "requires_external_verification": true,
+    "note": "real retracted paper; only Crossref knows",
+    "bib": "@inproceedings{ref1,\n  author = {Shengnan Zang},\n  title = {Cross-Cultural communication of language learning social software based on FPGA and transfer learning},\n  year = {2021},\n  doi = {10.1016/j.micpro.2020.103768},\n  booktitle = {Microprocessors and Microsystems}\n}",
+    "scholarlint_verdict": [
+      "ERROR: [ref1] ⚠️ This paper has been retracted (RETRACTED)"
+    ]
+  },
+  {
+    "category": "doi_swap",
+    "difficulty": "hard",
+    "requires_external_verification": true,
+    "note": "A's title+authors, B's real DOI — resolves fine, metadata won't match",
+    "bib": "@inproceedings{ref1,\n  author = {Anna Currey and Kenneth Heafield},\n  title = {Incorporating Source Syntax into Transformer-Based Neural Machine Translation},\n  year = {2019},\n  doi = {10.5220/0013888400004919},\n  booktitle = {Proceedings of the Fourth Conference on Machine Translation (Volume 1: Research Papers)}\n}",
+    "scholarlint_verdict": [
+      "ERROR: [ref1] Title mismatch (similarity 37%)",
+      "ERROR: [ref1] Author count mismatch: .bib has 2, database has 6",
+      "WARNING: [ref1] Venue name mismatch (similarity 46%)",
+      "WARNING: [ref1] Consider using the official citation format",
+      "WARNING: [ref1] Year mismatch: .bib has 2019, database has 2025"
+    ]
+  },
+  {
+    "category": "title_mismatch",
+    "difficulty": "medium",
+    "requires_external_verification": true,
+    "note": "A's real DOI but B's title",
+    "bib": "@inproceedings{ref1,\n  author = {Anna Currey and Kenneth Heafield},\n  title = {Enhancing Optical Sensor Image Classification through Deep Learning with Convolutional Neural Network},\n  year = {2019},\n  doi = {10.18653/v1/w19-5203},\n  booktitle = {Proceedings of the Fourth Conference on Machine Translation (Volume 1: Research Papers)}\n}",
+    "scholarlint_verdict": [
+      "ERROR: [ref1] Title mismatch (similarity 35%)"
+    ]
+  },
+  {
+    "category": "author_mismatch",
+    "difficulty": "medium",
+    "requires_external_verification": true,
+    "note": "real DOI + one fabricated extra author",
+    "bib": "@inproceedings{ref1,\n  author = {Anna Currey and Kenneth Heafield and John Q. Fabricated},\n  title = {Incorporating Source Syntax into Transformer-Based Neural Machine Translation},\n  year = {2019},\n  doi = {10.18653/v1/w19-5203},\n  booktitle = {Proceedings of the Fourth Conference on Machine Translation (Volume 1: Research Papers)}\n}",
+    "scholarlint_verdict": [
+      "ERROR: [ref1] Author count mismatch: .bib has 3, database has 2"
+    ]
+  },
+  {
+    "category": "year_mismatch",
+    "difficulty": "medium",
+    "requires_external_verification": true,
+    "note": "real DOI, year off by 2",
+    "bib": "@inproceedings{ref1,\n  author = {Anna Currey and Kenneth Heafield},\n  title = {Incorporating Source Syntax into Transformer-Based Neural Machine Translation},\n  year = {2021},\n  doi = {10.18653/v1/w19-5203},\n  booktitle = {Proceedings of the Fourth Conference on Machine Translation (Volume 1: Research Papers)}\n}",
+    "scholarlint_verdict": [
+      "WARNING: [ref1] Year mismatch: .bib has 2021, database has 2019"
+    ]
+  },
+  {
+    "category": "fabricated",
+    "difficulty": "hard",
+    "requires_external_verification": true,
+    "note": "hallucinated ref: plausible title, non-existent DOI",
+    "bib": "@inproceedings{ref1,\n  author = {Alice Zhang and Wei Chen and Michael Brown},\n  title = {Attention-Guided Contrastive Learning for Robust Text Classification},\n  year = {2022},\n  doi = {10.18653/v1/2022.acl-long.9999},\n  booktitle = {ACL}\n}",
+    "scholarlint_verdict": [
+      "ERROR: [ref1] DOI cannot be resolved: 10.18653/v1/2022.acl-long.9999",
+      "WARNING: [ref1] All author surnames are very common names (possible GPT fabrication)"
+    ]
+  },
+  {
+    "category": "malformed_doi",
+    "difficulty": "easy",
+    "requires_external_verification": false,
+    "note": "DOI not in 10.NNNN/... format",
+    "bib": "@inproceedings{ref1,\n  author = {Anna Currey and Kenneth Heafield},\n  title = {Incorporating Source Syntax into Transformer-Based Neural Machine Translation},\n  year = {2019},\n  doi = {doi-12345-broken},\n  booktitle = {Proceedings of the Fourth Conference on Machine Translation (Volume 1: Research Papers)}\n}",
+    "scholarlint_verdict": [
+      "ERROR: [ref1] Invalid DOI format: doi-12345-broken"
+    ]
+  }
+]
