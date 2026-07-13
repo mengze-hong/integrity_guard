@@ -1,24 +1,24 @@
-# Deployment overlay for the public demo (Kingsoft Cloud CentOS 7).
+# Self-contained deployment compose for the public demo (Kingsoft Cloud).
+# Run WITHOUT the base file so its 127.0.0.1:8000 mapping is not merged in
+# (compose appends `ports` across files, which caused an 8000 bind clash):
 #
-#   docker compose -f docker-compose.yml -f docker-compose.deploy.yml up -d --build
-#
-# Differences from the base compose:
-#   * binds host port 8093 (public) -> container 8000, so reviewers reach
-#     the app at http://<server-ip>:8093/. The docker daemon (root) binds
-#     the host port, so the unprivileged `app` user can do this via docker.
-#   * loads .env from disk (kept on the host, never in git/image)
-#   * restart: always so the demo survives reboots
-#   * bounded json-file logs so the host disk does not fill up
+#   docker compose -f docker-compose.deploy.yml up -d --build
 #
 # BYOK: the server needs NO LLM key — each user brings their own via the
 # in-app "AI Settings" dialog. Leave LLM_* blank in .env.
 
 services:
   integrityguard:
+    build: .
     env_file:
       - .env
+    environment:
+      - PYTHONPATH=/app
     ports:
-      - "8093:8000"
+      - "8088:8000"
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
     restart: always
     logging:
       driver: json-file

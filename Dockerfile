@@ -2,10 +2,7 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install system deps (curl needed for health check)
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
-
-# Install Python dependencies
+# Install Python dependencies (pinned in requirements.txt for fast, stable builds)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -18,9 +15,9 @@ RUN mkdir -p uploads data/jobs
 # Expose port
 EXPOSE 8000
 
-# Health check
+# Health check (uses stdlib python — no extra apt packages needed)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s \
-    CMD curl -f http://localhost:8000/healthz || exit 1
+    CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz').status==200 else 1)" || exit 1
 
 # Run with 1 worker (SQLite is not multi-process safe)
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
