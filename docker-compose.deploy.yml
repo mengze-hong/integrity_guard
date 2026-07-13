@@ -3,10 +3,9 @@
 #   docker compose -f docker-compose.yml -f docker-compose.deploy.yml up -d --build
 #
 # Differences from the base compose:
-#   * binds host port 80 (public) -> container 8000, so reviewers reach
-#     the app at http://<server-ip>/ with no port suffix. The docker
-#     daemon (root) binds 80, so the unprivileged `app` user can do this
-#     via docker without sudo.
+#   * binds host port 8093 (public) -> container 8000, so reviewers reach
+#     the app at http://<server-ip>:8093/. The docker daemon (root) binds
+#     the host port, so the unprivileged `app` user can do this via docker.
 #   * loads .env from disk (kept on the host, never in git/image)
 #   * restart: always so the demo survives reboots
 #   * bounded json-file logs so the host disk does not fill up
@@ -19,7 +18,7 @@ services:
     env_file:
       - .env
     ports:
-      - "80:8000"
+      - "8093:8000"
     restart: always
     logging:
       driver: json-file
