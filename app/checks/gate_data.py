@@ -576,7 +576,7 @@ class DataIntegrityGate(BaseGate):
 
         # NCG: Numerical Claim Grounding (Tier 0 + Tier 1, rule-based)
         # Replaces the old naive _check_text_table_consistency.
-        ncg_findings = await self._ncg_check(paper.tex_files, tables)
+        ncg_findings = await self._ncg_check(paper.tex_files, tables, paper.llm_config)
         for cf in ncg_findings:
             total_findings += 1
             issues.append(Issue(
@@ -1028,11 +1028,18 @@ class DataIntegrityGate(BaseGate):
     )
 
     @staticmethod
-    async def _extract_claims_llm(tex_files: list[TexFile]) -> list[dict] | None:
-        """LLM-assisted claim extraction. Returns None if LLM unavailable/fails."""
+    async def _extract_claims_llm(tex_files: list[TexFile], llm_config: dict | None = None) -> list[dict] | None:
+        """LLM-assisted claim extraction. Returns None if LLM unavailable/fails.
+
+        BYOK: uses ``llm_config`` (user's own key) when provided; otherwise
+        falls back to server ``settings``. Returns None (→ regex fallback) when
+        neither a user key nor a server key is available.
+        """
         try:
             from app.config import settings
-            if not settings.llm_api_key or not settings.llm_base_url:
+            has_byok = bool(llm_config and llm_config.get("api_key") and llm_config.get("base_url"))
+            has_server = bool(settings.llm_api_key and settings.llm_base_url)
+            if not has_byok and not has_server:
                 return None
             from app.services.llm import llm_check
         except Exception:
@@ -1059,6 +1066,7 @@ class DataIntegrityGate(BaseGate):
                 user_prompt=prose,
                 temperature=0.0,
                 max_tokens=800,
+                creds=llm_config,
             )
             raw = raw.strip()
             import re as _re
@@ -1096,7 +1104,7 @@ class DataIntegrityGate(BaseGate):
             return None
 
     @staticmethod
-    async def _ncg_check(tex_files: list[TexFile], tables: list[dict]) -> list[dict]:
+    async def _ncg_check(tex_files: list[TexFile], tables: list[dict], llm_config: dict | None = None) -> list[dict]:
         """NCG: LLM-first claim extraction + rule-based verification.
 
         Claims are first extracted by LLM (structured {value,metric,method,dataset}).
@@ -1104,7 +1112,7 @@ class DataIntegrityGate(BaseGate):
         Verification (scope_sim + cell matching) is always rule-based.
         """
         # LLM-first; fallback to regex
-        claims = await DataIntegrityGate._extract_claims_llm(tex_files)
+        claims = await DataIntegrityGate._extract_claims_llm(tex_files, llm_config)
         if not claims:
             claims = DataIntegrityGate._extract_claims(tex_files)
         if not claims or not tables:

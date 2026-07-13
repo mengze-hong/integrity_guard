@@ -18,7 +18,9 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t10_semparse_CLEAN_figure_table_crossref_153",
@@ -34,7 +36,9 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t10_semparse_P4_148",
@@ -55,7 +59,9 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t12_xfile_mnli_CLEAN_reference_authenticity_189",
@@ -75,7 +81,9 @@
       "tab_mnli.tex": "\\begin{table}[h]\n\\caption{MNLI results.}\n\\label{tab:mnli}\n\\begin{tabular}{lcc}\n\\toprule\nModel & Matched & Mismatched \\\\\n\\midrule\nBERT & 84.6 & 83.4 \\\\\nDeBERTa & 89.6 & 88.9 \\\\\nOurs & 90.2 & 89.5 \\\\\n\\bottomrule\n\\end{tabular}\n\\end{table}\n"
     },
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t08_coref_P5_118",
@@ -95,7 +103,9 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t14_fewshot_CLEAN_data_integrity_211",
@@ -111,7 +121,9 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t12_xfile_mnli_P1_176",
@@ -137,7 +149,9 @@
       "tab_mnli.tex": "\\begin{table}[h]\n\\caption{MNLI results.}\n\\label{tab:mnli}\n\\begin{tabular}{lcc}\n\\toprule\nModel & Matched & Mismatched \\\\\n\\midrule\nBERT & 84.6 & 83.4 \\\\\nDeBERTa & 89.6 & 88.9 \\\\\nOurs & 90.2 & 89.5 \\\\\n\\bottomrule\n\\end{tabular}\n\\end{table}\n"
     },
     "pred_gpt_5_5": -1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t08_coref_CLEAN_figure_table_crossref_121",
@@ -153,7 +167,9 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t13_multi_table_P5_200",
@@ -173,7 +189,9 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t08_coref_CLEAN_reference_authenticity_127",
@@ -189,7 +207,9 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t01_clf_f1_R1_10",
@@ -210,7 +230,9 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t12_xfile_mnli_CLEAN_figure_table_crossref_185",
@@ -230,7 +252,9 @@
       "tab_mnli.tex": "\\begin{table}[h]\n\\caption{MNLI results.}\n\\label{tab:mnli}\n\\begin{tabular}{lcc}\n\\toprule\nModel & Matched & Mismatched \\\\\n\\midrule\nBERT & 84.6 & 83.4 \\\\\nDeBERTa & 89.6 & 88.9 \\\\\nOurs & 90.2 & 89.5 \\\\\n\\bottomrule\n\\end{tabular}\n\\end{table}\n"
     },
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t12_xfile_mnli_P5_184",
@@ -254,7 +278,9 @@
       "tab_mnli.tex": "\\begin{table}[h]\n\\caption{MNLI results.}\n\\label{tab:mnli}\n\\begin{tabular}{lcc}\n\\toprule\nModel & Matched & Mismatched \\\\\n\\midrule\nBERT & 84.6 & 83.4 \\\\\nDeBERTa & 89.6 & 88.9 \\\\\nOurs & 90.2 & 89.5 \\\\\n\\bottomrule\n\\end{tabular}\n\\end{table}\n"
     },
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t03_mt_bleu_CLEAN_citation_bib_consistency_37",
@@ -270,7 +296,9 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t02_ner_conll_P3_18",
@@ -290,7 +318,9 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t02_ner_conll_CLEAN_figure_table_crossref_25",
@@ -306,7 +336,9 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t02_ner_conll_P5_22",
@@ -326,7 +358,9 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t05_summ_rouge_CLEAN_figure_table_crossref_71",
@@ -342,7 +376,9 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t07_re_tacred_P1_96",
@@ -364,7 +400,9 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t10_semparse_CLEAN_citation_bib_consistency_147",
@@ -380,7 +418,9 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t11_mrc_hotpot_P3_162",
@@ -400,7 +440,9 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t13_multi_table_CLEAN_reference_authenticity_205",
@@ -416,7 +458,9 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t03_mt_bleu_P5_38",
@@ -436,7 +480,9 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t01_clf_f1_CLEAN_citation_bib_consistency_3",
@@ -452,7 +498,9 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t13_multi_table_R3_208",
@@ -473,7 +521,9 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t05_summ_rouge_CLEAN_reference_authenticity_77",
@@ -489,7 +539,9 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t07_re_tacred_R3_110",
@@ -510,7 +562,9 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t11_mrc_hotpot_CLEAN_reference_authenticity_175",
@@ -526,7 +580,9 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_none_placeholder": -1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t07_re_tacred_P4_100",
@@ -547,7 +603,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t03_mt_bleu_CLEAN_reference_authenticity_45",
@@ -563,7 +620,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t07_re_tacred_R1_106",
@@ -584,7 +642,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t01_clf_f1_CLEAN_figure_table_crossref_7",
@@ -600,7 +659,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t09_dst_jga_R3_142",
@@ -621,7 +681,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t06_lm_ppl_CLEAN_figure_table_crossref_87",
@@ -637,7 +698,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t03_mt_bleu_P4_36",
@@ -658,7 +720,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t06_lm_ppl_CLEAN_reference_authenticity_93",
@@ -674,7 +737,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t12_xfile_mnli_R2_190",
@@ -699,7 +763,8 @@
       "tab_mnli.tex": "\\begin{table}[h]\n\\caption{MNLI results.}\n\\label{tab:mnli}\n\\begin{tabular}{lcc}\n\\toprule\nModel & Matched & Mismatched \\\\\n\\midrule\nBERT & 84.6 & 83.4 \\\\\nDeBERTa & 89.6 & 88.9 \\\\\nOurs & 90.2 & 89.5 \\\\\n\\bottomrule\n\\end{tabular}\n\\end{table}\n"
     },
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t13_multi_table_CLEAN_citation_bib_consistency_199",
@@ -715,7 +780,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t14_fewshot_R2_222",
@@ -736,7 +802,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t07_re_tacred_CLEAN_reference_authenticity_107",
@@ -752,7 +819,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t04_qa_squad_P1_48",
@@ -774,7 +842,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t12_xfile_mnli_CLEAN_reference_authenticity_193",
@@ -794,7 +863,8 @@
       "tab_mnli.tex": "\\begin{table}[h]\n\\caption{MNLI results.}\n\\label{tab:mnli}\n\\begin{tabular}{lcc}\n\\toprule\nModel & Matched & Mismatched \\\\\n\\midrule\nBERT & 84.6 & 83.4 \\\\\nDeBERTa & 89.6 & 88.9 \\\\\nOurs & 90.2 & 89.5 \\\\\n\\bottomrule\n\\end{tabular}\n\\end{table}\n"
     },
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t12_xfile_mnli_P6_186",
@@ -818,7 +888,8 @@
       "tab_mnli.tex": "\\begin{table}[h]\n\\caption{MNLI results.}\n\\label{tab:mnli}\n\\begin{tabular}{lcc}\n\\toprule\nModel & Matched & Mismatched \\\\\n\\midrule\nBERT & 84.6 & 83.4 \\\\\nDeBERTa & 89.6 & 88.9 \\\\\nOurs & 90.2 & 89.5 \\\\\n\\bottomrule\n\\end{tabular}\n\\end{table}\n"
     },
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t03_mt_bleu_CLEAN_citation_bib_consistency_35",
@@ -834,7 +905,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t05_summ_rouge_R2_76",
@@ -855,7 +927,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t02_ner_conll_CLEAN_reference_authenticity_29",
@@ -871,7 +944,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t08_coref_R3_126",
@@ -892,7 +966,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t10_semparse_CLEAN_reference_authenticity_155",
@@ -908,7 +983,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t08_coref_P4_116",
@@ -929,7 +1005,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t02_ner_conll_CLEAN_citation_bib_consistency_19",
@@ -945,7 +1022,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t07_re_tacred_P6_104",
@@ -965,7 +1043,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t09_dst_jga_CLEAN_figure_table_crossref_137",
@@ -981,7 +1060,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t14_fewshot_R1_220",
@@ -1002,7 +1082,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t10_semparse_CLEAN_reference_authenticity_159",
@@ -1018,7 +1099,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t11_mrc_hotpot_P1_160",
@@ -1040,7 +1122,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t01_clf_f1_CLEAN_citation_bib_consistency_5",
@@ -1056,7 +1139,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t01_clf_f1_P3_2",
@@ -1076,7 +1160,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t04_qa_squad_CLEAN_figure_table_crossref_57",
@@ -1092,7 +1177,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t03_mt_bleu_R3_46",
@@ -1113,7 +1199,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t02_ner_conll_CLEAN_figure_table_crossref_23",
@@ -1129,7 +1216,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t11_mrc_hotpot_P5_166",
@@ -1149,7 +1237,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t11_mrc_hotpot_CLEAN_citation_bib_consistency_165",
@@ -1165,7 +1254,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t09_dst_jga_P1_128",
@@ -1187,7 +1277,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t13_multi_table_CLEAN_reference_authenticity_209",
@@ -1203,7 +1294,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t14_fewshot_P1_210",
@@ -1225,7 +1317,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t07_re_tacred_CLEAN_citation_bib_consistency_101",
@@ -1241,7 +1334,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t05_summ_rouge_P5_70",
@@ -1261,7 +1355,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t05_summ_rouge_CLEAN_data_integrity_65",
@@ -1277,7 +1372,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -1,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t03_mt_bleu_R2_44",
@@ -1298,7 +1394,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t07_re_tacred_CLEAN_reference_authenticity_111",
@@ -1314,7 +1411,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t10_semparse_R3_158",
@@ -1335,7 +1433,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t05_summ_rouge_CLEAN_citation_bib_consistency_69",
@@ -1351,7 +1450,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t05_summ_rouge_R1_74",
@@ -1372,7 +1472,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t06_lm_ppl_CLEAN_reference_authenticity_95",
@@ -1388,7 +1489,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t01_clf_f1_R2_12",
@@ -1409,7 +1511,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t11_mrc_hotpot_CLEAN_data_integrity_161",
@@ -1425,7 +1528,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t02_ner_conll_P6_24",
@@ -1445,7 +1549,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t08_coref_CLEAN_figure_table_crossref_119",
@@ -1461,7 +1566,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t04_qa_squad_P4_52",
@@ -1482,7 +1588,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t05_summ_rouge_CLEAN_reference_authenticity_79",
@@ -1498,7 +1605,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t07_re_tacred_P3_98",
@@ -1518,7 +1626,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t06_lm_ppl_CLEAN_figure_table_crossref_89",
@@ -1534,7 +1643,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t10_semparse_P5_150",
@@ -1554,7 +1664,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t13_multi_table_CLEAN_reference_authenticity_207",
@@ -1570,7 +1681,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t12_xfile_mnli_R3_192",
@@ -1595,7 +1707,8 @@
       "tab_mnli.tex": "\\begin{table}[h]\n\\caption{MNLI results.}\n\\label{tab:mnli}\n\\begin{tabular}{lcc}\n\\toprule\nModel & Matched & Mismatched \\\\\n\\midrule\nBERT & 84.6 & 83.4 \\\\\nDeBERTa & 89.6 & 88.9 \\\\\nOurs & 90.2 & 89.5 \\\\\n\\bottomrule\n\\end{tabular}\n\\end{table}\n"
     },
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t01_clf_f1_CLEAN_figure_table_crossref_9",
@@ -1611,7 +1724,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t06_lm_ppl_P6_88",
@@ -1631,7 +1745,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t14_fewshot_CLEAN_reference_authenticity_223",
@@ -1647,7 +1762,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t05_summ_rouge_P6_72",
@@ -1667,7 +1783,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t04_qa_squad_CLEAN_reference_authenticity_59",
@@ -1683,7 +1800,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t11_mrc_hotpot_P4_164",
@@ -1704,7 +1822,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t12_xfile_mnli_CLEAN_citation_bib_consistency_181",
@@ -1724,7 +1843,8 @@
       "tab_mnli.tex": "\\begin{table}[h]\n\\caption{MNLI results.}\n\\label{tab:mnli}\n\\begin{tabular}{lcc}\n\\toprule\nModel & Matched & Mismatched \\\\\n\\midrule\nBERT & 84.6 & 83.4 \\\\\nDeBERTa & 89.6 & 88.9 \\\\\nOurs & 90.2 & 89.5 \\\\\n\\bottomrule\n\\end{tabular}\n\\end{table}\n"
     },
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t05_summ_rouge_P4_68",
@@ -1745,7 +1865,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t06_lm_ppl_CLEAN_citation_bib_consistency_83",
@@ -1761,7 +1882,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t02_ner_conll_R1_26",
@@ -1782,7 +1904,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t13_multi_table_CLEAN_data_integrity_195",
@@ -1798,7 +1921,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t10_semparse_R2_156",
@@ -1819,7 +1943,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t12_xfile_mnli_CLEAN_reference_authenticity_191",
@@ -1839,7 +1964,8 @@
       "tab_mnli.tex": "\\begin{table}[h]\n\\caption{MNLI results.}\n\\label{tab:mnli}\n\\begin{tabular}{lcc}\n\\toprule\nModel & Matched & Mismatched \\\\\n\\midrule\nBERT & 84.6 & 83.4 \\\\\nDeBERTa & 89.6 & 88.9 \\\\\nOurs & 90.2 & 89.5 \\\\\n\\bottomrule\n\\end{tabular}\n\\end{table}\n"
     },
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t06_lm_ppl_P4_84",
@@ -1860,7 +1986,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t04_qa_squad_CLEAN_citation_bib_consistency_51",
@@ -1876,7 +2003,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t03_mt_bleu_P3_34",
@@ -1896,7 +2024,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t08_coref_CLEAN_data_integrity_113",
@@ -1912,7 +2041,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t11_mrc_hotpot_R1_170",
@@ -1933,7 +2063,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t09_dst_jga_CLEAN_citation_bib_consistency_133",
@@ -1949,7 +2080,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t05_summ_rouge_P1_64",
@@ -1971,7 +2103,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t08_coref_CLEAN_citation_bib_consistency_115",
@@ -1987,7 +2120,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t10_semparse_P3_146",
@@ -2007,7 +2141,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t06_lm_ppl_CLEAN_reference_authenticity_91",
@@ -2023,7 +2158,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t11_mrc_hotpot_R3_174",
@@ -2044,7 +2180,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t10_semparse_CLEAN_reference_authenticity_157",
@@ -2060,7 +2197,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t09_dst_jga_P3_130",
@@ -2080,7 +2218,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t02_ner_conll_CLEAN_reference_authenticity_27",
@@ -2096,7 +2235,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t08_coref_R1_122",
@@ -2117,7 +2257,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t03_mt_bleu_CLEAN_data_integrity_33",
@@ -2133,7 +2274,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -1,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t13_multi_table_P6_202",
@@ -2153,7 +2295,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t10_semparse_CLEAN_figure_table_crossref_151",
@@ -2169,7 +2312,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t01_clf_f1_P5_6",
@@ -2189,7 +2333,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t13_multi_table_CLEAN_figure_table_crossref_203",
@@ -2205,7 +2350,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t06_lm_ppl_P1_80",
@@ -2227,7 +2373,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t13_multi_table_CLEAN_citation_bib_consistency_197",
@@ -2243,7 +2390,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t06_lm_ppl_R1_90",
@@ -2264,7 +2412,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t12_xfile_mnli_CLEAN_data_integrity_177",
@@ -2284,7 +2433,8 @@
       "tab_mnli.tex": "\\begin{table}[h]\n\\caption{MNLI results.}\n\\label{tab:mnli}\n\\begin{tabular}{lcc}\n\\toprule\nModel & Matched & Mismatched \\\\\n\\midrule\nBERT & 84.6 & 83.4 \\\\\nDeBERTa & 89.6 & 88.9 \\\\\nOurs & 90.2 & 89.5 \\\\\n\\bottomrule\n\\end{tabular}\n\\end{table}\n"
     },
     "pred_gpt_5_5": -1,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t01_clf_f1_P6_8",
@@ -2304,7 +2454,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t06_lm_ppl_CLEAN_citation_bib_consistency_85",
@@ -2320,7 +2471,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t14_fewshot_P3_212",
@@ -2340,7 +2492,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t04_qa_squad_CLEAN_citation_bib_consistency_53",
@@ -2356,7 +2509,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t12_xfile_mnli_P3_180",
@@ -2380,7 +2534,8 @@
       "tab_mnli.tex": "\\begin{table}[h]\n\\caption{MNLI results.}\n\\label{tab:mnli}\n\\begin{tabular}{lcc}\n\\toprule\nModel & Matched & Mismatched \\\\\n\\midrule\nBERT & 84.6 & 83.4 \\\\\nDeBERTa & 89.6 & 88.9 \\\\\nOurs & 90.2 & 89.5 \\\\\n\\bottomrule\n\\end{tabular}\n\\end{table}\n"
     },
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t10_semparse_CLEAN_data_integrity_145",
@@ -2396,7 +2551,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t04_qa_squad_R1_58",
@@ -2417,7 +2573,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t01_clf_f1_CLEAN_reference_authenticity_11",
@@ -2433,7 +2590,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t13_multi_table_R1_204",
@@ -2454,7 +2612,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t04_qa_squad_CLEAN_reference_authenticity_63",
@@ -2470,7 +2629,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t06_lm_ppl_P5_86",
@@ -2490,7 +2650,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t02_ner_conll_CLEAN_reference_authenticity_31",
@@ -2506,7 +2667,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t12_xfile_mnli_P4_182",
@@ -2531,7 +2693,8 @@
       "tab_mnli.tex": "\\begin{table}[h]\n\\caption{MNLI results.}\n\\label{tab:mnli}\n\\begin{tabular}{lcc}\n\\toprule\nModel & Matched & Mismatched \\\\\n\\midrule\nBERT & 84.6 & 83.4 \\\\\nDeBERTa & 89.6 & 88.9 \\\\\nOurs & 90.2 & 89.5 \\\\\n\\bottomrule\n\\end{tabular}\n\\end{table}\n"
     },
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t14_fewshot_CLEAN_citation_bib_consistency_215",
@@ -2547,7 +2710,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t04_qa_squad_P6_56",
@@ -2567,7 +2731,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t04_qa_squad_CLEAN_reference_authenticity_61",
@@ -2583,7 +2748,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t04_qa_squad_R3_62",
@@ -2604,7 +2770,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t09_dst_jga_CLEAN_reference_authenticity_141",
@@ -2620,7 +2787,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t02_ner_conll_R3_30",
@@ -2641,7 +2809,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t02_ner_conll_CLEAN_data_integrity_17",
@@ -2657,7 +2826,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t08_coref_P3_114",
@@ -2677,7 +2847,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t03_mt_bleu_CLEAN_reference_authenticity_47",
@@ -2693,7 +2864,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t09_dst_jga_P4_132",
@@ -2714,7 +2886,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t02_ner_conll_CLEAN_citation_bib_consistency_21",
@@ -2730,7 +2903,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t08_coref_P1_112",
@@ -2752,7 +2926,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t09_dst_jga_CLEAN_citation_bib_consistency_131",
@@ -2768,7 +2943,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t14_fewshot_R3_224",
@@ -2789,7 +2965,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t11_mrc_hotpot_CLEAN_citation_bib_consistency_163",
@@ -2805,7 +2982,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t07_re_tacred_P5_102",
@@ -2825,7 +3003,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t03_mt_bleu_CLEAN_figure_table_crossref_41",
@@ -2841,7 +3020,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t14_fewshot_P5_216",
@@ -2861,7 +3041,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t09_dst_jga_CLEAN_figure_table_crossref_135",
@@ -2877,7 +3058,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t04_qa_squad_P3_50",
@@ -2897,7 +3079,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t09_dst_jga_CLEAN_data_integrity_129",
@@ -2913,7 +3096,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t14_fewshot_P6_218",
@@ -2933,7 +3117,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t14_fewshot_CLEAN_figure_table_crossref_219",
@@ -2949,7 +3134,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t04_qa_squad_P5_54",
@@ -2969,7 +3155,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t11_mrc_hotpot_CLEAN_reference_authenticity_171",
@@ -2985,7 +3172,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t07_re_tacred_R2_108",
@@ -3006,7 +3194,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t01_clf_f1_CLEAN_reference_authenticity_13",
@@ -3022,7 +3211,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t10_semparse_R1_154",
@@ -3043,7 +3233,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t11_mrc_hotpot_CLEAN_figure_table_crossref_167",
@@ -3059,7 +3250,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t14_fewshot_P4_214",
@@ -3080,7 +3272,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t06_lm_ppl_CLEAN_data_integrity_81",
@@ -3096,7 +3289,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t05_summ_rouge_P3_66",
@@ -3116,7 +3310,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t11_mrc_hotpot_CLEAN_reference_authenticity_173",
@@ -3132,7 +3327,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t03_mt_bleu_R1_42",
@@ -3153,7 +3349,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t09_dst_jga_CLEAN_reference_authenticity_139",
@@ -3169,7 +3366,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t09_dst_jga_R2_140",
@@ -3190,7 +3388,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t10_semparse_CLEAN_citation_bib_consistency_149",
@@ -3206,7 +3405,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t08_coref_P6_120",
@@ -3226,7 +3426,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t14_fewshot_CLEAN_citation_bib_consistency_213",
@@ -3242,7 +3443,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t11_mrc_hotpot_P6_168",
@@ -3262,7 +3464,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t14_fewshot_CLEAN_figure_table_crossref_217",
@@ -3278,7 +3481,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t12_xfile_mnli_P1_xfile_178",
@@ -3304,7 +3508,8 @@
       "tab_mnli.tex": "\\begin{table}[h]\n\\caption{MNLI results.}\n\\label{tab:mnli}\n\\begin{tabular}{lcc}\n\\toprule\nModel & Matched & Mismatched \\\\\n\\midrule\nBERT & 84.6 & 83.4 \\\\\nDeBERTa & 89.6 & 88.9 \\\\\nOurs & 90.2 & 89.5 \\\\\n\\bottomrule\n\\end{tabular}\n\\end{table}\n"
     },
     "pred_gpt_5_5": -1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t05_summ_rouge_CLEAN_reference_authenticity_75",
@@ -3320,7 +3525,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t03_mt_bleu_P1_32",
@@ -3342,7 +3548,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -1,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t04_qa_squad_CLEAN_data_integrity_49",
@@ -3358,7 +3565,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t09_dst_jga_P6_136",
@@ -3378,7 +3586,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t03_mt_bleu_CLEAN_figure_table_crossref_39",
@@ -3394,7 +3603,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t02_ner_conll_P1_16",
@@ -3416,7 +3626,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t14_fewshot_CLEAN_reference_authenticity_221",
@@ -3432,7 +3643,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t13_multi_table_R2_206",
@@ -3453,7 +3665,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t12_xfile_mnli_CLEAN_citation_bib_consistency_183",
@@ -3473,7 +3686,8 @@
       "tab_mnli.tex": "\\begin{table}[h]\n\\caption{MNLI results.}\n\\label{tab:mnli}\n\\begin{tabular}{lcc}\n\\toprule\nModel & Matched & Mismatched \\\\\n\\midrule\nBERT & 84.6 & 83.4 \\\\\nDeBERTa & 89.6 & 88.9 \\\\\nOurs & 90.2 & 89.5 \\\\\n\\bottomrule\n\\end{tabular}\n\\end{table}\n"
     },
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t12_xfile_mnli_R1_188",
@@ -3498,7 +3712,8 @@
       "tab_mnli.tex": "\\begin{table}[h]\n\\caption{MNLI results.}\n\\label{tab:mnli}\n\\begin{tabular}{lcc}\n\\toprule\nModel & Matched & Mismatched \\\\\n\\midrule\nBERT & 84.6 & 83.4 \\\\\nDeBERTa & 89.6 & 88.9 \\\\\nOurs & 90.2 & 89.5 \\\\\n\\bottomrule\n\\end{tabular}\n\\end{table}\n"
     },
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t11_mrc_hotpot_CLEAN_figure_table_crossref_169",
@@ -3514,7 +3729,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t02_ner_conll_P4_20",
@@ -3535,7 +3751,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t09_dst_jga_CLEAN_reference_authenticity_143",
@@ -3551,7 +3768,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t10_semparse_P1_144",
@@ -3573,7 +3791,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t12_xfile_mnli_CLEAN_figure_table_crossref_187",
@@ -3593,7 +3812,8 @@
       "tab_mnli.tex": "\\begin{table}[h]\n\\caption{MNLI results.}\n\\label{tab:mnli}\n\\begin{tabular}{lcc}\n\\toprule\nModel & Matched & Mismatched \\\\\n\\midrule\nBERT & 84.6 & 83.4 \\\\\nDeBERTa & 89.6 & 88.9 \\\\\nOurs & 90.2 & 89.5 \\\\\n\\bottomrule\n\\end{tabular}\n\\end{table}\n"
     },
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t13_multi_table_P3_196",
@@ -3613,7 +3833,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t12_xfile_mnli_CLEAN_data_xfile_179",
@@ -3633,7 +3854,8 @@
       "tab_mnli.tex": "\\begin{table}[h]\n\\caption{MNLI results.}\n\\label{tab:mnli}\n\\begin{tabular}{lcc}\n\\toprule\nModel & Matched & Mismatched \\\\\n\\midrule\nBERT & 84.6 & 83.4 \\\\\nDeBERTa & 89.6 & 88.9 \\\\\nOurs & 90.2 & 89.5 \\\\\n\\bottomrule\n\\end{tabular}\n\\end{table}\n"
     },
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t01_clf_f1_R3_14",
@@ -3654,7 +3876,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t07_re_tacred_CLEAN_reference_authenticity_109",
@@ -3670,7 +3893,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t04_qa_squad_R2_60",
@@ -3691,7 +3915,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t05_summ_rouge_CLEAN_figure_table_crossref_73",
@@ -3707,7 +3932,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t05_summ_rouge_R3_78",
@@ -3728,7 +3954,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t08_coref_CLEAN_citation_bib_consistency_117",
@@ -3744,7 +3971,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t06_lm_ppl_R2_92",
@@ -3765,7 +3993,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t13_multi_table_CLEAN_figure_table_crossref_201",
@@ -3781,7 +4010,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t02_ner_conll_R2_28",
@@ -3802,7 +4032,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t05_summ_rouge_CLEAN_citation_bib_consistency_67",
@@ -3818,7 +4049,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t01_clf_f1_P4_4",
@@ -3839,7 +4071,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t07_re_tacred_CLEAN_citation_bib_consistency_99",
@@ -3855,7 +4088,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t08_coref_R2_124",
@@ -3876,7 +4110,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t01_clf_f1_CLEAN_data_integrity_1",
@@ -3892,7 +4127,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t06_lm_ppl_P3_82",
@@ -3912,7 +4148,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t07_re_tacred_CLEAN_data_integrity_97",
@@ -3928,7 +4165,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t10_semparse_P6_152",
@@ -3948,7 +4186,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t14_fewshot_CLEAN_reference_authenticity_225",
@@ -3964,7 +4203,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t01_clf_f1_P1_0",
@@ -3986,7 +4226,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t01_clf_f1_CLEAN_reference_authenticity_15",
@@ -4002,7 +4243,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t09_dst_jga_P5_134",
@@ -4022,7 +4264,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t07_re_tacred_CLEAN_figure_table_crossref_103",
@@ -4038,7 +4281,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t13_multi_table_P4_198",
@@ -4059,7 +4303,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t04_qa_squad_CLEAN_figure_table_crossref_55",
@@ -4075,7 +4320,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t09_dst_jga_R1_138",
@@ -4096,7 +4342,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t08_coref_CLEAN_reference_authenticity_123",
@@ -4112,7 +4359,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t03_mt_bleu_P6_40",
@@ -4132,7 +4380,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t08_coref_CLEAN_reference_authenticity_125",
@@ -4148,7 +4397,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t13_multi_table_P1_194",
@@ -4170,7 +4420,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 1,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t07_re_tacred_CLEAN_figure_table_crossref_105",
@@ -4186,7 +4437,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": 0,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t06_lm_ppl_R3_94",
@@ -4207,7 +4459,8 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 1
+    "pred_claude_opus_4_7": 1,
+    "pred_dummy_skip": -1
   },
   {
     "id": "t03_mt_bleu_CLEAN_reference_authenticity_43",
@@ -4223,6 +4476,7 @@
     "extra_files": {},
     "clean_extra_files": {},
     "pred_gpt_5_5": -2,
-    "pred_claude_opus_4_7": 0
+    "pred_claude_opus_4_7": 0,
+    "pred_dummy_skip": -1
   }
 ]

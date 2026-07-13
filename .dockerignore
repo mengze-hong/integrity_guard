@@ -1,0 +1,23 @@
+# Keep secrets and runtime data out of the image build context.
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+data/
+uploads/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+tests/
+research/
+_Archive/
+_Backup/
+*.md
+!README.md
+.vscode/
+.idea/
+*.log
+node_modules/

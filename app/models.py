@@ -76,6 +76,10 @@ class ParsedPaper(BaseModel):
     bib_file_path: Path | None = None
     all_files: list[Path] = Field(default_factory=list)
     figure_files: list[Path] = Field(default_factory=list)
+    # BYOK: per-request LLM credentials ({api_key, base_url, model}) threaded
+    # from the upload request so gates (NCG) use the user's own key. None =>
+    # fall back to server settings (regex-only if server has no key).
+    llm_config: dict | None = None
 
 
 # --- Check Result Models ---

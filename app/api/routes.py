@@ -453,25 +453,45 @@ _llm_calls_by_ip: dict[str, list[float]] = defaultdict(list)
 _llm_calls_global: list[float] = []
 
 
+def _llm_creds(request: Request) -> dict | None:
+    """Extract BYOK credentials from request headers.
+
+    Frontend sends the user's own OpenAI-compatible key/base_url/model via
+    X-LLM-Key / X-LLM-Base-URL / X-LLM-Model. Returns None when key or
+    base_url is missing (callers then fall back to server settings).
+    """
+    key = (request.headers.get("X-LLM-Key") or "").strip()
+    base = (request.headers.get("X-LLM-Base-URL") or "").strip()
+    model = (request.headers.get("X-LLM-Model") or "").strip()
+    if not key or not base:
+        return None
+    return {"api_key": key, "base_url": base, "model": model or settings.llm_model}
+
+
 def _llm_usage_guard(request: Request):
     """Enforce per-IP rate limit + global hourly cap on LLM-backed endpoints.
 
     Raises HTTP 429 when a limit is exceeded. Protects the internal LLM from
     abuse (important when the app is exposed via a public tunnel).
+
+    BYOK: when the request carries the user's own key, skip the global quota
+    (they pay their own LLM) but keep a per-IP rate limit as an abuse guard.
     """
     now = time.time()
     ip = request.client.host if request.client else "unknown"
+    byok = _llm_creds(request) is not None
     global _llm_calls_global
     _llm_calls_global[:] = [t for t in _llm_calls_global if now - t < 3600]
     _llm_calls_by_ip[ip] = [t for t in _llm_calls_by_ip[ip] if now - t < LLM_RATE_WINDOW]
 
-    if len(_llm_calls_global) >= LLM_GLOBAL_HOURLY_CAP:
-        raise HTTPException(status_code=429, detail="AI 服务已达全局用量上限，请稍后再试")
+    if not byok and len(_llm_calls_global) >= LLM_GLOBAL_HOURLY_CAP:
+        raise HTTPException(status_code=429, detail="AI service hourly global limit reached — please try again later")
     if len(_llm_calls_by_ip[ip]) >= LLM_RATE_PER_IP:
-        raise HTTPException(status_code=429, detail="AI 调用过于频繁，请稍后再试")
+        raise HTTPException(status_code=429, detail="Too many AI requests — please slow down")
 
     _llm_calls_by_ip[ip].append(now)
-    _llm_calls_global.append(now)
+    if not byok:
+        _llm_calls_global.append(now)
     # Bound memory: drop empty/stale IP buckets occasionally
     if len(_llm_calls_by_ip) > 5000:
         for k in [k for k, v in _llm_calls_by_ip.items() if not v]:
@@ -483,11 +503,18 @@ def _llm_usage_guard(request: Request):
 # helper transparently retries without it so all AI features keep working
 # regardless of which model `LLM_MODEL` points to.
 
-async def _llm_chat_post(client, messages, max_tokens, temperature=None):
-    """POST a chat completion to the LiteLLM proxy with graceful fallback."""
-    url = f"{settings.llm_base_url}/chat/completions"
-    headers = {"Authorization": f"Bearer {settings.llm_api_key}"}
-    payload = {"model": settings.llm_model, "messages": messages, "max_tokens": max_tokens}
+async def _llm_chat_post(client, messages, max_tokens, temperature=None, creds=None):
+    """POST a chat completion to an OpenAI-compatible proxy with fallback.
+
+    ``creds`` (BYOK): {api_key, base_url, model} from the user's request.
+    Falls back to server ``settings`` when not provided.
+    """
+    base_url = (creds or {}).get("base_url") or settings.llm_base_url
+    api_key = (creds or {}).get("api_key") or settings.llm_api_key
+    model = (creds or {}).get("model") or settings.llm_model
+    url = f"{base_url}/chat/completions"
+    headers = {"Authorization": f"Bearer {api_key}"}
+    payload = {"model": model, "messages": messages, "max_tokens": max_tokens}
     if temperature is not None:
         payload["temperature"] = temperature
 
@@ -614,7 +641,8 @@ async def upload_paper(
     _job_status[job_id] = "processing"
     _job_locks.add(job_id)
     _job_owners[job_id] = owner_metadata
-    background_tasks.add_task(_run_checks, job_id, upload_path, extract_dir, file.filename, owner_metadata)
+    llm_creds = _llm_creds(request)  # BYOK: user's own key for NCG (may be None)
+    background_tasks.add_task(_run_checks, job_id, upload_path, extract_dir, file.filename, owner_metadata, llm_creds)
 
     return {"job_id": job_id, "status": "processing", "share_token": owner_metadata["share_token"]}
 
@@ -791,7 +819,8 @@ async def recheck(request: Request, response: Response, job_id: str, background_
 
     _job_status[job_id] = "processing"
     _job_locks.add(job_id)
-    background_tasks.add_task(_run_checks_from_dir, job_id, project_dir, filename, old_dismissed, owner_metadata)
+    llm_creds = _llm_creds(request)  # BYOK for NCG on recheck
+    background_tasks.add_task(_run_checks_from_dir, job_id, project_dir, filename, old_dismissed, owner_metadata, llm_creds)
 
     return {"job_id": job_id, "status": "processing"}
 
@@ -1283,7 +1312,7 @@ async def delete_job(job_id: str, request: Request, response: Response):
 
 # ─── Internal helpers ─────────────────────────────────────────
 
-async def _run_checks(job_id: str, zip_path: Path, extract_dir: Path, filename: str, owner_metadata: dict):
+async def _run_checks(job_id: str, zip_path: Path, extract_dir: Path, filename: str, owner_metadata: dict, llm_creds: dict | None = None):
     """Extract zip and run checks."""
     try:
         extract_dir.mkdir(parents=True, exist_ok=True)
@@ -1299,7 +1328,7 @@ async def _run_checks(job_id: str, zip_path: Path, extract_dir: Path, filename: 
                 elif f.stat().st_size > 50 * 1024 * 1024:  # >50MB single file
                     f.unlink()  # Remove oversized files
 
-        await _run_checks_from_dir(job_id, project_dir, filename, [], owner_metadata)
+        await _run_checks_from_dir(job_id, project_dir, filename, [], owner_metadata, llm_creds)
     except Exception as e:
         _save_failed_report(job_id, filename, e, owner_metadata)
         logger.error(f" Job {job_id} failed: {redact(str(e))}")
@@ -1313,6 +1342,7 @@ async def _run_checks_from_dir(
     job_id: str, project_dir: Path, filename: str,
     old_dismissed: list[DismissedIssue],
     owner_metadata: dict | None = None,
+    llm_creds: dict | None = None,
 ):
     """Run checks from an already-extracted directory."""
     try:
@@ -1326,6 +1356,9 @@ async def _run_checks_from_dir(
             paper.bib_entries = parse_all_bbl_files(bbl_paths)
         if not paper.bib_entries:
             paper.bib_entries = extract_inline_bib_entries(paper.tex_files)
+
+        # BYOK: hand the user's own LLM creds to the gates (NCG reads this).
+        paper.llm_config = llm_creds
 
         gates = [
             StructureGate(),

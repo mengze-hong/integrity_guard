@@ -336,6 +336,8 @@
             <span style="font-size:16px; padding:2px 8px; background:#eff6ff; color:#2563eb; border-radius:6px; font-weight:800; letter-spacing:-0.2px;">ScholarLint</span>
         </div>
         <div id="nav-auth" style="display:flex; align-items:center; gap:12px;">
+            <!-- AI Settings (BYOK) -->
+            <button onclick="openAiSettings()" title="Set your own AI API key (stored in this browser)" style="font-size:11px; padding:5px 12px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; color:#334155; cursor:pointer; font-weight:600; transition:all 0.15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#fff'">⚙️ AI Key</button>
             <!-- Language toggle -->
             <button id="lang-toggle-btn" onclick="toggleLang()" style="font-size:11px; padding:5px 12px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; color:#334155; cursor:pointer; font-weight:600; letter-spacing:0.3px; transition:all 0.15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#fff'">EN</button>
             <button onclick="showAuthModal('login')" id="nav-login-btn" style="font-size:12px; padding:6px 16px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; color:#334155; cursor:pointer; font-weight:500; transition:all 0.15s;" onmouseover="this.style.background='#f8fafc';this.style.borderColor='#cbd5e1'" onmouseout="this.style.background='#fff';this.style.borderColor='#e2e8f0'" data-i18n="nav.login">登录</button>
@@ -534,6 +536,9 @@
                 </button>
                 <button onclick="runAiDiagnosis()" class="bg-slate-50 text-slate-700 px-5 py-3 rounded-xl font-semibold text-sm hover:bg-slate-100 border border-slate-200 transition-all" data-i18n="btn.diagnosis">
                     📋 Diagnosis
+                </button>
+                <button onclick="openAiSettings()" class="bg-slate-50 text-slate-700 px-5 py-3 rounded-xl font-semibold text-sm hover:bg-slate-100 border border-slate-200 transition-all" title="Set your own AI API key (stored in this browser)">
+                    ⚙️ AI Settings
                 </button>
             </div>
 
@@ -860,6 +865,36 @@ async function apiFetch(path, options = {}) {
     throw new Error(detail || statusHints[r.status] || `HTTP ${r.status}`);
 }
 
+// ─── BYOK: bring-your-own LLM key (stored in browser localStorage) ───
+function getLlmConfig() {
+    return {
+        api_key: (localStorage.getItem('ll_api_key') || '').trim(),
+        base_url: (localStorage.getItem('ll_base_url') || '').trim(),
+        model: (localStorage.getItem('ll_model') || '').trim(),
+    };
+}
+function hasLlmKey() {
+    const c = getLlmConfig();
+    return !!(c.api_key && c.base_url);
+}
+// Header object attached to every AI request + upload; empty when unset.
+function llmHeaders() {
+    const c = getLlmConfig();
+    if (!c.api_key || !c.base_url) return {};
+    return {
+        'X-LLM-Key': c.api_key,
+        'X-LLM-Base-URL': c.base_url,
+        'X-LLM-Model': c.model || 'gpt-5.2',
+    };
+}
+// Gate an AI feature on a configured key; opens the settings modal if missing.
+function requireLlmKey() {
+    if (hasLlmKey()) return true;
+    toast('Set your AI API key first (⚙️ AI Settings)', 'warning', 3500);
+    openAiSettings();
+    return false;
+}
+
 function fileApiUrl(path) {
     return apiUrl(`/api/files/${jobId}/${String(path).split('/').map(encodeURIComponent).join('/')}`);
 }
@@ -1180,6 +1215,9 @@ document.getElementById('upload-form').addEventListener('submit', async e => {
     const uploadResult = await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('POST', '/api/upload');
+        // BYOK: attach the user's LLM creds so NCG (data gate) can use their key.
+        const _llm = llmHeaders();
+        for (const [k, v] of Object.entries(_llm)) xhr.setRequestHeader(k, v);
         xhr.upload.onprogress = (e) => {
             if (e.lengthComputable) {
                 const pct = Math.round(e.loaded / e.total * 30); // Upload is 0-30%
@@ -2694,13 +2732,91 @@ function showBibCompareModal(oldBib, newBib, source, replaceInfo) {
         <div style="display:flex; gap:8px; margin-top:16px; justify-content:flex-end;">
             <button onclick="this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-size:13px;">Cancel</button>
             <button onclick="copyBibToClipboard(this, '${btoa(encodeURIComponent(newBib))}')" style="padding:8px 16px; border-radius:8px; border:none; background:#3b82f6; color:#fff; cursor:pointer; font-size:13px;">📋 Copy</button>
-            ${replaceInfo ? `<button onclick="applyBibReplace(this)" style="padding:8px 16px; border-radius:8px; border:none; background:#22c55e; color:#fff; cursor:pointer; font-size:13px; font-weight:600;">✅ 替换</button>` : ''}
+            ${replaceInfo ? `<button onclick="applyBibReplace(this)" style="padding:8px 16px; border-radius:8px; border:none; background:#22c55e; color:#fff; cursor:pointer; font-size:13px; font-weight:600;">✅ Replace</button>` : ''}
         </div>
     </div>`;
     // Store replace info on the modal element
     if (replaceInfo) modal._replaceInfo = replaceInfo;
     modal._newBib = newBib;
     document.body.appendChild(modal);
+}
+
+// ─── AI Settings (BYOK) modal ───────────────────────────────
+function openAiSettings() {
+    const c = getLlmConfig();
+    const modal = document.createElement('div');
+    modal.className = 'modal-bg';
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+    modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:26px; max-width:520px; width:92%;">
+        <h3 style="font-size:17px; font-weight:800; margin:0 0 4px;">⚙️ AI Settings (Bring Your Own Key)</h3>
+        <p style="font-size:12px; color:#64748b; margin:0 0 18px; line-height:1.55;">
+            AI features (Simulate Review, Polish, Optimize Abstract, AI Fix, data-claim grounding) use <b>your own</b> OpenAI-compatible key.
+            It is stored only in <b>this browser</b> and sent directly with each request — never saved on the server.
+            Core checks (structure, citations, references, figures, data rules) work without a key.
+        </p>
+        <label style="display:block; font-size:12px; font-weight:700; color:#334155; margin-bottom:5px;">API Key</label>
+        <input id="ll-key" type="password" placeholder="sk-..." value="${esc(c.api_key)}" autocomplete="off"
+            style="width:100%; padding:9px 11px; border:1px solid #cbd5e1; border-radius:9px; font-size:13px; margin-bottom:14px; box-sizing:border-box; font-family:var(--font-mono);">
+        <label style="display:block; font-size:12px; font-weight:700; color:#334155; margin-bottom:5px;">Base URL</label>
+        <input id="ll-base" type="text" placeholder="https://api.openai.com/v1" value="${esc(c.base_url)}"
+            style="width:100%; padding:9px 11px; border:1px solid #cbd5e1; border-radius:9px; font-size:13px; margin-bottom:14px; box-sizing:border-box; font-family:var(--font-mono);">
+        <label style="display:block; font-size:12px; font-weight:700; color:#334155; margin-bottom:5px;">Model</label>
+        <input id="ll-model" type="text" placeholder="gpt-4o" value="${esc(c.model)}"
+            style="width:100%; padding:9px 11px; border:1px solid #cbd5e1; border-radius:9px; font-size:13px; margin-bottom:6px; box-sizing:border-box; font-family:var(--font-mono);">
+        <p id="ll-test-result" style="font-size:12px; margin:6px 0 0; min-height:16px;"></p>
+        <div style="display:flex; gap:8px; margin-top:16px; justify-content:space-between; align-items:center;">
+            <button onclick="clearAiSettings(this)" style="padding:8px 14px; border-radius:8px; border:1px solid #fecaca; background:#fff; color:#ef4444; cursor:pointer; font-size:13px;">Clear</button>
+            <div style="display:flex; gap:8px;">
+                <button onclick="testAiConnection(this)" style="padding:8px 14px; border-radius:8px; border:1px solid #bfdbfe; background:#eff6ff; color:#2563eb; cursor:pointer; font-size:13px;">Test</button>
+                <button onclick="saveAiSettings(this)" style="padding:8px 18px; border-radius:8px; border:none; background:#3b82f6; color:#fff; cursor:pointer; font-size:13px; font-weight:700;">Save</button>
+            </div>
+        </div>
+    </div>`;
+    document.body.appendChild(modal);
+    setTimeout(() => { const el = modal.querySelector('#ll-key'); if (el) el.focus(); }, 50);
+}
+function saveAiSettings(btn) {
+    const modal = btn.closest('.modal-bg');
+    const key = modal.querySelector('#ll-key').value.trim();
+    const base = modal.querySelector('#ll-base').value.trim();
+    const model = modal.querySelector('#ll-model').value.trim();
+    if (!key || !base) { toast('API Key and Base URL are required', 'warning', 3000); return; }
+    localStorage.setItem('ll_api_key', key);
+    localStorage.setItem('ll_base_url', base);
+    localStorage.setItem('ll_model', model);
+    toast('✅ AI settings saved (this browser only)', 'success', 2000);
+    modal.remove();
+}
+function clearAiSettings(btn) {
+    localStorage.removeItem('ll_api_key');
+    localStorage.removeItem('ll_base_url');
+    localStorage.removeItem('ll_model');
+    const modal = btn.closest('.modal-bg');
+    modal.querySelector('#ll-key').value = '';
+    modal.querySelector('#ll-base').value = '';
+    modal.querySelector('#ll-model').value = '';
+    toast('AI settings cleared', 'info', 1800);
+}
+async function testAiConnection(btn) {
+    const modal = btn.closest('.modal-bg');
+    const key = modal.querySelector('#ll-key').value.trim();
+    const base = modal.querySelector('#ll-base').value.trim();
+    const model = modal.querySelector('#ll-model').value.trim() || 'gpt-5.2';
+    const out = modal.querySelector('#ll-test-result');
+    if (!key || !base) { out.style.color = '#ef4444'; out.textContent = 'Enter API Key and Base URL first'; return; }
+    out.style.color = '#64748b'; out.textContent = 'Testing…';
+    try {
+        const r = await fetch(base.replace(/\/$/, '') + '/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+            body: JSON.stringify({ model, messages: [{ role: 'user', content: 'ping' }], max_tokens: 5 }),
+        });
+        if (r.ok) { out.style.color = '#16a34a'; out.textContent = '✅ Connection OK'; }
+        else { out.style.color = '#ef4444'; out.textContent = `❌ HTTP ${r.status} — check key/base URL/model`; }
+    } catch (e) {
+        out.style.color = '#ef4444';
+        out.textContent = '❌ Cannot reach endpoint (CORS or wrong Base URL). It may still work server-side.';
+    }
 }
 
 function copyBibToClipboard(btn, encoded) {
@@ -3094,10 +3210,11 @@ function copyBatchFixMarkdown() {
 
 async function doBatchFix() {
     if (!jobId) return;
-    showAiLoading('🤖 AI 正在批量分析所有问题…');
+    if (!requireLlmKey()) return;
+    showAiLoading('🤖 AI is batch-analyzing all issues…');
 
     try {
-        const r = await fetch(`/api/ai-batch-fix/${jobId}`, {method: 'POST'});
+        const r = await fetch(`/api/ai-batch-fix/${jobId}`, {method: 'POST', headers: llmHeaders()});
         const d = await r.json();
 
         if (d.status === 'ok' && d.fixes && d.fixes.length > 0) {
@@ -3365,9 +3482,10 @@ function renderDiagnosisList(items, {ordered=false} = {}) {
 
 async function runAiDiagnosis() {
     if (!jobId) return;
-    showAiLoading('📋 AI 正在生成论文诊断报告…');
+    if (!requireLlmKey()) return;
+    showAiLoading('📋 AI is generating the paper diagnosis report…');
     try {
-        const r = await fetch(`/api/ai-diagnosis/${jobId}`, { method: 'POST' });
+        const r = await fetch(`/api/ai-diagnosis/${jobId}`, { method: 'POST', headers: llmHeaders() });
         const d = await r.json();
         if (d.status === 'ok' && d.diagnosis) {
             const diagnosis = d.diagnosis;
@@ -3430,7 +3548,7 @@ async function runAiDiagnosis() {
                 <div style="display:flex; gap:8px; margin-top:16px; justify-content:flex-end;">
                     <button onclick="this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-size:13px;">关闭</button>
                     <button onclick="navigator.clipboard.writeText(window._lastDiagnosisMarkdown || '');toast('Diagnosis report copied as Markdown','success',1500)" style="padding:8px 16px; border-radius:8px; border:none; background:#334155; color:#fff; cursor:pointer; font-size:13px;">Copy Markdown</button>
-                    <button onclick="enterWorkspace();this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:none; background:#2563eb; color:#fff; cursor:pointer; font-size:13px; font-weight:600;">进入工作台处理</button>
+                    <button onclick="enterWorkspace();this.closest('.modal-bg').remove()" style="padding:8px 16px; border-radius:8px; border:none; background:#2563eb; color:#fff; cursor:pointer; font-size:13px; font-weight:600;">Open workspace to fix</button>
                 </div>
             </div>`;
             document.body.appendChild(modal);
@@ -3447,9 +3565,10 @@ async function runAiDiagnosis() {
 // === AI Reviewer Simulation ===
 async function runAiReview() {
     if (!jobId) return;
-    showAiLoading('🤖 AI 正在模拟顶会审稿人…');
+    if (!requireLlmKey()) return;
+    showAiLoading('🤖 AI is simulating a top-conference reviewer…');
     try {
-        const r = await fetch(`/api/ai-review/${jobId}`, { method: 'POST' });
+        const r = await fetch(`/api/ai-review/${jobId}`, { method: 'POST', headers: llmHeaders() });
         const d = await r.json();
         if (d.status === 'ok' && d.review) {
             const modal = document.createElement('div');
@@ -3499,9 +3618,10 @@ function applyAbstractText(abstractText) {
 // === AI Abstract Optimization ===
 async function optimizeAbstract() {
     if (!jobId) return;
-    showAiLoading('✨ AI 正在优化 Abstract…');
+    if (!requireLlmKey()) return;
+    showAiLoading('✨ AI is optimizing the Abstract…');
     try {
-        const r = await fetch(`/api/ai-abstract/${jobId}`, { method: 'POST' });
+        const r = await fetch(`/api/ai-abstract/${jobId}`, { method: 'POST', headers: llmHeaders() });
         const d = await r.json();
         if (d.status === 'ok' && d.suggestion) {
             const optimized = extractOptimizedAbstract(d.suggestion);
@@ -3582,10 +3702,11 @@ function downloadProjectZip() {
 }
 
 async function aiFixIssue(message, file, line, gate) {
-    showAiLoading('🤖 AI 正在生成修复建议…');
+    if (!requireLlmKey()) return;
+    showAiLoading('🤖 AI is generating a fix suggestion…');
     try {
         const r = await fetch(`/api/ai-fix/${jobId}`, {
-            method:'POST', headers:{'Content-Type':'application/json'},
+            method:'POST', headers:{'Content-Type':'application/json', ...llmHeaders()},
             body: JSON.stringify({message, file, line, gate: gate || ''})
         });
         const d = await r.json();
@@ -3675,13 +3796,14 @@ async function doPolishSelection(mode = 'academic') {
         toast('Select the text to polish first (at least 10 characters)', 'warning');
         return;
     }
+    if (!requireLlmKey()) return;
 
-    const modeNames = {academic: '学术润色', concise: '精简', formal: '正式化'};
-    showAiLoading(`✨ AI 正在${modeNames[mode] || '润色'}选中文本…`);
+    const modeNames = {academic: 'academic polish', concise: 'conciseness', formal: 'formalization'};
+    showAiLoading(`✨ AI is applying ${modeNames[mode] || 'polish'} to the selection…`);
 
     try {
         const r = await fetch(`/api/ai-polish/${jobId}`, {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
+            method: 'POST', headers: {'Content-Type': 'application/json', ...llmHeaders()},
             body: JSON.stringify({text: selection, mode}),
         });
         const d = await r.json();
@@ -3692,7 +3814,7 @@ async function doPolishSelection(mode = 'academic') {
             modal.onclick = e => { if(e.target===modal) modal.remove(); };
             const polishedEncoded = btoa(encodeURIComponent(d.polished));
             modal.innerHTML = `<div style="background:#fff; border-radius:16px; box-shadow:0 25px 50px rgba(0,0,0,0.25); padding:24px; max-width:700px; width:90%; max-height:80vh; overflow-y:auto;">
-                <h3 style="font-size:16px; font-weight:700; margin:0 0 12px;">✨ ${modeNames[mode] || '润色'}结果</h3>
+                <h3 style="font-size:16px; font-weight:700; margin:0 0 12px;">✨ ${modeNames[mode] || 'Polish'} result</h3>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                     <div>
                         <p style="font-size:10px; font-weight:600; color:#ef4444; margin:0 0 4px;">原文</p>

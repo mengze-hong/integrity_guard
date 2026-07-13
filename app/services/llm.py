@@ -24,28 +24,41 @@ async def llm_check(
     user_prompt: str,
     temperature: float = 0.1,
     max_tokens: int = 2000,
+    creds: dict | None = None,
 ) -> str:
     """Run a single LLM check and return the response text.
 
     Retries without ``temperature`` if the model only supports the default,
     so reasoning models (gpt-5.x) work without special-casing each one.
+
+    ``creds`` (BYOK): when provided with ``api_key``/``base_url``, an ephemeral
+    client is built for this call so each user can use their own key. Falls
+    back to the global client + ``settings.llm_model`` otherwise.
     """
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
     ]
-    kwargs = {"model": settings.llm_model, "messages": messages, "max_tokens": max_tokens}
+
+    if creds and creds.get("api_key") and creds.get("base_url"):
+        client = AsyncOpenAI(api_key=creds["api_key"], base_url=creds["base_url"])
+        model = creds.get("model") or settings.llm_model
+    else:
+        client = llm_client
+        model = settings.llm_model
+
+    kwargs = {"model": model, "messages": messages, "max_tokens": max_tokens}
     if temperature is not None:
         kwargs["temperature"] = temperature
 
     try:
-        response = await llm_client.chat.completions.create(**kwargs)
+        response = await client.chat.completions.create(**kwargs)
     except BadRequestError as exc:
         msg = str(exc).lower()
         # Reasoning models reject non-default temperature; retry without it.
         if "temperature" in msg and "temperature" in kwargs:
             kwargs.pop("temperature", None)
-            response = await llm_client.chat.completions.create(**kwargs)
+            response = await client.chat.completions.create(**kwargs)
         else:
             logger.error(f"LLM request failed: {redact(str(exc))}")
             raise

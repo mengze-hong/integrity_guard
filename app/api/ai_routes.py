@@ -82,6 +82,7 @@ async def ai_diagnosis_report(job_id: str, request: Request, response: Response)
                 ],
                 max_tokens=900,
                 temperature=0.2,
+                creds=legacy._llm_creds(request),
             )
         if resp.status_code != 200:
             return {
@@ -177,6 +178,7 @@ async def ai_fix_suggestion(job_id: str, request: Request, response: Response):
                 ],
                 max_tokens=500,
                 temperature=0.3,
+                creds=legacy._llm_creds(request),
             )
             if resp.status_code == 200:
                 data = resp.json()
@@ -251,6 +253,7 @@ async def ai_batch_fix(job_id: str, request: Request, response: Response):
                     ],
                     max_tokens=400,
                     temperature=0.2,
+                    creds=legacy._llm_creds(request),
                 )
                 if resp.status_code == 200:
                     data = resp.json()
@@ -331,6 +334,7 @@ Reply in English, clearly formatted. Start each point with '- '. Do not invent e
                 ],
                 max_tokens=1000,
                 temperature=0.7,
+                creds=legacy._llm_creds(request),
             )
             if resp.status_code == 200:
                 data = resp.json()
@@ -372,6 +376,7 @@ async def ai_polish_text(job_id: str, request: Request, response: Response):
                 ],
                 max_tokens=max(1024, len(text) * 2),
                 temperature=0.4,
+                creds=legacy._llm_creds(request),
             )
             if resp.status_code == 200:
                 data = resp.json()
@@ -430,6 +435,7 @@ Output format:
                 ],
                 max_tokens=800,
                 temperature=0.5,
+                creds=legacy._llm_creds(request),
             )
             if resp.status_code == 200:
                 data = resp.json()
