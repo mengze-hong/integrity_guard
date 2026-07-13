@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
-    <title>ScholarLint — Pre-submission Manuscript Check</title>
+    <title>ScholarLint 投稿通</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/material-darker.css">
@@ -333,7 +333,7 @@
                 </div>
             </div>
             <span style="font-size:20px; font-weight:800; color:#0f172a; letter-spacing:-0.3px;">ScholarLint</span>
-            <span style="font-size:16px; padding:2px 8px; background:#eff6ff; color:#2563eb; border-radius:6px; font-weight:800; letter-spacing:-0.2px;">ScholarLint</span>
+            <span style="font-size:16px; padding:2px 8px; background:#eff6ff; color:#2563eb; border-radius:6px; font-weight:800; letter-spacing:-0.2px;">投稿通</span>
         </div>
         <div id="nav-auth" style="display:flex; align-items:center; gap:12px;">
             <!-- AI Settings (BYOK) -->
@@ -4764,9 +4764,7 @@ function applyLang() {
     if (btn) btn.textContent = t('lang.toggle');
 
     // document title
-    document.title = _lang === 'en'
-        ? 'ScholarLint — Pre-submission Manuscript Check'
-        : 'ScholarLint · 投稿通 — 论文质检';
+    document.title = 'ScholarLint 投稿通';
 
     // html lang attribute
     document.documentElement.lang = _lang === 'en' ? 'en' : 'zh-CN';
