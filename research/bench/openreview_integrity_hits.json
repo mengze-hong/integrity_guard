@@ -1,0 +1,308 @@
+[
+  {
+    "forum": "aN4Jf6Cx69",
+    "review_id": "2ZCcyMAYL9",
+    "field": "weaknesses",
+    "gate": "data_integrity",
+    "keyword": "different from",
+    "snippet": "alpha.  In fact, the mechanistic analysis focuses on the p_C > 0 case, which is different from the p_c = 0 regime that gives rise to all the tradeoffs observed in Figure 2.  Thus, the connection between pages 1-4 of the paper and the rest is not entirely clear.\n\n-- -- The followi",
+    "venue": "ICLR 2024 oral"
+  },
+  {
+    "forum": "o2IEmeLL9r",
+    "review_id": "QGXRov57aB",
+    "field": "questions",
+    "gate": "data_integrity",
+    "keyword": "different from",
+    "snippet": "evaluated on? In other words, is PTGM able to generalize to new tasks that are different from individual trajectories in the dataset? \n\n5.\tIt would be interesting to see the number of different (unique) goals output by the high-level policy during a trajectory. For example, for",
+    "venue": "ICLR 2024 oral"
+  },
+  {
+    "forum": "PdaPky8MUn",
+    "review_id": "bxEk7Kmak1",
+    "field": "questions",
+    "gate": "data_integrity",
+    "keyword": "different from",
+    "snippet": "the current results are meaningless since the downstream task datasets are very different from Pythia 70M. I'm not sure we are able to find the right dataset to cover all the tasks for Long Range Arena. What about separating this experiment from Long Range Arena and showing the c",
+    "venue": "ICLR 2024 oral"
+  },
+  {
+    "forum": "PdaPky8MUn",
+    "review_id": "ym0J0WiQDe",
+    "field": "questions",
+    "gate": "data_integrity",
+    "keyword": "reported.*different",
+    "snippet": "s in this table?\n\n3. In Table 2, the X \"denotes computationally infeasible or unreported results\". These are 2 drastically different things and 2 separate symbols should probably be used.\n\n4. The methods evaluated for Figure 2 still seem to use complex valued parameterizations ev",
+    "venue": "ICLR 2024 oral"
+  },
+  {
+    "forum": "LzPWWPAdY4",
+    "review_id": "u93H33DD7O",
+    "field": "summary",
+    "gate": "data_integrity",
+    "keyword": "different from",
+    "snippet": "antized weights in a transformer based model for future LoRA-based fine-tuning. Different from initializations for Quantized Lora used in prior methods, such as fixup or zero-init, LoftQ initalizes the quantized matrix weights and lora weights together to minimize the Frobenious",
+    "venue": "ICLR 2024 oral"
+  },
+  {
+    "forum": "4Ay23yeuz0",
+    "review_id": "QHmeOXRpN8",
+    "field": "weaknesses",
+    "gate": "data_integrity",
+    "keyword": "discrepan",
+    "snippet": "y benefits the models or favors the presented method disproportionately.\n\n- The discrepancy observed where TabDDPM struggles with the News dataset (poor performance in Table 1), yet exhibits a low error rate in Table 2 seems unintuitive. Additionally, given TabDDPM's consistent s",
+    "venue": "ICLR 2024 oral"
+  },
+  {
+    "forum": "bNt7oajl2a",
+    "review_id": "ZMQAeW9VUN",
+    "field": "weaknesses",
+    "gate": "data_integrity",
+    "keyword": "discrepan",
+    "snippet": "they consider (e.g. in considering the potential for human reasoners to show a discrepancy between hypothesis generation and rule application), but intuition is not always a reliable guide regarding human performance. It would be good to qualify these statements a bit more (or,",
+    "venue": "ICLR 2024 oral"
+  },
+  {
+    "forum": "HSKaGOi7Ar",
+    "review_id": "eH5tgrtG4z",
+    "field": "weaknesses",
+    "gate": "data_integrity",
+    "keyword": "different from",
+    "snippet": "e examples of different kinds of substructures in Theorem 3.3 (and how they are different from each other).\n\n- Missing discussion on some previous works: there are many papers proposed to count substructures, and it is not clear how your result is related to them.",
+    "venue": "ICLR 2024 oral"
+  },
+  {
+    "forum": "zMPHKOmQNb",
+    "review_id": "ez6LPPZPOL",
+    "field": "strengths",
+    "gate": "data_integrity",
+    "keyword": "different from",
+    "snippet": "ovides an interesting/refreshing take on how to sample antibodies that is quite different from most papers' use of language models. It's drawing on a whole line of work on energy-based models with details that are both old-school and new-school. There will be many ML+Bio research",
+    "venue": "ICLR 2024 oral"
+  },
+  {
+    "forum": "0BqyZSWfzo",
+    "review_id": "My8ST7abN0",
+    "field": "weaknesses",
+    "gate": "data_integrity",
+    "keyword": "inconsisten",
+    "snippet": "paper titles, for examples \"rényi\" in Feldman et al. (2023)\n- arXiv papers have inconsistent format, for example compare Maddock et al. (2022) and Pillutla et al. (2023)\n- Steinke (2022) is missing the publication forum\n- Zanella-Beguelin et al. (2022) and (2023) are the same pap",
+    "venue": "ICLR 2024 oral"
+  },
+  {
+    "forum": "ze7DOLi394",
+    "review_id": "RUsLYJEhvF",
+    "field": "questions",
+    "gate": "figure_table",
+    "keyword": "figure.*missing",
+    "snippet": "- Looking at figure 3 (a) and 3 (c), it seems that the observations made from them are not that significant. Am I missing something? How does the choice of the thresholds affect your observations?",
+    "venue": "ICLR 2024 oral"
+  },
+  {
+    "forum": "SLw9fp4yI6",
+    "review_id": "HI7Jse9UP1",
+    "field": "weaknesses",
+    "gate": "data_integrity",
+    "keyword": "different from",
+    "snippet": "of Liu et al. 2021 relies on expensive fine-tuning with training data, which is different from their zero-shot regime.)\n* The evaluation is restricted to toxicity reduction, whereas other CTG studies often explore sentiment or topic control as well. It is recommended to broaden t",
+    "venue": "ICLR 2024 spotlight"
+  },
+  {
+    "forum": "csukJcpYDe",
+    "review_id": "bEDma7HexF",
+    "field": "weaknesses",
+    "gate": "citation",
+    "keyword": "citation missing",
+    "snippet": "h \"policy computation\" or \"policy evaluation\".\n\nSome minor typos:\nAppendix A.3: citation missing in the first sentence \nSame place: \"n=6 states\" -> \"n=6 state\" (completely changes the meaning)\n\"HZ\" -> \"Hz\"",
+    "venue": "ICLR 2024 spotlight"
+  },
+  {
+    "forum": "3SJE1WLB4M",
+    "review_id": "nxSJSwCT3C",
+    "field": "questions",
+    "gate": "figure_table",
+    "keyword": "figure.*missing",
+    "snippet": "* Is Figure 2 mentioned in the context? I'm kind of missing what those curves represent here.",
+    "venue": "ICLR 2024 spotlight"
+  },
+  {
+    "forum": "Ffjc8ApSbt",
+    "review_id": "vj5yJYwDz1",
+    "field": "weaknesses",
+    "gate": "data_integrity",
+    "keyword": "reported.*different",
+    "snippet": "her Gaussian or exponential.\n\n- W10: I found that the performance on \"Coat\" you reported in Table 1 is significantly lower than that on [1]. It would be helpful to understand whether this variance is attributed to different experimental settings or other factors.\n\n- W11: The abbr",
+    "venue": "ICLR 2024 spotlight"
+  },
+  {
+    "forum": "5ES5Hdlbxw",
+    "review_id": "1LMmEcM4Nt",
+    "field": "questions",
+    "gate": "data_integrity",
+    "keyword": "contradicts",
+    "snippet": "kness' section.\n\n2. Figure 2 shows that PPO fails in most tasks with k=1, which contradicts the claim 'Furthermore, these are the environments where deep RL algorithms like PPO are most likely to find an optimal policy' on Page 5. Can you provide an explanation?\n\n3. Apart from th",
+    "venue": "ICLR 2024 spotlight"
+  },
+  {
+    "forum": "kC5nZDU5zf",
+    "review_id": "w5PLgEg5nQ",
+    "field": "questions",
+    "gate": "citation",
+    "keyword": "missing citation",
+    "snippet": "g some metrics in Table 1?\nTypos:\nPage 6: HMD semantics -> HM3D Semantics. Also missing citation for HM3D Semantics\t\nPage 5: temperture -> temperature\nPage 2: codebook better encodes -> codebook encodes better\nPage 17: gent’s -> agent’s",
+    "venue": "ICLR 2024 spotlight"
+  },
+  {
+    "forum": "fwCoLe3TAX",
+    "review_id": "QTNzvE2o8f",
+    "field": "summary",
+    "gate": "data_integrity",
+    "keyword": "discrepan",
+    "snippet": "ging groups.\n\nThe grouping objective is adversarial to find groups with maximum discrepancy in reward, while the RL objective is encouraging reduction of loss variance across groups\n\n-- Updated my evaluation after reading the responses and revisions",
+    "venue": "ICLR 2024 spotlight"
+  },
+  {
+    "forum": "Ad81awoBVS",
+    "review_id": "4RCPhGJonO",
+    "field": "questions",
+    "gate": "citation",
+    "keyword": "missing citation",
+    "snippet": "n: “While rotation has been a widely used technique in the literature for OCC…” missing citations, please add them here?",
+    "venue": "ICLR 2024 spotlight"
+  },
+  {
+    "forum": "RvUVMjfp8i",
+    "review_id": "ilTO4sg4Mm",
+    "field": "questions",
+    "gate": "data_integrity",
+    "keyword": "inconsisten",
+    "snippet": "In practical applications, how can the metrics for measuring real-world inconsistency be correlated with the inconsistency in the evaluation framework?",
+    "venue": "ICLR 2024 spotlight"
+  },
+  {
+    "forum": "RvUVMjfp8i",
+    "review_id": "EExcscTulS",
+    "field": "summary",
+    "gate": "data_integrity",
+    "keyword": "inconsisten",
+    "snippet": "g on semi-supervised learning in open environments. It considers issues such as inconsistent data distributions, label spaces, and feature spaces. The authors build a comprehensive benchmark, including various data types such as tabular data, image data, and text data, and adequa",
+    "venue": "ICLR 2024 spotlight"
+  },
+  {
+    "forum": "RvUVMjfp8i",
+    "review_id": "vi4mOSJs26",
+    "field": "summary",
+    "gate": "data_integrity",
+    "keyword": "inconsisten",
+    "snippet": "he challenge of non-robust performance in semi-supervised learning (SSL) due to inconsistencies between labeled and unlabeled data, especially in open environments with different data sources. The authors introduce the Robustness Analysis Curve (RAC) and related metrics, reshapin",
+    "venue": "ICLR 2024 spotlight"
+  },
+  {
+    "forum": "RvUVMjfp8i",
+    "review_id": "vi4mOSJs26",
+    "field": "questions",
+    "gate": "data_integrity",
+    "keyword": "inconsisten",
+    "snippet": "he current theoretical results appear to be applicable only when the degrees of inconsistency across the three types of variations are the same. It raises the question of whether the theory would still hold if the degrees of inconsistency were different.",
+    "venue": "ICLR 2024 spotlight"
+  },
+  {
+    "forum": "RvUVMjfp8i",
+    "review_id": "vi4mOSJs26",
+    "field": "strengths",
+    "gate": "data_integrity",
+    "keyword": "inconsisten",
+    "snippet": "ation for the research conducted. The authors emphasize the challenges posed by inconsistencies between labeled and unlabeled data in open environments. They have set a strong foundation for the study, making it easier for readers to understand the significance of the work and th",
+    "venue": "ICLR 2024 spotlight"
+  },
+  {
+    "forum": "WNLAkjUm19",
+    "review_id": "f9sCcjQ1NS",
+    "field": "questions",
+    "gate": "data_integrity",
+    "keyword": "discrepan",
+    "snippet": "performance of 83.6, yet Table 3 reports 82.9. Could you please comment on this discrepancy? \n\n- Table 3 notes that K-MIM DINO achieves a linear probe accuracy of 67.4, which is significantly lower than 78.2 reported by Caron et al (ICCV 2021), while outperforming them on fine-tu",
+    "venue": "ICLR 2024 spotlight"
+  },
+  {
+    "forum": "n9xeGcI4Yg",
+    "review_id": "kq15EdEgzm",
+    "field": "weaknesses",
+    "gate": "data_integrity",
+    "keyword": "inconsisten",
+    "snippet": "pproach).\n2. This paper can benefit from showing some intrinsic analysis of the inconsistency of the generator and the discriminator. Right now, while the evaluation shows the effectiveness of the proposed approach, it is unclear how severe the problem is, and in how many cases f",
+    "venue": "ICLR 2024 spotlight"
+  },
+  {
+    "forum": "n9xeGcI4Yg",
+    "review_id": "kq15EdEgzm",
+    "field": "summary",
+    "gate": "data_integrity",
+    "keyword": "inconsisten",
+    "snippet": "a new answer reranking method for LLMs. The main objective is to reconcile the inconsistency between the model's response in the generator setting and its response in the discriminator setting. Specifically, this work designs a regularized imperfect-information sequential signal",
+    "venue": "ICLR 2024 spotlight"
+  },
+  {
+    "forum": "n9xeGcI4Yg",
+    "review_id": "kq15EdEgzm",
+    "field": "strengths",
+    "gate": "data_integrity",
+    "keyword": "inconsisten",
+    "snippet": "1. The inconsistent behavior of LLMs across different prompts is an annoying phenomenon. This paper proposes a principled method to reconcile such consistency via game theory.\n2. The proposed method is evalu",
+    "venue": "ICLR 2024 spotlight"
+  },
+  {
+    "forum": "gkfUvn0fLU",
+    "review_id": "mxxo7KAROf",
+    "field": "questions",
+    "gate": "data_integrity",
+    "keyword": "inconsisten",
+    "snippet": "used for constraints that seem to be inequality constraints? This appears to be inconsistent with the explanation provided in Section 4 of the main text.",
+    "venue": "ICLR 2024 spotlight"
+  },
+  {
+    "forum": "lOwkOIUJtx",
+    "review_id": "2PQHB1UZba",
+    "field": "weaknesses",
+    "gate": "citation",
+    "keyword": "not cited",
+    "snippet": "otosensitive ganglion cells [1, 8]\n- You use SSIM but the relevant paper(s) are not cited (e.g. [7]).\n- Heading 3.1 \"Periphrl\"\n\n## Literature\n\n1. Do, M. T. H., & Yau, K.-W. (2010). Intrinsically Photosensitive Retinal Ganglion Cells. Physiol Rev, 90.\n\n1. Hoppe, D., & Rothkopf, C.",
+    "venue": "ICLR 2024 spotlight"
+  },
+  {
+    "forum": "Tigr1kMDZy",
+    "review_id": "wvYkaq3a7U",
+    "field": "weaknesses",
+    "gate": "figure_table",
+    "keyword": "figure.*wrong",
+    "snippet": "pect and help to understand the results.\n  - It's not clear in the example from Figure 1 that demonstrations are \"incorrect\", and that all \"imitation\" is wrongful- there is still an argument that context is important, and in this example (at least in the example where all labels",
+    "venue": "ICLR 2024 spotlight"
+  },
+  {
+    "forum": "jenyYQzue1",
+    "review_id": "zavCxsNpdm",
+    "field": "questions",
+    "gate": "data_integrity",
+    "keyword": "inconsisten",
+    "snippet": "o produce the reasoning trees, how to deal with the possible logical or factual inconsistency between the statements/facts?\n\nQ3: What does “CMCR” in the title of Section 5.2 refer to?",
+    "venue": "ICLR 2024 spotlight"
+  },
+  {
+    "forum": "NgaLU2fP5D",
+    "review_id": "NCFVktUB0W",
+    "field": "weaknesses",
+    "gate": "figure_table",
+    "keyword": "not referenced",
+    "snippet": "chological and cognitive modules into their methods. These relevant methods are not referenced in this paper, let alone included as baselines in the experiments.\n4. The assessment of the model's interpretability is not entirely convincing. The limited dimensionality of hidden lea",
+    "venue": "ICLR 2024 spotlight"
+  },
+  {
+    "forum": "vngVydDWft",
+    "review_id": "ZyzP7Cvpb3",
+    "field": "weaknesses",
+    "gate": "data_integrity",
+    "keyword": "does not match",
+    "snippet": "initial values of the attention weights come from? Also, the numbers in Tab. 5 does not match that of in Tab. 15.",
+    "venue": "ICLR 2024 spotlight"
+  }
+]
